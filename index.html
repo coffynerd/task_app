@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista Zadań</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 30px;
-            max-width: 600px;
-        }
-        .task {
-            border-bottom: 1px solid #ddd;
-            padding: 10px 0;
-        }
-        .task.done {
-            color: #888;
-            text-decoration: line-through;
-        }
-        .assignees {
-            color: #555;
-            font-size: 0.9em;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista Zadań</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      max-width: 600px;
+    }
+    .task {
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+    }
+    .task.done {
+      color: #888;
+      text-decoration: line-through;
+    }
+    .assignees {
+      color: #555;
+      font-size: 0.9em;
+    }
+  </style>
 </head>
 <body>
 
@@ -37,102 +37,116 @@ const path = "tasks.json";
 const branch = "main";
 
 async function fetchTasks() {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Błąd przy pobieraniu zadań:', errorData);
-        throw new Error(errorData.message);
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Błąd przy pobieraniu zadań:", errorData);
+    throw new Error(errorData.message);
+  }
+  const data = await response.json();
+  const decoded = atob(data.content);
+
+  let tasksData;
+  try {
+    tasksData = JSON.parse(decoded);
+  } catch (e) {
+    throw new Error("Nieprawidłowy format JSON w pliku tasks.json");
+  }
+
+  if (!Array.isArray(tasksData)) {
+    throw new Error("Pobrane dane nie są tablicą");
+  }
+
+  tasksData.forEach(task => {
+    if (typeof task !== 'object' || task === null ||
+        !('done' in task) ||
+        !('content' in task) ||
+        !('assignees' in task) ||
+        !Array.isArray(task.assignees)) {
+      throw new Error('Niepoprawna struktura zadania: ' + JSON.stringify(task));
     }
-    const data = await response.json();
-    const tasksData = JSON.parse(atob(data.content));
+  });
 
-    if (!Array.isArray(tasksData)) {
-        throw new Error('Pobrane dane nie są tablicą');
-    }
-
-    tasksData.forEach(task => {
-        if (!('done' in task) || !('content' in task) || !('assignees' in task)) {
-            throw new Error('Niepoprawna struktura zadania: ' + JSON.stringify(task));
-        }
-    });
-
-    return { tasks: tasksData, sha: data.sha };
+  return { tasks: tasksData, sha: data.sha };
 }
 
 async function updateTasks(tasks) {
-    const latest = await fetchTasks();
-    const content = btoa(JSON.stringify(tasks, null, 2));
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
-        method: "PUT",
-        headers: {
-            "Authorization": `token ${TOKEN}`,
-            "Accept": "application/vnd.github.v3+json",
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            message: "Update tasks status",
-            content: content,
-            sha: latest.sha,
-            branch: branch
-        })
-    });
+  const latest = await fetchTasks();
+  const content = btoa(JSON.stringify(tasks, null, 2));
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `token ${TOKEN}`,
+      "Accept": "application/vnd.github.v3+json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      message: "Update tasks status",
+      content: content,
+      sha: latest.sha,
+      branch: branch
+    })
+  });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Błąd przy aktualizacji zadań:', errorData);
-        throw new Error(errorData.message);
-    }
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Błąd przy aktualizacji zadań:", errorData);
+    throw new Error(errorData.message);
+  }
 
-    return response.ok;
+  return response.ok;
 }
 
 async function renderTasks() {
-    try {
-        const { tasks } = await fetchTasks();
-        const taskList = document.getElementById('taskList');
-        taskList.innerHTML = '';
+  try {
+    const { tasks } = await fetchTasks();
+    const taskList = document.getElementById("taskList");
+    taskList.innerHTML = "";
 
-        tasks.forEach((task, index) => {
-            const taskDiv = document.createElement('div');
-            taskDiv.classList.add('task');
+    tasks.forEach((task, index) => {
+      const taskDiv = document.createElement("div");
+      taskDiv.classList.add("task");
 
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = task.done;
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = task.done;
 
-            checkbox.addEventListener('change', async () => {
-                try {
-                    const fresh = await fetchTasks();
-                    fresh.tasks[index].done = checkbox.checked;
-                    await updateTasks(fresh.tasks);
-                    taskDiv.classList.toggle('done', checkbox.checked);
-                    alert('Status zadania został zaktualizowany!');
-                } catch (error) {
-                    console.error('Błąd podczas aktualizacji:', error);
-                    alert('Błąd przy aktualizacji statusu zadania: ' + error.message);
-                    checkbox.checked = !checkbox.checked;
-                }
-            });
+      checkbox.addEventListener("change", async () => {
+        try {
+          const fresh = await fetchTasks();
+          if (!Array.isArray(fresh.tasks) || !fresh.tasks[index]) {
+            throw new Error("Nie można znaleźć zadania do aktualizacji");
+          }
+          fresh.tasks[index].done = checkbox.checked;
+          await updateTasks(fresh.tasks);
+          taskDiv.classList.toggle("done", checkbox.checked);
+          alert("Status zadania został zaktualizowany!");
+        } catch (error) {
+          console.error("Błąd podczas aktualizacji:", error);
+          alert("Błąd przy aktualizacji statusu zadania: " + error.message);
+          checkbox.checked = !checkbox.checked;
+        }
+      });
 
-            taskDiv.classList.toggle('done', checkbox.checked);
+      taskDiv.classList.toggle("done", checkbox.checked);
 
-            const content = document.createElement('span');
-            content.textContent = ' ' + task.content;
+      const content = document.createElement("span");
+      content.textContent = " " + task.content;
 
-            const assignees = document.createElement('div');
-            assignees.classList.add('assignees');
-            assignees.textContent = 'Przypisane osoby: ' + task.assignees.join(', ');
+      const assignees = document.createElement("div");
+      assignees.classList.add("assignees");
+      assignees.textContent = "Przypisane osoby: " + task.assignees.join(", ");
 
-            taskDiv.appendChild(checkbox);
-            taskDiv.appendChild(content);
-            taskDiv.appendChild(assignees);
+      taskDiv.appendChild(checkbox);
+      taskDiv.appendChild(content);
+      taskDiv.appendChild(assignees);
 
-            taskList.appendChild(taskDiv);
-        });
-    } catch (error) {
-        console.error('Błąd podczas renderowania:', error);
-        document.getElementById('taskList').textContent = 'Wystąpił błąd przy ładowaniu zadań: ' + error.message;
-    }
+      taskList.appendChild(taskDiv);
+    });
+  } catch (error) {
+    console.error("Błąd podczas renderowania:", error);
+    document.getElementById("taskList").textContent = "Wystąpił błąd przy ładowaniu zadań: " + error.message;
+  }
 }
 
 renderTasks();
