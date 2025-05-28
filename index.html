@@ -44,7 +44,19 @@ async function fetchTasks() {
         throw new Error(errorData.message);
     }
     const data = await response.json();
-    return { tasks: JSON.parse(atob(data.content)), sha: data.sha };
+    const tasksData = JSON.parse(atob(data.content));
+
+    if (!Array.isArray(tasksData)) {
+        throw new Error('Pobrane dane nie są tablicą');
+    }
+
+    tasksData.forEach(task => {
+        if (!('done' in task) || !('content' in task) || !('assignees' in task)) {
+            throw new Error('Niepoprawna struktura zadania: ' + JSON.stringify(task));
+        }
+    });
+
+    return { tasks: tasksData, sha: data.sha };
 }
 
 async function updateTasks(tasks, sha) {
@@ -90,7 +102,7 @@ async function renderTasks() {
             checkbox.addEventListener('change', async () => {
                 tasks[index].done = checkbox.checked;
                 try {
-                    const freshData = await fetchTasks(); // Always fetch latest sha before update
+                    const freshData = await fetchTasks();
                     await updateTasks(tasks, freshData.sha);
                     taskDiv.classList.toggle('done', checkbox.checked);
                     alert('Status zadania został zaktualizowany!');
