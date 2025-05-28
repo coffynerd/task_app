@@ -67,6 +67,7 @@ async function updateTasks(tasks, sha) {
     if (!response.ok) {
         const errorData = await response.json();
         console.error('Błąd przy aktualizacji zadań:', errorData);
+        throw new Error(errorData.message);
     }
 
     return response.ok;
@@ -76,7 +77,6 @@ async function renderTasks() {
     try {
         const { tasks, sha } = await fetchTasks();
         const taskList = document.getElementById('taskList');
-
         taskList.innerHTML = '';
 
         tasks.forEach((task, index) => {
@@ -86,14 +86,17 @@ async function renderTasks() {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = task.done;
+
             checkbox.addEventListener('change', async () => {
                 tasks[index].done = checkbox.checked;
-                const success = await updateTasks(tasks, sha);
-                if (success) {
+                try {
+                    const freshData = await fetchTasks(); // Always fetch latest sha before update
+                    await updateTasks(tasks, freshData.sha);
                     taskDiv.classList.toggle('done', checkbox.checked);
                     alert('Status zadania został zaktualizowany!');
-                } else {
-                    alert('Błąd przy aktualizacji statusu zadania!');
+                } catch (error) {
+                    console.error('Błąd podczas aktualizacji:', error);
+                    alert('Błąd przy aktualizacji statusu zadania: ' + error.message);
                     checkbox.checked = !checkbox.checked;
                 }
             });
@@ -115,6 +118,7 @@ async function renderTasks() {
         });
     } catch (error) {
         console.error('Błąd podczas renderowania:', error);
+        document.getElementById('taskList').textContent = 'Wystąpił błąd przy ładowaniu zadań: ' + error.message;
     }
 }
 
