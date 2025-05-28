@@ -1,20 +1,511 @@
 [
   {
     "id": "1",
-    "content": "Przygotowanie raportu",
-    "assignees": ["Ania", "Jan"],
+    "content": "Substral – ściągnąć przedstawiciela",
+    "assignees": [
+      "Kacper"
+    ],
     "done": false
   },
   {
     "id": "2",
-    "content": "Sprzątanie biura",
-    "assignees": ["Michał"],
+    "content": "Dedra – dokończyć dostawę (karton pod namiotem)",
+    "assignees": [
+      "Julek",
+      "Mariusz"
+    ],
     "done": false
   },
   {
     "id": "3",
-    "content": "Sprzątanie biura",
-    "assignees": ["Kacper"],
-    "done": true
+    "content": "Cenówki cały sklep i namiot, dokładnie przejrzeć, dorobić usunąć niepotrzebne",
+    "assignees": [
+      "Milena",
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "4",
+    "content": "Dołożyć nawozy do traw (o ile są, jak nie ma zapisać)",
+    "assignees": [
+      "Julek",
+      "Mariusz"
+    ],
+    "done": false
+  },
+  {
+    "id": "5",
+    "content": "Rozłożyć chemie z cenówkami",
+    "assignees": [
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "6",
+    "content": "Myjka",
+    "assignees": [
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "7",
+    "content": "Dokończyć styropian",
+    "assignees": [
+      "Julek",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "8",
+    "content": "Umieścić odkład dragona w jednym miejscu",
+    "assignees": [
+      "Milena",
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "9",
+    "content": "Sprawdzić marże",
+    "assignees": [
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "10",
+    "content": "Zamówienie centralny",
+    "assignees": [
+      "Filip",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "11",
+    "content": "Zamówienie Bros",
+    "assignees": [
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "12",
+    "content": "Primacol – ściągnąć przedstawiciela",
+    "assignees": [
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "13",
+    "content": "Przełożyć grille, LEPIEJ JE WYEKSPONOWAĆ",
+    "assignees": [
+      "Julek",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "14",
+    "content": "Śmieci za namiotem posortować",
+    "assignees": [
+      "Kacper",
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "15",
+    "content": "Cenówki na Polbruk",
+    "assignees": [
+      "Julek",
+      "Kacper",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "16",
+    "content": "Km-Km+ na Klimas",
+    "assignees": [
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "17",
+    "content": "Rawlplug – ściągnąć przedstawiciela (zamówienie zwrot)",
+    "assignees": [
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "18",
+    "content": "Posprzątać sylikony i fugi (atlas; mapei)",
+    "assignees": [
+      "Milena",
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "19",
+    "content": "Sprawdzić ceny na wiertła z dedry (jeśli brakuje lub się nie zgadza cena to wydrukować)",
+    "assignees": [
+      "Milena",
+      "Julek",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "20",
+    "content": "Znaleźć miejsce na produkty Polmarku (są pod szufladą Kuby)",
+    "assignees": [
+      "Milena",
+      "Filip",
+      "Julek",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "21",
+    "content": "Porządek w cenówkach i wytrzeć półkę na suszarki i deski do prasowania",
+    "assignees": [
+      "Mielna",
+      "Julek",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "22",
+    "content": "Porządek biuro (blat, kasa, biurko)",
+    "assignees": [
+      "Milena",
+      "Julek",
+      "Filip",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "23",
+    "content": "Porządek z dokumentami",
+    "assignees": [
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "24",
+    "content": "Zwrot Dedra?",
+    "assignees": [
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "25",
+    "content": "Zwrot Kwiatolandia?",
+    "assignees": [
+      "Kacper",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "26",
+    "content": "Dołożyć wkłady i znicze",
+    "assignees": [
+      "Mariusz"
+    ],
+    "done": false
+  },
+  {
+    "id": "27",
+    "content": "Cenówki na siatki ( wystarczy wpisać „siatka plastikowa” i wydrukować wszystkie0",
+    "assignees": [
+      "Milena",
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "28",
+    "content": "Wprowadzić faktury spoza grupy do systemu",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "29",
+    "content": "Ułożyć dokumenty dla szefowej w czerwonych teczkach",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "30",
+    "content": "Umówić się z przedstawicielem z Candelux na wymianę nierotów",
+    "assignees": [
+      "Filip",
+      "Kaper"
+    ],
+    "done": false
+  },
+  {
+    "id": "31",
+    "content": "Uzupełnić dokument RW",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "32",
+    "content": "Zatwierdzić dokumenty KZ-",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "33",
+    "content": "Porządek w szufladach",
+    "assignees": [
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "34",
+    "content": "Zrobić rozpiskę faktur sprzedażowych przelewowych",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "35",
+    "content": "Zrobić rozpiskę faktur zakupowych spoza grupy",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "36",
+    "content": "Sprawdzić czy są wprowadzone wszystkie korekty przed końcem miesiąca",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "37",
+    "content": "Nauczyć Milenę generować pliki dla szefowej (polecenie służbowe od Kuby)",
+    "assignees": [
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "38",
+    "content": "Zrobić podsumowanie stawek VAT zwrotów",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "39",
+    "content": "Domknąć temat WZ dla klienta",
+    "assignees": [
+      "Filip",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "40",
+    "content": "Reklamacja Dedra",
+    "assignees": [
+      "Filip",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "41",
+    "content": "Ułożyć faktury sprzedażowe w kolejności i sprawdzić czy się wszystko zgadza",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "42",
+    "content": "Ułożyć zwroty w kolejności i sprawdzić czy wszystkie są wystawione poprawnie",
+    "assignees": [
+      "Filip",
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "43",
+    "content": "Dokończyć lampy w namiocie",
+    "assignees": [
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "44",
+    "content": "Poukładać kartony na odkładzie z dedry (wszystkie mają być widoczne i po jednej stronie pełne a po drugiej puste)",
+    "assignees": [
+      "Mariusz",
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "45",
+    "content": "Zamieść na pace w busie",
+    "assignees": [
+      "Filip",
+      "Milena",
+      "Kacper",
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "46",
+    "content": "Cenówki torebki foliowe z suwakiem",
+    "assignees": [
+      "Milena"
+    ],
+    "done": false
+  },
+  {
+    "id": "47",
+    "content": "Zadzwonić do przedstawiciela od zniczy",
+    "assignees": [
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "48",
+    "content": "Ułożyć wełny mineralne",
+    "assignees": [
+      "Filip",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "49",
+    "content": "Rozłożyć sensownie odkład cementu",
+    "assignees": [
+      "Filip",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "50",
+    "content": "Zamówić ziemię",
+    "assignees": [
+      "Kacper",
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "51",
+    "content": "Zadzwonić do firmy trans-pal",
+    "assignees": [
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "52",
+    "content": "Kartony (same kartony bez śmieci !!!!!!!!!)",
+    "assignees": [
+      "Mariusz",
+      "Julek",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "53",
+    "content": "Odkład Bradasa (agrotkaniny)",
+    "assignees": [
+      "Julek",
+      "Kacper"
+    ],
+    "done": false
+  },
+  {
+    "id": "54",
+    "content": "Znaleźć miejsce na papier nie na ziemi (paleta lub regał)",
+    "assignees": [
+      "Milena",
+      "Julek"
+    ],
+    "done": false
+  },
+  {
+    "id": "55",
+    "content": "Cenówki na Farby na palecie",
+    "assignees": [
+      "Milena",
+      "Julek",
+      "Kacper",
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "56",
+    "content": "Folia bąbelkowa",
+    "assignees": [
+      "Filip"
+    ],
+    "done": false
+  },
+  {
+    "id": "57",
+    "content": "Posprzątać na dziale ogrodniczym przy składziku",
+    "assignees": [
+      "Kacper",
+      "Milena",
+      "Julek",
+      "Filip"
+    ],
+    "done": false
   }
 ]
