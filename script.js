@@ -1,7 +1,7 @@
 
-const TOKEN = "TWÓJ_GITHUB_TOKEN";
-const owner = "TWÓJ_LOGIN";
-const repo = "NAZWA_REPOZYTORIUM";
+const TOKEN = "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";
+const owner = "coffynerd";
+const repo = "task_app";
 const path = "tasks.json";
 const branch = "main";
 
