@@ -51,7 +51,10 @@
 
         const assignees = document.createElement('div');
         assignees.classList.add('assignees');
-        assignees.textContent = 'Przypisane osoby: ' + task.assignees.join(', ');
+        const lista = Array.isArray(task.assignees)
+          ? task.assignees
+          : (typeof task.assignees === 'string' ? task.assignees.split(',').map(s => s.trim()) : []);
+        assignees.textContent = 'Przypisane osoby: ' + lista.join(', ');
 
         taskDiv.appendChild(checkbox);
         taskDiv.appendChild(content);
