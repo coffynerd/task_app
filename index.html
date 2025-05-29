@@ -22,7 +22,7 @@
         return;
       }
 
-      tasks.forEach(task => {
+      tasks.filter(task => task.visible !== false).forEach(task => {
         const taskDiv = document.createElement('div');
         taskDiv.classList.add('task');
         taskDiv.classList.toggle('done', task.done);
