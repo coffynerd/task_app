@@ -1,93 +1,286 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-  <link rel="icon" href="favicon.png" type="image/png">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lista Zadań</title>
-  <script type="module">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Zadań</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .nav-bar {
+            overflow: hidden;
+            padding: 0 20px;
+            color: white;
+        }
+        .blue-nav { background-color: #007bff; }
+        .gray-nav { background-color: #6c757d; }
+        .nav-bar a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .nav-bar a:hover {
+            background-color: yellow;
+            color: black;
+        }
+        .content {
+            padding: 20px 30px;
+            display: none; /* All content hidden by default */
+        }
+        .content.active {
+            display: block; /* Only active content is shown */
+        }
+        .task {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        /* ZMIANA: Przekreślenie na czerwono */
+        .task.done {
+            color: red;
+            text-decoration: line-through;
+            background-color: #f9f9f9;
+        }
+        .task-content-wrapper {
+             display: flex;
+             align-items: center;
+        }
+        .assignees {
+            color: #555;
+            font-size: 0.9em;
+            margin-left: auto;
+            padding-left: 20px;
+            text-align: right;
+        }
+        h2, h3 { color: #333; }
+        form { margin-top: 20px; margin-bottom: 20px; }
+        form input { padding: 8px; margin-right: 10px; }
+        button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #007bff; }
+        .task button { background-color: #6c757d; }
+    </style>
+</head>
+<body>
+
+    <div id="user-view">
+        <div class="nav-bar blue-nav">
+            <a onclick="showPage('user-tasks')">Lista zadań</a>
+            <a onclick="showPage('user-order')">Do zamówienia</a>
+            <a onclick="showPage('user-schedule')">Grafik</a>
+            <a onclick="switchToAdmin()">Panel Administratora</a>
+        </div>
+        <div id="user-tasks" class="content active">
+            <h2>Lista Zadań</h2>
+            <div id="supabase-task-list">Ładowanie...</div>
+        </div>
+        <div id="user-order" class="content">
+            <h2>Do zamówienia</h2>
+            <p>strona w budowie 000</p>
+        </div>
+        <div id="user-schedule" class="content">
+            <h2>Grafik</h2>
+            <p>strona w budowie 001</p>
+        </div>
+    </div>
+
+    <div id="admin-view" style="display: none;">
+        <div class="nav-bar gray-nav">
+            <a onclick="showPage('admin-tasks')">Lista zadań</a>
+            <a onclick="showPage('admin-order')">Do zamówienia</a>
+            <a onclick="showPage('admin-schedule')">Grafik</a>
+            <a onclick="switchToUser()">Panel użytkownika</a>
+        </div>
+        <div id="admin-tasks" class="content active">
+            <h2>Panel Administratora</h2>
+            <form id="admin-task-form">
+                <h3>Dodaj zadanie</h3>
+                <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
+                <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
+                <button type="submit">Dodaj</button>
+            </form>
+            <h3>Lista zadań</h3>
+            <div id="admin-task-list-visible">Ładowanie...</div>
+            <h3>Zadania ukryte</h3>
+            <div id="admin-task-list-hidden"></div>
+        </div>
+        <div id="admin-order" class="content">
+            <h2>Do zamówienia</h2>
+            <p>strona w budowie 010</p>
+        </div>
+        <div id="admin-schedule" class="content">
+            <h2>Grafik</h2>
+            <p>Strona w budowie 011</p>
+        </div>
+    </div>
+
+<script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+    // --- GLOBAL STATE AND VIEW MANAGEMENT ---
+    let isAdminInitialized = false;
     const supabaseUrl = 'https://ugznhwthaztruazsjbhu.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnem5od3RoYXp0cnVhenNqYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NjU4NjAsImV4cCI6MjA2NDA0MTg2MH0.MlBkk-oKSRW7CaUiFf3Edo0KXamVlLaZfLuxGcWL4yU';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    async function renderTasks() {
-      const { data: tasks, error } = await supabase.from('tasks').select('*');
-      const taskList = document.getElementById('taskList');
-      taskList.innerHTML = '';
+    function showPage(pageId) {
+        document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+    }
 
-      if (error) {
-        taskList.innerHTML = 'Błąd ładowania zadań.';
-        console.error(error);
-        return;
-      }
+    function switchToAdmin() {
+        const password = prompt("Wpisz hasło administratora:");
+        if (password === "admin") {
+            document.getElementById('user-view').style.display = 'none';
+            document.getElementById('admin-view').style.display = 'block';
+            showPage('admin-tasks');
+            if (!isAdminInitialized) {
+                initAdminView();
+                isAdminInitialized = true;
+            }
+        } else if (password !== null) {
+            alert("Niepoprawne hasło!");
+        }
+    }
 
-      tasks.filter(task => task.visible !== false).forEach(task => {
-        const taskDiv = document.createElement('div');
-        taskDiv.classList.add('task');
-        taskDiv.classList.toggle('done', task.done);
+    function switchToUser() {
+        document.getElementById('admin-view').style.display = 'none';
+        document.getElementById('user-view').style.display = 'block';
+        showPage('user-tasks');
+    }
 
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = task.done;
+    window.showPage = showPage;
+    window.switchToAdmin = switchToAdmin;
+    window.switchToUser = switchToUser;
 
-        checkbox.addEventListener('change', async () => {
-          const { error } = await supabase.from('tasks')
-            .update({ done: checkbox.checked })
-            .eq('id', task.id);
+    // --- USER VIEW LOGIC (Supabase) ---
+    function initUserView() {
+        async function renderSupabaseTasks() {
+            const { data: tasks, error } = await supabase.from('tasks').select('*');
+            const taskList = document.getElementById('supabase-task-list');
+            taskList.innerHTML = '';
+            if (error) {
+                taskList.innerHTML = 'Błąd ładowania zadań.';
+                return;
+            }
+            tasks.filter(task => task.visible !== false).forEach(task => {
+                const taskDiv = document.createElement('div');
+                taskDiv.classList.add('task');
+                taskDiv.classList.toggle('done', task.done);
+                
+                // ZMIANA: Dodanie checkboxa i jego logiki
+                const taskContentWrapper = document.createElement('div');
+                taskContentWrapper.classList.add('task-content-wrapper');
 
-          if (error) {
-            alert('Błąd aktualizacji zadania.');
-            console.error(error);
-            checkbox.checked = !checkbox.checked;
-          } else {
-            taskDiv.classList.toggle('done', checkbox.checked);
-            alert('Zaktualizowano zadanie');
-          }
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = task.done;
+                checkbox.style.marginRight = '10px';
+                
+                checkbox.addEventListener('change', async () => {
+                    const { error } = await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id);
+                    if (error) {
+                        alert('Błąd podczas aktualizacji zadania!');
+                        checkbox.checked = !checkbox.checked; // Cofnij zmianę w UI
+                    } else {
+                        taskDiv.classList.toggle('done', checkbox.checked);
+                    }
+                });
+
+                const taskContent = document.createElement('span');
+                taskContent.textContent = task.content;
+                
+                taskContentWrapper.appendChild(checkbox);
+                taskContentWrapper.appendChild(taskContent);
+
+                const assignees = document.createElement('div');
+                assignees.classList.add('assignees');
+                const assigneesList = Array.isArray(task.assignees)
+                    ? task.assignees
+                    : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
+                assignees.textContent = 'Osoby: ' + (assigneesList.length > 0 ? assigneesList.join(', ') : 'brak');
+                
+                taskDiv.appendChild(taskContentWrapper);
+                taskDiv.appendChild(assignees);
+                taskList.appendChild(taskDiv);
+            });
+        }
+        renderSupabaseTasks();
+    }
+
+    // --- ADMIN VIEW LOGIC (Supabase - nowa wersja) ---
+    function initAdminView() {
+        const taskList = document.getElementById('admin-task-list-visible');
+        const hiddenTaskList = document.getElementById('admin-task-list-hidden');
+        const taskForm = document.getElementById('admin-task-form');
+
+        async function renderAdminTasks() {
+            const { data: tasks, error } = await supabase.from('tasks').select('*');
+            taskList.innerHTML = '';
+            hiddenTaskList.innerHTML = '';
+            if (error) {
+                taskList.textContent = 'Błąd ładowania zadań.';
+                return;
+            }
+            tasks.forEach(task => {
+                const div = document.createElement('div');
+                div.classList.add('task');
+                div.classList.toggle('done', task.done);
+
+                const label = document.createElement('label');
+                label.textContent = `${task.content} (Przypisani: ${task.assignees || 'brak'})`;
+
+                const buttonsDiv = document.createElement('div');
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Edytuj';
+                editBtn.onclick = async () => {
+                    const newContent = prompt('Nowa treść zadania:', task.content);
+                    const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', task.assignees || '');
+                    if (newContent !== null && newAssignees !== null) {
+                        await supabase.from('tasks').update({ content: newContent, assignees: newAssignees }).eq('id', task.id);
+                        renderAdminTasks();
+                    }
+                };
+                const toggleBtn = document.createElement('button');
+                toggleBtn.textContent = task.visible === false ? 'Odkryj' : 'Ukryj';
+                toggleBtn.onclick = async () => {
+                    await supabase.from('tasks').update({ visible: !task.visible }).eq('id', task.id);
+                    renderAdminTasks();
+                };
+                
+                buttonsDiv.appendChild(editBtn);
+                buttonsDiv.appendChild(toggleBtn);
+                div.appendChild(label);
+                div.appendChild(buttonsDiv);
+
+                (task.visible === false ? hiddenTaskList : taskList).appendChild(div);
+            });
+        }
+
+        taskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = document.getElementById('admin-task-input').value.trim();
+            const assignees = document.getElementById('admin-assignee-input').value.trim();
+            if (!content) return alert('Wpisz treść zadania.');
+            await supabase.from('tasks').insert([{ content, assignees, done: false, visible: true }]);
+            taskForm.reset();
+            renderAdminTasks();
         });
 
-        const content = document.createElement('span');
-        content.textContent = ' ' + task.content;
-
-        const assignees = document.createElement('div');
-        assignees.classList.add('assignees');
-        const lista = Array.isArray(task.assignees)
-          ? task.assignees
-          : (typeof task.assignees === 'string' ? task.assignees.split(',').map(s => s.trim()) : []);
-        assignees.textContent = 'Przypisane osoby: ' + lista.join(', ');
-
-        taskDiv.appendChild(checkbox);
-        taskDiv.appendChild(content);
-        taskDiv.appendChild(assignees);
-        taskList.appendChild(taskDiv);
-      });
+        renderAdminTasks();
     }
-
-    renderTasks();
-  </script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-      max-width: 600px;
-    }
-    .task {
-      border-bottom: 1px solid #ddd;
-      padding: 10px 0;
-    }
-    .task.done {
-      color: #888;
-      text-decoration: line-through;
-    }
-    .assignees {
-      color: #555;
-      font-size: 0.9em;
-    }
-  </style>
-</head>
-<body>
-  <h2>Lista Zadań</h2>
-  <div id="taskList">Ładowanie...</div>
+    
+    // --- INITIALIZE THE APP ---
+    document.addEventListener('DOMContentLoaded', initUserView);
+</script>
 </body>
 </html>
