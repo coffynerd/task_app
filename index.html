@@ -16,7 +16,6 @@
             padding: 0 20px;
             color: white;
         }
-        /* ZMIANA 1: Nowy kolor niebieski */
         .blue-nav { background-color: #004896; }
         .gray-nav { background-color: #6c757d; }
         .nav-bar a {
@@ -29,12 +28,10 @@
             cursor: pointer;
             transition: background-color 0.3s;
         }
-        /* ZMIANA 2: Nowy kolor żółty dla niebieskiego paska */
         .blue-nav a:hover {
             background-color: #ffc101;
             color: black;
         }
-        /* ZMIANA 3: Ciemniejszy szary dla paska admina */
         .gray-nav a:hover {
             background-color: #5a6268;
         }
@@ -77,8 +74,33 @@
         h2, h3 { color: #333; }
         form { margin-top: 20px; margin-bottom: 20px; background-color: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         form input { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; } /* Przycisk też dostaje nowy niebieski */
+        button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; }
         .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
+        .google-sheet-iframe {
+            width: 100%;
+            height: 75vh;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .page-header a {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9em;
+            transition: background-color 0.3s;
+        }
+        .page-header a:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -142,8 +164,11 @@
             <div id="admin-order-list-completed"></div>
         </div>
         <div id="admin-schedule" class="content">
-            <h2>Grafik</h2>
-            <p>Strona w budowie 011</p>
+            <div class="page-header">
+                <h2>Grafik</h2>
+                <a href="https://docs.google.com/spreadsheets/d/1nKe6cmb0Tz60gZykzb1Rw06pq1tG0c2FTdktCS2OYV0/edit?usp=sharing" target="_blank">Edytuj</a>
+            </div>
+            <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?widget=true&amp;headers=false&amp;rm=minimal"></iframe>
         </div>
     </div>
 
@@ -161,8 +186,10 @@
         document.getElementById(pageId).classList.add('active');
     }
 
+    // ZMIANA: Dodana obsługa nowych haseł
     function switchToAdmin() {
         const password = prompt("Wpisz hasło administratora:");
+
         if (password === "admin") {
             document.getElementById('user-view').style.display = 'none';
             document.getElementById('admin-view').style.display = 'block';
@@ -171,9 +198,14 @@
                 initAdminView();
                 isAdminInitialized = true;
             }
-        } else if (password !== null) {
+        } else if (password === "dev") {
+            window.location.href = 'https://coffynerd.github.io/blazor1';
+        } else if (password === "iddqd") {
+            window.location.href = 'https://www.youtube.com/watch?v=dXji8ycMolI';
+        } else if (password !== null) { // Jeśli użytkownik coś wpisał, ale to nie jest żadne z powyższych
             alert("Niepoprawne hasło!");
         }
+        // Jeśli password === null (użytkownik kliknął Anuluj), nic się nie dzieje
     }
 
     function switchToUser() {
