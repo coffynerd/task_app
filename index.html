@@ -16,7 +16,8 @@
             padding: 0 20px;
             color: white;
         }
-        .blue-nav { background-color: #007bff; }
+        /* ZMIANA 1: Nowy kolor niebieski */
+        .blue-nav { background-color: #004896; }
         .gray-nav { background-color: #6c757d; }
         .nav-bar a {
             float: left;
@@ -28,46 +29,56 @@
             cursor: pointer;
             transition: background-color 0.3s;
         }
-        .nav-bar a:hover {
-            background-color: yellow;
+        /* ZMIANA 2: Nowy kolor żółty dla niebieskiego paska */
+        .blue-nav a:hover {
+            background-color: #ffc101;
             color: black;
+        }
+        /* ZMIANA 3: Ciemniejszy szary dla paska admina */
+        .gray-nav a:hover {
+            background-color: #5a6268;
         }
         .content {
             padding: 20px 30px;
-            display: none; /* All content hidden by default */
+            display: none;
         }
         .content.active {
-            display: block; /* Only active content is shown */
+            display: block;
         }
-        .task {
+        .item-row {
             border-bottom: 1px solid #ddd;
             padding: 10px 5px;
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
-        /* ZMIANA: Przekreślenie na czerwono */
-        .task.done {
+        .item-row.done {
             color: red;
             text-decoration: line-through;
             background-color: #f9f9f9;
         }
-        .task-content-wrapper {
+        .item-content-wrapper {
              display: flex;
              align-items: center;
+             flex-grow: 1;
         }
-        .assignees {
+        .assignees, .supplier-info {
             color: #555;
             font-size: 0.9em;
+            margin-left: 15px;
+        }
+        .date-info {
+            font-size: 0.8em;
+            color: #888;
             margin-left: auto;
             padding-left: 20px;
             text-align: right;
         }
         h2, h3 { color: #333; }
-        form { margin-top: 20px; margin-bottom: 20px; }
-        form input { padding: 8px; margin-right: 10px; }
-        button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #007bff; }
-        .task button { background-color: #6c757d; }
+        form { margin-top: 20px; margin-bottom: 20px; background-color: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        form input { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; } /* Przycisk też dostaje nowy niebieski */
+        .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
     </style>
 </head>
 <body>
@@ -85,11 +96,16 @@
         </div>
         <div id="user-order" class="content">
             <h2>Do zamówienia</h2>
-            <p>strona w budowie 000</p>
+            <form id="user-order-form">
+                <input type="text" id="user-order-name" placeholder="Nazwa produktu" required>
+                <input type="text" id="user-order-supplier" placeholder="Dostawca">
+                <button type="submit">Dodaj do listy</button>
+            </form>
+            <div id="user-order-list"></div>
         </div>
         <div id="user-schedule" class="content">
             <h2>Grafik</h2>
-            <p>strona w budowie 001</p>
+            <p>strona w budowie 0010</p>
         </div>
     </div>
 
@@ -114,8 +130,16 @@
             <div id="admin-task-list-hidden"></div>
         </div>
         <div id="admin-order" class="content">
-            <h2>Do zamówienia</h2>
-            <p>strona w budowie 010</p>
+            <h2>Do zamówienia (Admin)</h2>
+             <form id="admin-order-form">
+                <input type="text" id="admin-order-name" placeholder="Nazwa produktu" required>
+                <input type="text" id="admin-order-supplier" placeholder="Dostawca">
+                <button type="submit">Dodaj do listy</button>
+            </form>
+            <h3>Pozycje do zamówienia</h3>
+            <div id="admin-order-list-active"></div>
+            <h3>Zamówienia zrealizowane</h3>
+            <div id="admin-order-list-completed"></div>
         </div>
         <div id="admin-schedule" class="content">
             <h2>Grafik</h2>
@@ -162,24 +186,22 @@
     window.switchToAdmin = switchToAdmin;
     window.switchToUser = switchToUser;
 
-    // --- USER VIEW LOGIC (Supabase) ---
+    // --- USER VIEW LOGIC ---
     function initUserView() {
+        // --- Tasks for User ---
         async function renderSupabaseTasks() {
             const { data: tasks, error } = await supabase.from('tasks').select('*');
             const taskList = document.getElementById('supabase-task-list');
             taskList.innerHTML = '';
-            if (error) {
-                taskList.innerHTML = 'Błąd ładowania zadań.';
-                return;
-            }
+            if (error) { taskList.innerHTML = 'Błąd ładowania zadań.'; return; }
+            
             tasks.filter(task => task.visible !== false).forEach(task => {
-                const taskDiv = document.createElement('div');
-                taskDiv.classList.add('task');
-                taskDiv.classList.toggle('done', task.done);
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('item-row');
+                itemDiv.classList.toggle('done', task.done);
                 
-                // ZMIANA: Dodanie checkboxa i jego logiki
-                const taskContentWrapper = document.createElement('div');
-                taskContentWrapper.classList.add('task-content-wrapper');
+                const contentWrapper = document.createElement('div');
+                contentWrapper.classList.add('item-content-wrapper');
 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
@@ -187,58 +209,110 @@
                 checkbox.style.marginRight = '10px';
                 
                 checkbox.addEventListener('change', async () => {
-                    const { error } = await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id);
-                    if (error) {
-                        alert('Błąd podczas aktualizacji zadania!');
-                        checkbox.checked = !checkbox.checked; // Cofnij zmianę w UI
-                    } else {
-                        taskDiv.classList.toggle('done', checkbox.checked);
-                    }
+                    await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id);
+                    itemDiv.classList.toggle('done', checkbox.checked);
                 });
 
                 const taskContent = document.createElement('span');
                 taskContent.textContent = task.content;
                 
-                taskContentWrapper.appendChild(checkbox);
-                taskContentWrapper.appendChild(taskContent);
+                contentWrapper.appendChild(checkbox);
+                contentWrapper.appendChild(taskContent);
 
                 const assignees = document.createElement('div');
                 assignees.classList.add('assignees');
-                const assigneesList = Array.isArray(task.assignees)
-                    ? task.assignees
-                    : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
+                const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
                 assignees.textContent = 'Osoby: ' + (assigneesList.length > 0 ? assigneesList.join(', ') : 'brak');
                 
-                taskDiv.appendChild(taskContentWrapper);
-                taskDiv.appendChild(assignees);
-                taskList.appendChild(taskDiv);
+                itemDiv.appendChild(contentWrapper);
+                itemDiv.appendChild(assignees);
+                taskList.appendChild(itemDiv);
             });
         }
+
+        // --- Orders for User ---
+        async function renderUserOrders() {
+            const { data: orders, error } = await supabase.from('orders').select('*').eq('is_completed', false).order('created_at', { ascending: true });
+            const orderList = document.getElementById('user-order-list');
+            orderList.innerHTML = '';
+            if (error) { orderList.innerHTML = 'Błąd ładowania listy.'; return; }
+
+            orders.forEach(order => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('item-row');
+                
+                const contentWrapper = document.createElement('div');
+                contentWrapper.classList.add('item-content-wrapper');
+                contentWrapper.textContent = order.name;
+                
+                const supplierInfo = document.createElement('span');
+                supplierInfo.classList.add('supplier-info');
+                supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
+                contentWrapper.appendChild(supplierInfo);
+
+                const dateInfo = document.createElement('div');
+                dateInfo.classList.add('date-info');
+                dateInfo.textContent = new Date(order.created_at).toLocaleDateString('pl-PL');
+
+                const buttonsDiv = document.createElement('div');
+                const doneBtn = document.createElement('button');
+                doneBtn.textContent = 'Zamówione';
+                doneBtn.onclick = async () => {
+                    await supabase.from('orders').update({ is_completed: true }).eq('id', order.id);
+                    renderUserOrders(); 
+                };
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Edytuj';
+                editBtn.onclick = async () => {
+                    const newName = prompt("Nowa nazwa produktu:", order.name);
+                    const newSupplier = prompt("Nowy dostawca:", order.supplier);
+                    if(newName !== null && newSupplier !== null) {
+                        await supabase.from('orders').update({ name: newName, supplier: newSupplier }).eq('id', order.id);
+                        renderUserOrders();
+                    }
+                };
+                buttonsDiv.appendChild(editBtn);
+                buttonsDiv.appendChild(doneBtn);
+
+                itemDiv.appendChild(contentWrapper);
+                itemDiv.appendChild(dateInfo);
+                itemDiv.appendChild(buttonsDiv);
+                orderList.appendChild(itemDiv);
+            });
+        }
+        
+        const userOrderForm = document.getElementById('user-order-form');
+        userOrderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('user-order-name').value;
+            const supplier = document.getElementById('user-order-supplier').value;
+            await supabase.from('orders').insert([{ name, supplier }]);
+            userOrderForm.reset();
+            renderUserOrders();
+        });
+
         renderSupabaseTasks();
+        renderUserOrders();
     }
 
-    // --- ADMIN VIEW LOGIC (Supabase - nowa wersja) ---
+    // --- ADMIN VIEW LOGIC ---
     function initAdminView() {
-        const taskList = document.getElementById('admin-task-list-visible');
-        const hiddenTaskList = document.getElementById('admin-task-list-hidden');
-        const taskForm = document.getElementById('admin-task-form');
-
+        // --- Tasks for Admin ---
+        const adminTaskList = document.getElementById('admin-task-list-visible');
+        const adminHiddenTaskList = document.getElementById('admin-task-list-hidden');
+        const adminTaskForm = document.getElementById('admin-task-form');
         async function renderAdminTasks() {
             const { data: tasks, error } = await supabase.from('tasks').select('*');
-            taskList.innerHTML = '';
-            hiddenTaskList.innerHTML = '';
-            if (error) {
-                taskList.textContent = 'Błąd ładowania zadań.';
-                return;
-            }
+            adminTaskList.innerHTML = '';
+            adminHiddenTaskList.innerHTML = '';
+            if (error) { adminTaskList.textContent = 'Błąd ładowania zadań.'; return; }
+            
             tasks.forEach(task => {
                 const div = document.createElement('div');
-                div.classList.add('task');
+                div.classList.add('item-row');
                 div.classList.toggle('done', task.done);
-
                 const label = document.createElement('label');
                 label.textContent = `${task.content} (Przypisani: ${task.assignees || 'brak'})`;
-
                 const buttonsDiv = document.createElement('div');
                 const editBtn = document.createElement('button');
                 editBtn.textContent = 'Edytuj';
@@ -256,27 +330,96 @@
                     await supabase.from('tasks').update({ visible: !task.visible }).eq('id', task.id);
                     renderAdminTasks();
                 };
-                
                 buttonsDiv.appendChild(editBtn);
                 buttonsDiv.appendChild(toggleBtn);
                 div.appendChild(label);
                 div.appendChild(buttonsDiv);
-
-                (task.visible === false ? hiddenTaskList : taskList).appendChild(div);
+                (task.visible === false ? adminHiddenTaskList : adminTaskList).appendChild(div);
             });
         }
-
-        taskForm.addEventListener('submit', async (e) => {
+        adminTaskForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const content = document.getElementById('admin-task-input').value.trim();
             const assignees = document.getElementById('admin-assignee-input').value.trim();
-            if (!content) return alert('Wpisz treść zadania.');
+            if (!content) return;
             await supabase.from('tasks').insert([{ content, assignees, done: false, visible: true }]);
-            taskForm.reset();
+            adminTaskForm.reset();
             renderAdminTasks();
+        });
+        
+        // --- Orders for Admin ---
+        async function renderAdminOrders() {
+            const { data: orders, error } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
+            const activeList = document.getElementById('admin-order-list-active');
+            const completedList = document.getElementById('admin-order-list-completed');
+            activeList.innerHTML = '';
+            completedList.innerHTML = '';
+            if (error) { activeList.innerHTML = 'Błąd ładowania listy.'; return; }
+
+            orders.forEach(order => {
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('item-row');
+                itemDiv.classList.toggle('done', order.is_completed);
+
+                const contentWrapper = document.createElement('div');
+                contentWrapper.classList.add('item-content-wrapper');
+                contentWrapper.textContent = order.name;
+
+                const supplierInfo = document.createElement('span');
+                supplierInfo.classList.add('supplier-info');
+                supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
+                contentWrapper.appendChild(supplierInfo);
+
+                const dateInfo = document.createElement('div');
+                dateInfo.classList.add('date-info');
+                dateInfo.textContent = new Date(order.created_at).toLocaleDateString('pl-PL');
+
+                const buttonsDiv = document.createElement('div');
+                if (!order.is_completed) {
+                    const doneBtn = document.createElement('button');
+                    doneBtn.textContent = 'Zamówione';
+                    doneBtn.onclick = async () => {
+                        await supabase.from('orders').update({ is_completed: true }).eq('id', order.id);
+                        renderAdminOrders();
+                    };
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Edytuj';
+                    editBtn.onclick = async () => {
+                        const newName = prompt("Nowa nazwa produktu:", order.name);
+                        const newSupplier = prompt("Nowy dostawca:", order.supplier);
+                         if(newName !== null && newSupplier !== null) {
+                            await supabase.from('orders').update({ name: newName, supplier: newSupplier }).eq('id', order.id);
+                            renderAdminOrders();
+                        }
+                    };
+                    buttonsDiv.appendChild(editBtn);
+                    buttonsDiv.appendChild(doneBtn);
+                }
+                
+                itemDiv.appendChild(contentWrapper);
+                itemDiv.appendChild(dateInfo);
+                itemDiv.appendChild(buttonsDiv);
+                
+                if(order.is_completed) {
+                    completedList.appendChild(itemDiv);
+                } else {
+                    activeList.appendChild(itemDiv);
+                }
+            });
+        }
+
+        const adminOrderForm = document.getElementById('admin-order-form');
+        adminOrderForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('admin-order-name').value;
+            const supplier = document.getElementById('admin-order-supplier').value;
+            await supabase.from('orders').insert([{ name, supplier }]);
+            adminOrderForm.reset();
+            renderAdminOrders();
         });
 
         renderAdminTasks();
+        renderAdminOrders();
     }
     
     // --- INITIALIZE THE APP ---
