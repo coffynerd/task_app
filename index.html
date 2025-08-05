@@ -127,7 +127,7 @@
         </div>
         <div id="user-schedule" class="content">
             <h2>Grafik</h2>
-            <p>strona w budowie 0010</p>
+            <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false"></iframe>
         </div>
     </div>
 
@@ -168,7 +168,7 @@
                 <h2>Grafik</h2>
                 <a href="https://docs.google.com/spreadsheets/d/1nKe6cmb0Tz60gZykzb1Rw06pq1tG0c2FTdktCS2OYV0/edit?usp=sharing" target="_blank">Edytuj</a>
             </div>
-            <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?widget=true&amp;headers=false&amp;rm=minimal"></iframe>
+            <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?widget=true&headers=false&rm=minimal"></iframe>
         </div>
     </div>
 
@@ -186,10 +186,8 @@
         document.getElementById(pageId).classList.add('active');
     }
 
-    // ZMIANA: Dodana obsługa nowych haseł
     function switchToAdmin() {
         const password = prompt("Wpisz hasło administratora:");
-
         if (password === "admin") {
             document.getElementById('user-view').style.display = 'none';
             document.getElementById('admin-view').style.display = 'block';
@@ -202,10 +200,9 @@
             window.location.href = 'https://coffynerd.github.io/blazor1';
         } else if (password === "iddqd") {
             window.location.href = 'https://www.youtube.com/watch?v=dXji8ycMolI';
-        } else if (password !== null) { // Jeśli użytkownik coś wpisał, ale to nie jest żadne z powyższych
+        } else if (password !== null) {
             alert("Niepoprawne hasło!");
         }
-        // Jeśli password === null (użytkownik kliknął Anuluj), nic się nie dzieje
     }
 
     function switchToUser() {
