@@ -280,10 +280,8 @@
         updateThemeIcon();
     }
 
-    function switchToAdmin() {
-        const password = prompt("Wpisz hasło administratora:");
-
-        if (password === "admin") {
+    const passwordActions = {
+        'admin': () => {
             document.getElementById('user-view').style.display = 'none';
             document.getElementById('admin-view').style.display = 'block';
             showPage('admin-tasks');
@@ -291,11 +289,28 @@
                 initAdminView();
                 isAdminInitialized = true;
             }
-        } else if (password === "dev") {
+        },
+        'dev': () => {
             window.location.href = 'https://coffynerd.github.io/blazor1';
-        } else if (password === "iddqd") {
+        },
+        'iddqd': () => {
             window.location.href = 'https://www.youtube.com/watch?v=dXji8ycMolI';
-        } else if (password !== null) { // Usunięto warunek dla "dark"
+        },
+        'minecraft': () => {
+            window.location.href = 'https://classic.minecraft.net';
+        },
+        'help': () => {
+            const availablePasswords = Object.keys(passwordActions).filter(p => p !== 'help');
+            alert('Dostępne hasła:\n- ' + availablePasswords.join('\n- '));
+        }
+    };
+
+    function switchToAdmin() {
+        const password = prompt("Wpisz hasło administratora:");
+        if (password === null) return;
+        if (passwordActions.hasOwnProperty(password)) {
+            passwordActions[password]();
+        } else {
             alert("Niepoprawne hasło!");
         }
     }
@@ -328,38 +343,40 @@
             
             tasks.filter(task => task.visible !== false).forEach(task => {
                 const isPriority = task.content.startsWith('!!!');
-                
                 const itemDiv = document.createElement('div');
                 itemDiv.classList.add('item-row', 'task-item');
                 itemDiv.classList.toggle('done', task.done);
-                if (isPriority) {
-                    itemDiv.classList.add('priority');
-                }
+                if (isPriority) itemDiv.classList.add('priority');
                 
                 const contentWrapper = document.createElement('div');
                 contentWrapper.classList.add('item-content-wrapper');
-
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.checked = task.done;
                 checkbox.style.marginRight = '10px';
                 
                 checkbox.addEventListener('change', async () => {
-                    await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id);
-                    itemDiv.classList.toggle('done', checkbox.checked);
+                    const { error } = await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id);
+                    if(error){
+                        alert('Błąd aktualizacji!');
+                        checkbox.checked = !checkbox.checked;
+                    } else {
+                        itemDiv.classList.toggle('done', checkbox.checked);
+                        if (isPriority && checkbox.checked) {
+                            const audio = new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-758719.wav');
+                            audio.play();
+                        }
+                    }
                 });
 
                 const taskContent = document.createElement('span');
                 taskContent.textContent = isPriority ? task.content.substring(3).trim() : task.content;
-                
                 contentWrapper.appendChild(checkbox);
                 contentWrapper.appendChild(taskContent);
-
                 const assignees = document.createElement('div');
                 assignees.classList.add('assignees');
                 const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
                 assignees.textContent = 'Osoby: ' + (assigneesList.length > 0 ? assigneesList.join(', ') : 'brak');
-                
                 itemDiv.appendChild(contentWrapper);
                 itemDiv.appendChild(assignees);
                 taskList.appendChild(itemDiv);
@@ -371,7 +388,6 @@
             const orderList = document.getElementById('user-order-list');
             orderList.innerHTML = '';
             if (error) { orderList.innerHTML = 'Błąd ładowania listy.'; return; }
-
             orders.forEach(order => {
                 const itemDiv = document.createElement('div');
                 itemDiv.classList.add('item-row', 'order-item');
@@ -450,13 +466,33 @@
                 const div = document.createElement('div');
                 div.classList.add('item-row', 'task-item');
                 div.classList.toggle('done', task.done);
-                if(isPriority) {
-                    div.classList.add('priority');
-                }
+                if(isPriority) div.classList.add('priority');
+
+                // ZMIANA: Dodany checkbox i wrapper, tak jak w widoku użytkownika
+                const contentWrapper = document.createElement('div');
+                contentWrapper.classList.add('item-content-wrapper');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = task.done;
+                checkbox.style.marginRight = '10px';
+                
+                checkbox.addEventListener('change', async () => {
+                    const { error } = await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id);
+                    if(error){
+                        alert('Błąd aktualizacji!');
+                        checkbox.checked = !checkbox.checked;
+                    } else {
+                        div.classList.toggle('done', checkbox.checked);
+                    }
+                });
 
                 const label = document.createElement('label');
                 const taskText = isPriority ? task.content.substring(3).trim() : task.content;
                 label.textContent = `${taskText} (Przypisani: ${task.assignees || 'brak'})`;
+                
+                contentWrapper.appendChild(checkbox);
+                contentWrapper.appendChild(label);
 
                 const buttonsDiv = document.createElement('div');
                 const editBtn = document.createElement('button');
@@ -477,8 +513,10 @@
                 };
                 buttonsDiv.appendChild(editBtn);
                 buttonsDiv.appendChild(toggleBtn);
-                div.appendChild(label);
+                
+                div.appendChild(contentWrapper);
                 div.appendChild(buttonsDiv);
+                
                 (task.visible === false ? adminHiddenTaskList : adminTaskList).appendChild(div);
             });
         }
@@ -504,20 +542,16 @@
                 const itemDiv = document.createElement('div');
                 itemDiv.classList.add('item-row', 'order-item');
                 itemDiv.classList.toggle('done', order.is_completed);
-
                 const contentWrapper = document.createElement('div');
                 contentWrapper.classList.add('item-content-wrapper');
                 contentWrapper.textContent = order.name;
-
                 const supplierInfo = document.createElement('span');
                 supplierInfo.classList.add('supplier-info');
                 supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
                 contentWrapper.appendChild(supplierInfo);
-
                 const dateInfo = document.createElement('div');
                 dateInfo.classList.add('date-info');
                 dateInfo.textContent = new Date(order.created_at).toLocaleDateString('pl-PL');
-
                 const buttonsDiv = document.createElement('div');
                 if (!order.is_completed) {
                     const doneBtn = document.createElement('button');
