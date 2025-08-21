@@ -179,7 +179,7 @@
             background-color: var(--surface-dark);
             border: 1px solid var(--border-dark);
         }
-        .dark-mode form input, .dark-mode textarea {
+        .dark-mode form input, .dark-mode .note-content-input {
             background-color: #2a2a2a;
             color: var(--text-dark);
             border-color: #444;
@@ -222,7 +222,11 @@
         .editor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         #note-title-input, #user-note-title-input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         #note-color-input, #user-note-color-input { height: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; background-color: white; }
-        #note-content-input, #user-note-content-input { flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-family: inherit; }
+        .note-content-input {
+            flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-family: inherit; overflow-y: auto;
+        }
+        .note-content-input div { display: flex; align-items: center; }
+        .note-content-input input[type="checkbox"] { margin-right: 8px; }
         #note-timestamps, #user-note-timestamps { font-size: 0.8em; color: #888; text-align: right; margin-top: 10px; padding-right: 10px; }
         .dark-mode #note-timestamps, .dark-mode #user-note-timestamps { color: #aaa; }
         .note-editor-buttons { margin-top: 10px; text-align: right; }
@@ -365,9 +369,10 @@
                         <input type="text" id="user-note-title-input" placeholder="Tytuł notatki...">
                         <input type="color" id="user-note-color-input" title="Wybierz kolor tytułu" value="#000000">
                     </div>
-                    <textarea id="user-note-content-input" placeholder="Treść notatki..."></textarea>
+                    <div id="user-note-content-input" class="note-content-input" contenteditable="true"></div>
                     <div id="user-note-timestamps"></div>
                     <div class="note-editor-buttons">
+                        <button id="user-toggle-raw-btn">Edytuj znaczniki</button>
                         <button id="user-save-note-btn">Zapisz</button>
                     </div>
                 </div>
@@ -434,9 +439,10 @@
                         <input type="text" id="note-title-input" placeholder="Tytuł notatki...">
                         <input type="color" id="note-color-input" title="Wybierz kolor tytułu">
                     </div>
-                    <textarea id="note-content-input" placeholder="Treść notatki..."></textarea>
+                    <div id="note-content-input" class="note-content-input" contenteditable="true"></div>
                     <div id="note-timestamps"></div>
                     <div class="note-editor-buttons">
+                        <button id="admin-toggle-raw-btn">Edytuj znaczniki</button>
                         <button id="delete-note-btn">Usuń</button>
                         <button id="save-note-btn">Zapisz</button>
                     </div>
@@ -453,6 +459,7 @@
     const supabaseUrl = 'https://ugznhwthaztruazsjbhu.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnem5od3RoYXp0cnVhenNqYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NjU4NjAsImV4cCI6MjA2NDA0MTg2MH0.MlBkk-oKSRW7CaUiFf3Edo0KXamVlLaZfLuxGcWL4yU';
     const supabase = createClient(supabaseUrl, supabaseKey);
+    let editorMode = { user: 'render', admin: 'render' }; // 'render' or 'raw'
 
     // --- UI UTILITIES ---
     const modal = document.getElementById('modal');
@@ -520,6 +527,39 @@
     window.switchToAdmin = switchToAdmin;
     window.switchToUser = switchToUser;
     
+    // --- NOTEBOOK CHECKBOX HELPERS ---
+    function convertTextToCheckboxes(text) {
+        if (!text) return '';
+        return text.split('\n').map(line => {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('# ')) {
+                return `<div><input type="checkbox">${line.substring(2)}</div>`;
+            }
+            if (trimmedLine.startsWith('& ')) {
+                return `<div><input type="checkbox" checked>${line.substring(2)}</div>`;
+            }
+            return `<div>${line}</div>`;
+        }).join('');
+    }
+
+    function convertCheckboxesToText(element) {
+        const lines = [];
+        element.childNodes.forEach(node => {
+            if (node.nodeName === 'DIV') {
+                const checkbox = node.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    const prefix = checkbox.checked ? '& ' : '# ';
+                    lines.push(prefix + node.textContent);
+                } else {
+                    lines.push(node.textContent);
+                }
+            } else {
+                lines.push(node.textContent);
+            }
+        });
+        return lines.join('\n');
+    }
+
     // --- RENDER FUNCTIONS (GLOBAL SCOPE) ---
 
     async function renderSupabaseTasks() {
@@ -780,11 +820,13 @@
 
     // --- USER VIEW INITIALIZATION & NOTE LOGIC ---
     let currentUserNoteId = null;
-    function clearUserEditor() { const userNoteTitleList = document.getElementById('user-note-title-list'); const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = null; userNoteTitleInput.value = ''; userNoteContentInput.value = ''; userNoteColorInput.value = '#000000'; userNoteTimestamps.innerHTML = ''; userNoteTitleInput.removeAttribute('data-current-id'); const selected = userNoteTitleList.querySelector('.selected'); if(selected) selected.classList.remove('selected'); }
-    function loadUserNoteIntoEditor(note) { const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = note.id; userNoteTitleInput.setAttribute('data-current-id', note.id); userNoteTitleInput.value = note.title; userNoteContentInput.value = note.content; userNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; userNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('user-note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); }
+    function clearUserEditor() { const userNoteTitleList = document.getElementById('user-note-title-list'); const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = null; userNoteTitleInput.value = ''; userNoteContentInput.innerHTML = ''; userNoteColorInput.value = '#000000'; userNoteTimestamps.innerHTML = ''; userNoteTitleInput.removeAttribute('data-current-id'); const selected = userNoteTitleList.querySelector('.selected'); if(selected) selected.classList.remove('selected'); editorMode.user = 'render'; document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj znaczniki'; }
+    function loadUserNoteIntoEditor(note) { const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = note.id; userNoteTitleInput.setAttribute('data-current-id', note.id); userNoteTitleInput.value = note.title; userNoteContentInput.innerHTML = convertTextToCheckboxes(note.content); userNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; userNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('user-note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); editorMode.user = 'render'; document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj znaczniki'; }
     async function saveUserNote() { 
         const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'); 
-        const title = userNoteTitleInput.value, content = userNoteContentInput.value, title_color = userNoteColorInput.value; 
+        const title = userNoteTitleInput.value;
+        const content = editorMode.user === 'raw' ? userNoteContentInput.innerText : convertCheckboxesToText(userNoteContentInput);
+        const title_color = userNoteColorInput.value; 
         if (!title) { showModal('Błąd', 'Tytuł notatki jest wymagany.'); return; } 
         if (currentUserNoteId) { 
             await supabase.from('notes').update({ title, content, title_color, updated_at: new Date() }).eq('id', currentUserNoteId); 
@@ -801,14 +843,27 @@
         document.getElementById('user-order-form').addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('user-order-name').value; const supplier = document.getElementById('user-order-supplier').value; await supabase.from('orders').insert([{ name, supplier }]); e.target.reset(); renderUserOrders(); });
         document.getElementById('user-new-note-btn').onclick = clearUserEditor;
         document.getElementById('user-save-note-btn').onclick = saveUserNote;
+        document.getElementById('user-toggle-raw-btn').addEventListener('click', () => {
+            const contentInput = document.getElementById('user-note-content-input');
+            const button = document.getElementById('user-toggle-raw-btn');
+            if (editorMode.user === 'render') {
+                contentInput.innerText = convertCheckboxesToText(contentInput);
+                editorMode.user = 'raw';
+                button.textContent = 'Pokaż kratki';
+            } else {
+                contentInput.innerHTML = convertTextToCheckboxes(contentInput.innerText);
+                editorMode.user = 'render';
+                button.textContent = 'Edytuj znaczniki';
+            }
+        });
         refreshAllData();
     }
 
     // --- ADMIN VIEW INITIALIZATION & NOTE LOGIC ---
     let currentAdminNoteId = null;
-    function clearAdminEditor() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = null; adminNoteTitleInput.value = ''; adminNoteContentInput.value = ''; adminNoteColorInput.value = '#000000'; adminNoteTimestamps.innerHTML = ''; adminNoteTitleInput.removeAttribute('data-current-id'); const selected = document.getElementById('note-title-list').querySelector('.selected'); if(selected) selected.classList.remove('selected'); }
-    function loadAdminNoteIntoEditor(note) { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = note.id; adminNoteTitleInput.setAttribute('data-current-id', note.id); adminNoteTitleInput.value = note.title; adminNoteContentInput.value = note.content; adminNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; adminNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); }
-    async function saveAdminNote() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'); const title = adminNoteTitleInput.value, content = adminNoteContentInput.value, title_color = adminNoteColorInput.value; if (!title) { showModal('Błąd', 'Tytuł notatki jest wymagany.'); return; } if (currentAdminNoteId) { await supabase.from('notes').update({ title, content, title_color, updated_at: new Date() }).eq('id', currentAdminNoteId); } else { const { data } = await supabase.from('notes').insert([{ title, content, title_color }]).select(); if(data && data.length > 0) { currentAdminNoteId = data[0].id; loadAdminNoteIntoEditor(data[0]); } } renderNotes(); }
+    function clearAdminEditor() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = null; adminNoteTitleInput.value = ''; adminNoteContentInput.innerHTML = ''; adminNoteColorInput.value = '#000000'; adminNoteTimestamps.innerHTML = ''; adminNoteTitleInput.removeAttribute('data-current-id'); const selected = document.getElementById('note-title-list').querySelector('.selected'); if(selected) selected.classList.remove('selected'); editorMode.admin = 'render'; document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj znaczniki'; }
+    function loadAdminNoteIntoEditor(note) { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = note.id; adminNoteTitleInput.setAttribute('data-current-id', note.id); adminNoteTitleInput.value = note.title; adminNoteContentInput.innerHTML = convertTextToCheckboxes(note.content); adminNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; adminNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); editorMode.admin = 'render'; document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj znaczniki'; }
+    async function saveAdminNote() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'); const title = adminNoteTitleInput.value; const content = editorMode.admin === 'raw' ? adminNoteContentInput.innerText : convertCheckboxesToText(adminNoteContentInput); const title_color = adminNoteColorInput.value; if (!title) { showModal('Błąd', 'Tytuł notatki jest wymagany.'); return; } if (currentAdminNoteId) { await supabase.from('notes').update({ title, content, title_color, updated_at: new Date() }).eq('id', currentAdminNoteId); } else { const { data } = await supabase.from('notes').insert([{ title, content, title_color, is_public: false }]).select(); if(data && data.length > 0) { currentAdminNoteId = data[0].id; loadAdminNoteIntoEditor(data[0]); } } renderNotes(); }
     async function deleteAdminNote() { if (!currentAdminNoteId) return; if (confirm('Czy na pewno chcesz usunąć tę notatkę?')) { await supabase.from('notes').delete().eq('id', currentAdminNoteId); clearAdminEditor(); renderNotes(); } }
     
     function initAdminView() {
@@ -818,6 +873,19 @@
         document.getElementById('new-note-btn').onclick = clearAdminEditor;
         document.getElementById('save-note-btn').onclick = saveAdminNote;
         document.getElementById('delete-note-btn').onclick = deleteAdminNote;
+        document.getElementById('admin-toggle-raw-btn').addEventListener('click', () => {
+            const contentInput = document.getElementById('note-content-input');
+            const button = document.getElementById('admin-toggle-raw-btn');
+            if (editorMode.admin === 'render') {
+                contentInput.innerText = convertCheckboxesToText(contentInput);
+                editorMode.admin = 'raw';
+                button.textContent = 'Pokaż kratki';
+            } else {
+                contentInput.innerHTML = convertTextToCheckboxes(contentInput.innerText);
+                editorMode.admin = 'render';
+                button.textContent = 'Edytuj znaczniki';
+            }
+        });
         
         refreshAllData();
     }
@@ -840,3 +908,4 @@
 </script>
 </body>
 </html>
+
