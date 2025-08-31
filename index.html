@@ -179,7 +179,7 @@
             background-color: var(--surface-dark);
             border: 1px solid var(--border-dark);
         }
-        .dark-mode form input, .dark-mode .note-content-input {
+        .dark-mode form input, .dark-mode .note-content-input, .dark-mode .raw-editor {
             background-color: #2a2a2a;
             color: var(--text-dark);
             border-color: #444;
@@ -197,6 +197,7 @@
         .note-list-column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-light); padding-right: 20px; }
         .dark-mode .note-list-column { border-right-color: var(--border-dark); }
         .note-editor-column { flex: 3; display: flex; flex-direction: column; }
+        .note-editor-content-wrapper { position: relative; flex-grow: 1; display: flex; }
         #new-note-btn, #user-new-note-btn { width: 100%; margin: 0 0 10px 0; }
         #note-title-list, #user-note-title-list { overflow-y: auto; }
         .note-list-item { padding: 10px; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
@@ -222,11 +223,14 @@
         .editor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         #note-title-input, #user-note-title-input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         #note-color-input, #user-note-color-input { height: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; background-color: white; }
-        .note-content-input {
-            flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; font-family: inherit; overflow-y: auto;
+        .note-content-input, .raw-editor {
+            flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;
         }
+        .note-content-input { overflow-y: auto; }
+        .raw-editor { resize: none; }
         .note-content-input div { display: flex; align-items: center; }
-        .note-content-input input[type="checkbox"] { margin-right: 8px; }
+        .note-content-input input[type="checkbox"] { margin-right: 8px; flex-shrink: 0; }
+        .note-content-input img, .note-content-input video { max-width: 100%; height: auto; }
         #note-timestamps, #user-note-timestamps { font-size: 0.8em; color: #888; text-align: right; margin-top: 10px; padding-right: 10px; }
         .dark-mode #note-timestamps, .dark-mode #user-note-timestamps { color: #aaa; }
         .note-editor-buttons { margin-top: 10px; text-align: right; }
@@ -244,6 +248,19 @@
         .dark-mode .modal-content { background: var(--surface-dark); color: var(--text-dark); }
         .modal-content h4 { margin-top: 0; }
         .modal-content p { white-space: pre-wrap; }
+
+        /* --- SUBTASK STYLES --- */
+        .subtask {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 5px;
+        }
+        .subtask-text.done {
+            text-decoration: line-through;
+        }
+        .task-text-container {
+             display: inline;
+        }
 
         /* --- MOBILE STYLES --- */
         @media (max-width: 768px) {
@@ -337,7 +354,7 @@
             <div class="nav-actions">
                 <button class="refresh-btn" title="Odśwież dane">🔄</button>
                 <button class="theme-toggle-btn"></button>
-                <button class="hamburger-btn" id="user-hamburger-btn">☰</button>
+                <button class="hamburger-btn" id="user-hamburger-btn">&#9776;</button>
             </div>
         </div>
         <div id="user-tasks" class="content active">
@@ -369,10 +386,13 @@
                         <input type="text" id="user-note-title-input" placeholder="Tytuł notatki...">
                         <input type="color" id="user-note-color-input" title="Wybierz kolor tytułu" value="#000000">
                     </div>
-                    <div id="user-note-content-input" class="note-content-input" contenteditable="true"></div>
+                    <div class="note-editor-content-wrapper">
+                        <div id="user-note-content-input" class="note-content-input" contenteditable="true"></div>
+                        <textarea id="user-note-content-raw" class="raw-editor" style="display: none;"></textarea>
+                    </div>
                     <div id="user-note-timestamps"></div>
                     <div class="note-editor-buttons">
-                        <button id="user-toggle-raw-btn">Edytuj znaczniki</button>
+                        <button id="user-toggle-raw-btn">Edytuj Kod</button>
                         <button id="user-save-note-btn">Zapisz</button>
                     </div>
                 </div>
@@ -392,7 +412,7 @@
             <div class="nav-actions">
                 <button class="refresh-btn" title="Odśwież dane">🔄</button>
                 <button class="theme-toggle-btn"></button>
-                <button class="hamburger-btn" id="admin-hamburger-btn">☰</button>
+                <button class="hamburger-btn" id="admin-hamburger-btn">&#9776;</button>
             </div>
         </div>
         <div id="admin-tasks" class="content">
@@ -439,10 +459,13 @@
                         <input type="text" id="note-title-input" placeholder="Tytuł notatki...">
                         <input type="color" id="note-color-input" title="Wybierz kolor tytułu">
                     </div>
-                    <div id="note-content-input" class="note-content-input" contenteditable="true"></div>
+                     <div class="note-editor-content-wrapper">
+                        <div id="note-content-input" class="note-content-input" contenteditable="true"></div>
+                        <textarea id="note-content-raw" class="raw-editor" style="display: none;"></textarea>
+                    </div>
                     <div id="note-timestamps"></div>
                     <div class="note-editor-buttons">
-                        <button id="admin-toggle-raw-btn">Edytuj znaczniki</button>
+                        <button id="admin-toggle-raw-btn">Edytuj Kod</button>
                         <button id="delete-note-btn">Usuń</button>
                         <button id="save-note-btn">Zapisz</button>
                     </div>
@@ -484,7 +507,7 @@
     const themeToggleButtons = document.querySelectorAll('.theme-toggle-btn');
     function updateThemeIcon() {
         const isDarkMode = document.body.classList.contains('dark-mode');
-        themeToggleButtons.forEach(btn => { btn.innerHTML = isDarkMode ? '☀️' : '🌙'; });
+        themeToggleButtons.forEach(btn => { btn.innerHTML = isDarkMode ? '&#9728;&#65039;' : '&#127769;'; });
     }
     function toggleTheme() {
         document.body.classList.toggle('dark-mode');
@@ -527,37 +550,63 @@
     window.switchToAdmin = switchToAdmin;
     window.switchToUser = switchToUser;
     
-    // --- NOTEBOOK CHECKBOX HELPERS ---
-    function convertTextToCheckboxes(text) {
+    // --- NOTEBOOK HELPERS ---
+    function convertTextToHtml(text) {
         if (!text) return '';
-        return text.split('\n').map(line => {
-            const trimmedLine = line.trim();
-            if (trimmedLine.startsWith('# ')) {
-                return `<div><input type="checkbox">${line.substring(2)}</div>`;
+        
+        const buttonRegex = /\[(.*?)\]\{(.*?)\}/g;
+        
+        const lines = text.split('\n');
+        const htmlLines = lines.map(line => {
+            let processedLine = line;
+            const trimmed = line.trim();
+
+            if (trimmed.startsWith('# ')) {
+                return `<div><input type="checkbox">${trimmed.substring(2)}</div>`;
+            } else if (trimmed.startsWith('& ')) {
+                return `<div><input type="checkbox" checked>${trimmed.substring(2)}</div>`;
             }
-            if (trimmedLine.startsWith('& ')) {
-                return `<div><input type="checkbox" checked>${line.substring(2)}</div>`;
-            }
-            return `<div>${line}</div>`;
-        }).join('');
+
+            processedLine = processedLine.replace(buttonRegex, (match, buttonText, link) => {
+                let href = link.trim();
+                if (!href.startsWith('http://') && !href.startsWith('https://')) {
+                    href = 'https://' + href;
+                }
+                return `<a href="${href}" target="_blank"><button>${buttonText}</button></a>`;
+            });
+
+            return `<div>${processedLine}</div>`;
+        });
+        return htmlLines.join('');
     }
 
-    function convertCheckboxesToText(element) {
+    function convertRenderedToSource(element) {
         const lines = [];
-        element.childNodes.forEach(node => {
-            if (node.nodeName === 'DIV') {
-                const checkbox = node.querySelector('input[type="checkbox"]');
+        element.childNodes.forEach(child => {
+            if (child.nodeName === 'DIV') {
+                const checkbox = child.querySelector('input[type="checkbox"]');
                 if (checkbox) {
                     const prefix = checkbox.checked ? '& ' : '# ';
-                    lines.push(prefix + node.textContent);
+                    lines.push(prefix + child.textContent);
                 } else {
-                    lines.push(node.textContent);
+                    lines.push(child.innerHTML);
                 }
-            } else {
-                lines.push(node.textContent);
             }
         });
         return lines.join('\n');
+    }
+
+    // --- TASK HELPERS ---
+    function parseTaskContent(content) {
+        if (!content) return '';
+        const subtaskRegex = /\((#|&)(.*?)\)/g;
+        let index = 0;
+        return content.replace(subtaskRegex, (match, sign, text) => {
+            const isChecked = sign === '&';
+            const textSpan = `<span class="subtask-text ${isChecked ? 'done' : ''}">${text}</span>`;
+            const checkbox = `<input type="checkbox" class="subtask-checkbox" data-index="${index++}" ${isChecked ? 'checked' : ''}>`;
+            return `<span class="subtask">${checkbox}${textSpan}</span>`;
+        });
     }
 
     // --- RENDER FUNCTIONS (GLOBAL SCOPE) ---
@@ -574,17 +623,30 @@
             itemDiv.classList.add('item-row', 'task-item');
             itemDiv.classList.toggle('done', task.done);
             if (isPriority) itemDiv.classList.add('priority');
+            itemDiv.dataset.taskId = task.id;
+            itemDiv.dataset.fullContent = task.content;
+
             const contentWrapper = document.createElement('div');
             contentWrapper.classList.add('item-content-wrapper');
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = task.done;
             checkbox.style.marginRight = '10px';
             checkbox.addEventListener('change', async () => { const { error } = await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id); if(error){ showModal('Błąd', 'Błąd aktualizacji!'); checkbox.checked = !checkbox.checked; } else { itemDiv.classList.toggle('done', checkbox.checked); if (isPriority && checkbox.checked) { const audio = new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-758719.wav'); audio.play(); } } });
+            
             const taskContent = document.createElement('span');
-            taskContent.textContent = isPriority ? task.content.substring(3).trim() : task.content;
+            taskContent.classList.add('task-text-container');
+            
+            let contentToParse = task.content;
+            if (isPriority) {
+                contentToParse = task.content.substring(3).trim();
+            }
+            taskContent.innerHTML = parseTaskContent(contentToParse);
+            
             contentWrapper.appendChild(checkbox);
             contentWrapper.appendChild(taskContent);
+            
             const rightSideInfo = document.createElement('div');
             rightSideInfo.classList.add('right-aligned-info');
             const assignees = document.createElement('div');
@@ -661,7 +723,7 @@
             actionsWrapper.classList.add('note-actions');
             const pinBtn = document.createElement('span');
             pinBtn.classList.add('note-pin-btn');
-            pinBtn.innerHTML = '📌';
+            pinBtn.innerHTML = '&#128204;';
             pinBtn.title = 'Przypnij/Odepnij';
             pinBtn.onclick = async (e) => {
                 e.stopPropagation();
@@ -692,19 +754,37 @@
             div.classList.add('item-row', 'task-item');
             div.classList.toggle('done', task.done);
             if(isPriority) div.classList.add('priority');
+            div.dataset.taskId = task.id;
+            div.dataset.fullContent = task.content;
+
             const contentWrapper = document.createElement('div');
             contentWrapper.classList.add('item-content-wrapper');
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.checked = task.done;
             checkbox.style.marginRight = '10px';
             checkbox.addEventListener('change', async () => { const { error } = await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id); if(error){ showModal('Błąd', 'Błąd aktualizacji!'); checkbox.checked = !checkbox.checked; } else { div.classList.toggle('done', checkbox.checked); } });
+            
             const label = document.createElement('label');
-            const taskText = isPriority ? task.content.substring(3).trim() : task.content;
+            let taskText = task.content;
+            if (isPriority) {
+                taskText = task.content.substring(3).trim();
+            }
+
+            const taskTextSpan = document.createElement('span');
+            taskTextSpan.innerHTML = parseTaskContent(taskText);
+
+            const otherInfoSpan = document.createElement('span');
             const dateString = task.created_at ? ` | ${new Date(task.created_at).toLocaleDateString('pl-PL')}` : '';
-            label.textContent = `${taskText} (Przypisani: ${task.assignees || 'brak'}) ${dateString}`;
+            otherInfoSpan.textContent = ` (Przypisani: ${task.assignees || 'brak'}) ${dateString}`;
+            
+            label.appendChild(taskTextSpan);
+            label.appendChild(otherInfoSpan);
+            
             contentWrapper.appendChild(checkbox);
             contentWrapper.appendChild(label);
+
             const buttonsDiv = document.createElement('div');
             const editBtn = document.createElement('button');
             editBtn.textContent = 'Edytuj';
@@ -787,12 +867,12 @@
             actionsWrapper.classList.add('note-actions'); 
             const pinBtn = document.createElement('span'); 
             pinBtn.classList.add('note-pin-btn'); 
-            pinBtn.innerHTML = '📌'; 
+            pinBtn.innerHTML = '&#128204;'; 
             pinBtn.title = 'Przypnij/Odepnij'; 
             pinBtn.onclick = async (e) => { e.stopPropagation(); await supabase.from('notes').update({ is_pinned: !note.is_pinned }).eq('id', note.id); renderNotes(); }; 
             const publishBtn = document.createElement('span'); 
             publishBtn.classList.add('note-publish-btn'); 
-            publishBtn.innerHTML = note.is_public ? '🔓' : '🔒'; 
+            publishBtn.innerHTML = note.is_public ? '&#128275;' : '&#128274;'; 
             publishBtn.title = note.is_public ? 'Uczyń prywatną' : 'Upublicznij'; 
             publishBtn.onclick = async (e) => { e.stopPropagation(); await supabase.from('notes').update({ is_public: !note.is_public }).eq('id', note.id); renderNotes(); }; 
             actionsWrapper.appendChild(pinBtn); 
@@ -820,12 +900,12 @@
 
     // --- USER VIEW INITIALIZATION & NOTE LOGIC ---
     let currentUserNoteId = null;
-    function clearUserEditor() { const userNoteTitleList = document.getElementById('user-note-title-list'); const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = null; userNoteTitleInput.value = ''; userNoteContentInput.innerHTML = ''; userNoteColorInput.value = '#000000'; userNoteTimestamps.innerHTML = ''; userNoteTitleInput.removeAttribute('data-current-id'); const selected = userNoteTitleList.querySelector('.selected'); if(selected) selected.classList.remove('selected'); editorMode.user = 'render'; document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj znaczniki'; }
-    function loadUserNoteIntoEditor(note) { const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = note.id; userNoteTitleInput.setAttribute('data-current-id', note.id); userNoteTitleInput.value = note.title; userNoteContentInput.innerHTML = convertTextToCheckboxes(note.content); userNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; userNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('user-note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); editorMode.user = 'render'; document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj znaczniki'; }
+    function clearUserEditor() { const userNoteTitleList = document.getElementById('user-note-title-list'); const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = null; userNoteTitleInput.value = ''; userNoteContentInput.innerHTML = ''; userNoteColorInput.value = '#000000'; userNoteTimestamps.innerHTML = ''; userNoteTitleInput.removeAttribute('data-current-id'); const selected = userNoteTitleList.querySelector('.selected'); if(selected) selected.classList.remove('selected'); editorMode.user = 'render'; document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod'; }
+    function loadUserNoteIntoEditor(note) { const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteContentRaw = document.getElementById('user-note-content-raw'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = note.id; userNoteTitleInput.setAttribute('data-current-id', note.id); userNoteTitleInput.value = note.title; userNoteContentInput.innerHTML = convertTextToHtml(note.content); userNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; userNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('user-note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); editorMode.user = 'render'; document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod'; userNoteContentInput.style.display = 'block'; userNoteContentRaw.style.display = 'none'; }
     async function saveUserNote() { 
-        const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'); 
+        const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteContentRaw = document.getElementById('user-note-content-raw'); 
         const title = userNoteTitleInput.value;
-        const content = editorMode.user === 'raw' ? userNoteContentInput.innerText : convertCheckboxesToText(userNoteContentInput);
+        const content = editorMode.user === 'raw' ? userNoteContentRaw.value : convertRenderedToSource(userNoteContentInput);
         const title_color = userNoteColorInput.value; 
         if (!title) { showModal('Błąd', 'Tytuł notatki jest wymagany.'); return; } 
         if (currentUserNoteId) { 
@@ -845,15 +925,20 @@
         document.getElementById('user-save-note-btn').onclick = saveUserNote;
         document.getElementById('user-toggle-raw-btn').addEventListener('click', () => {
             const contentInput = document.getElementById('user-note-content-input');
+            const rawInput = document.getElementById('user-note-content-raw');
             const button = document.getElementById('user-toggle-raw-btn');
             if (editorMode.user === 'render') {
-                contentInput.innerText = convertCheckboxesToText(contentInput);
+                rawInput.value = convertRenderedToSource(contentInput);
+                contentInput.style.display = 'none';
+                rawInput.style.display = 'block';
                 editorMode.user = 'raw';
-                button.textContent = 'Pokaż kratki';
+                button.textContent = 'Podgląd Wizualny';
             } else {
-                contentInput.innerHTML = convertTextToCheckboxes(contentInput.innerText);
+                contentInput.innerHTML = convertTextToHtml(rawInput.value);
+                rawInput.style.display = 'none';
+                contentInput.style.display = 'block';
                 editorMode.user = 'render';
-                button.textContent = 'Edytuj znaczniki';
+                button.textContent = 'Edytuj Kod';
             }
         });
         refreshAllData();
@@ -861,9 +946,9 @@
 
     // --- ADMIN VIEW INITIALIZATION & NOTE LOGIC ---
     let currentAdminNoteId = null;
-    function clearAdminEditor() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = null; adminNoteTitleInput.value = ''; adminNoteContentInput.innerHTML = ''; adminNoteColorInput.value = '#000000'; adminNoteTimestamps.innerHTML = ''; adminNoteTitleInput.removeAttribute('data-current-id'); const selected = document.getElementById('note-title-list').querySelector('.selected'); if(selected) selected.classList.remove('selected'); editorMode.admin = 'render'; document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj znaczniki'; }
-    function loadAdminNoteIntoEditor(note) { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = note.id; adminNoteTitleInput.setAttribute('data-current-id', note.id); adminNoteTitleInput.value = note.title; adminNoteContentInput.innerHTML = convertTextToCheckboxes(note.content); adminNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; adminNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); editorMode.admin = 'render'; document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj znaczniki'; }
-    async function saveAdminNote() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'); const title = adminNoteTitleInput.value; const content = editorMode.admin === 'raw' ? adminNoteContentInput.innerText : convertCheckboxesToText(adminNoteContentInput); const title_color = adminNoteColorInput.value; if (!title) { showModal('Błąd', 'Tytuł notatki jest wymagany.'); return; } if (currentAdminNoteId) { await supabase.from('notes').update({ title, content, title_color, updated_at: new Date() }).eq('id', currentAdminNoteId); } else { const { data } = await supabase.from('notes').insert([{ title, content, title_color, is_public: false }]).select(); if(data && data.length > 0) { currentAdminNoteId = data[0].id; loadAdminNoteIntoEditor(data[0]); } } renderNotes(); }
+    function clearAdminEditor() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = null; adminNoteTitleInput.value = ''; adminNoteContentInput.innerHTML = ''; adminNoteColorInput.value = '#000000'; adminNoteTimestamps.innerHTML = ''; adminNoteTitleInput.removeAttribute('data-current-id'); const selected = document.getElementById('note-title-list').querySelector('.selected'); if(selected) selected.classList.remove('selected'); editorMode.admin = 'render'; document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod'; }
+    function loadAdminNoteIntoEditor(note) { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteContentRaw = document.getElementById('note-content-raw'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = note.id; adminNoteTitleInput.setAttribute('data-current-id', note.id); adminNoteTitleInput.value = note.title; adminNoteContentInput.innerHTML = convertTextToHtml(note.content); adminNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; adminNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); editorMode.admin = 'render'; document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod'; adminNoteContentInput.style.display = 'block'; adminNoteContentRaw.style.display = 'none';}
+    async function saveAdminNote() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteContentRaw = document.getElementById('note-content-raw'); const title = adminNoteTitleInput.value; const content = editorMode.admin === 'raw' ? adminNoteContentRaw.value : convertRenderedToSource(adminNoteContentInput); const title_color = adminNoteColorInput.value; if (!title) { showModal('Błąd', 'Tytuł notatki jest wymagany.'); return; } if (currentAdminNoteId) { await supabase.from('notes').update({ title, content, title_color, updated_at: new Date() }).eq('id', currentAdminNoteId); } else { const { data } = await supabase.from('notes').insert([{ title, content, title_color, is_public: false }]).select(); if(data && data.length > 0) { currentAdminNoteId = data[0].id; loadAdminNoteIntoEditor(data[0]); } } renderNotes(); }
     async function deleteAdminNote() { if (!currentAdminNoteId) return; if (confirm('Czy na pewno chcesz usunąć tę notatkę?')) { await supabase.from('notes').delete().eq('id', currentAdminNoteId); clearAdminEditor(); renderNotes(); } }
     
     function initAdminView() {
@@ -875,21 +960,79 @@
         document.getElementById('delete-note-btn').onclick = deleteAdminNote;
         document.getElementById('admin-toggle-raw-btn').addEventListener('click', () => {
             const contentInput = document.getElementById('note-content-input');
+            const rawInput = document.getElementById('note-content-raw');
             const button = document.getElementById('admin-toggle-raw-btn');
             if (editorMode.admin === 'render') {
-                contentInput.innerText = convertCheckboxesToText(contentInput);
+                rawInput.value = convertRenderedToSource(contentInput);
+                contentInput.style.display = 'none';
+                rawInput.style.display = 'block';
                 editorMode.admin = 'raw';
-                button.textContent = 'Pokaż kratki';
+                button.textContent = 'Podgląd Wizualny';
             } else {
-                contentInput.innerHTML = convertTextToCheckboxes(contentInput.innerText);
+                contentInput.innerHTML = convertTextToHtml(rawInput.value);
+                rawInput.style.display = 'none';
+                contentInput.style.display = 'block';
                 editorMode.admin = 'render';
-                button.textContent = 'Edytuj znaczniki';
+                button.textContent = 'Edytuj Kod';
             }
         });
         
         refreshAllData();
     }
     
+    function setupTaskListeners() {
+        const taskLists = [
+            document.getElementById('supabase-task-list'),
+            document.getElementById('admin-task-list-visible'),
+            document.getElementById('admin-task-list-hidden')
+        ];
+
+        taskLists.forEach(list => {
+            if (!list) return;
+            list.addEventListener('change', async (e) => {
+                if (e.target.classList.contains('subtask-checkbox')) {
+                    const checkbox = e.target;
+                    const textSpan = checkbox.nextElementSibling;
+                    const taskRow = checkbox.closest('.item-row');
+                    
+                    if (!taskRow) return;
+
+                    const taskId = taskRow.dataset.taskId;
+                    let fullContent = taskRow.dataset.fullContent;
+                    const clickedIndex = parseInt(checkbox.dataset.index, 10);
+                    const isChecked = checkbox.checked;
+
+                    textSpan.classList.toggle('done', isChecked);
+
+                    const subtaskRegex = /\((#|&)(.*?)\)/g;
+                    let currentIndex = 0;
+                    const newContent = fullContent.replace(subtaskRegex, (match, sign, text) => {
+                        if (currentIndex === clickedIndex) {
+                            const newSign = isChecked ? '&' : '#';
+                            return `(${newSign}${text})`;
+                        }
+                        currentIndex++;
+                        return match;
+                    });
+                    
+                    taskRow.dataset.fullContent = newContent;
+
+                    const { error } = await supabase
+                        .from('tasks')
+                        .update({ content: newContent })
+                        .eq('id', taskId);
+
+                    if (error) {
+                        showModal('Błąd', 'Nie udało się zaktualizować podzadania.');
+                        checkbox.checked = !isChecked;
+                        textSpan.classList.toggle('done', !isChecked);
+                        taskRow.dataset.fullContent = fullContent;
+                    }
+                }
+            });
+        });
+    }
+
     // --- APP INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', () => {
         initUserView();
@@ -904,6 +1047,19 @@
         document.getElementById('admin-hamburger-btn').addEventListener('click', () => {
             document.getElementById('admin-nav-links').classList.toggle('open');
         });
+
+        // Handle clicks on links within note content
+        function handleNoteClick(e) {
+            const link = e.target.closest('a');
+            if (link && link.href) {
+                e.preventDefault();
+                window.open(link.href, '_blank');
+            }
+        }
+        document.getElementById('user-note-content-input').addEventListener('click', handleNoteClick);
+        document.getElementById('note-content-input').addEventListener('click', handleNoteClick);
+        
+        setupTaskListeners();
     });
 </script>
 </body>
