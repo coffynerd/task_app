@@ -139,7 +139,28 @@
             border-radius: 5px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        form input { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        form input, form textarea { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; resize: none; }
+        
+        .vacation-request-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .vacation-request-form .vacation-form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1 1 200px;
+        }
+         .vacation-request-form textarea {
+            min-height: 36px;
+        }
+
+        .vacation-request-form button {
+            margin-left: 0;
+        }
+
         button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; transition: background-color 0.3s; }
         button:disabled { background-color: #aaa; cursor: not-allowed; }
         .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
@@ -179,7 +200,7 @@
             background-color: var(--surface-dark);
             border: 1px solid var(--border-dark);
         }
-        .dark-mode form input, .dark-mode .note-content-input, .dark-mode .raw-editor {
+        .dark-mode form input, .dark-mode form textarea, .dark-mode .note-content-input, .dark-mode .raw-editor {
             background-color: #2a2a2a;
             color: var(--text-dark);
             border-color: #444;
@@ -224,10 +245,9 @@
         #note-title-input, #user-note-title-input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         #note-color-input, #user-note-color-input { height: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; background-color: white; }
         .note-content-input, .raw-editor {
-            flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;
+            flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: none;
         }
         .note-content-input { overflow-y: auto; }
-        .raw-editor { resize: none; }
         .note-content-input div { display: flex; align-items: center; }
         .note-content-input input[type="checkbox"] { margin-right: 8px; flex-shrink: 0; }
         .note-content-input img, .note-content-input video { max-width: 100%; height: auto; }
@@ -236,8 +256,8 @@
         .note-editor-buttons { margin-top: 10px; text-align: right; }
         #admin-notes button { background-color: #6c757d; }
         #admin-notes button:hover { background-color: #5a6268; }
-        #delete-note-btn { background-color: #dc3545; }
-        #delete-note-btn:hover { background-color: #c82333; }
+        #delete-note-btn, .delete-order-btn, .delete-vacation-btn { background-color: #dc3545; }
+        #delete-note-btn:hover, .delete-order-btn:hover, .delete-vacation-btn:hover { background-color: #c82333; }
 
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000;
@@ -261,7 +281,13 @@
         .task-text-container {
              display: inline;
         }
-
+        .vacation-request.accepted {
+            background-color: #d4edda;
+        }
+        .dark-mode .vacation-request.accepted {
+            background-color: #1c3d23;
+        }
+        
         /* --- MOBILE STYLES --- */
         @media (max-width: 768px) {
             .nav-links {
@@ -329,6 +355,14 @@
                 margin-left: 0;
                 margin-right: 10px;
             }
+            .vacation-request-form {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .vacation-request-form .vacation-form-row {
+                flex: initial;
+            }
         }
     </style>
 </head>
@@ -348,6 +382,7 @@
                 <a onclick="showPage('user-tasks')">Lista zadań</a>
                 <a onclick="showPage('user-order')">Do zamówienia</a>
                 <a onclick="showPage('user-schedule')">Grafik</a>
+                <a onclick="showPage('user-schedule-requests')">Wnioski do grafiku</a>
                 <a onclick="showPage('user-notes')">Notatnik</a>
                 <a onclick="switchToAdmin()">Panel Administratora</a>
             </div>
@@ -398,6 +433,31 @@
                 </div>
             </div>
         </div>
+        <div id="user-schedule-requests" class="content">
+            <h2>Złóż wniosek do grafiku</h2>
+            <form id="user-schedule-request-form" class="vacation-request-form">
+                <div class="vacation-form-row">
+                    <label for="user-employee-name">Imię i nazwisko:</label>
+                    <input type="text" id="user-employee-name" required>
+                </div>
+                <div class="vacation-form-row">
+                    <label for="user-start-date">Data od:</label>
+                    <input type="date" id="user-start-date" required>
+                </div>
+                <div class="vacation-form-row">
+                    <label for="user-end-date">Data do:</label>
+                    <input type="date" id="user-end-date" required>
+                </div>
+                <div class="vacation-form-row">
+                    <label for="user-vacation-notes">Notatka:</label>
+                    <textarea id="user-vacation-notes"></textarea>
+                </div>
+                <button type="submit">Wyślij wniosek</button>
+            </form>
+            
+            <h3>Zgłoszone wnioski</h3>
+            <div id="user-schedule-request-list">Ładowanie...</div>
+        </div>
     </div>
 
     <div id="admin-view" style="display: none;">
@@ -406,6 +466,7 @@
                 <a onclick="showPage('admin-tasks')">Lista zadań</a>
                 <a onclick="showPage('admin-order')">Do zamówienia</a>
                 <a onclick="showPage('admin-schedule')">Grafik</a>
+                <a onclick="showPage('admin-schedule-requests')">Wnioski do grafiku</a>
                 <a onclick="showPage('admin-notes')">Notatnik</a>
                 <a onclick="switchToUser()">Panel użytkownika</a>
             </div>
@@ -471,6 +532,38 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div id="admin-schedule-requests" class="content">
+            <h2>Złóż wniosek do grafiku</h2>
+            <form id="admin-schedule-request-form" class="vacation-request-form">
+                <div class="vacation-form-row">
+                    <label for="admin-employee-name">Imię i nazwisko:</label>
+                    <input type="text" id="admin-employee-name" required>
+                </div>
+                <div class="vacation-form-row">
+                    <label for="admin-start-date">Data od:</label>
+                    <input type="date" id="admin-start-date" required>
+                </div>
+                <div class="vacation-form-row">
+                    <label for="admin-end-date">Data do:</label>
+                    <input type="date" id="admin-end-date" required>
+                </div>
+                <div class="vacation-form-row">
+                    <label for="admin-vacation-notes">Notatka:</label>
+                    <textarea id="admin-vacation-notes"></textarea>
+                </div>
+                <button type="submit">Wyślij wniosek</button>
+            </form>
+            <h2>Zarządzaj wnioskami</h2>
+            <div class="filter-container" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                <label for="admin-filter-start">Filtruj od:</label>
+                <input type="date" id="admin-filter-start">
+                <label for="admin-filter-end">do:</label>
+                <input type="date" id="admin-filter-end">
+                <button id="admin-filter-btn">Filtruj</button>
+                <button id="admin-clear-filter-btn">Wyczyść</button>
+            </div>
+            <div id="admin-schedule-request-list">Ładowanie...</div>
         </div>
     </div>
 
@@ -585,9 +678,21 @@
         element.childNodes.forEach(child => {
             if (child.nodeName === 'DIV') {
                 const checkbox = child.querySelector('input[type="checkbox"]');
+                const link = child.querySelector('a');
+                const button = link ? link.querySelector('button') : null;
+
                 if (checkbox) {
                     const prefix = checkbox.checked ? '& ' : '# ';
                     lines.push(prefix + child.textContent);
+                } else if (link && button) {
+                    const buttonText = button.textContent;
+                    let href = link.getAttribute('href');
+                    if (href.startsWith('https://')) {
+                        href = href.substring(8);
+                    } else if (href.startsWith('http://')) {
+                        href = href.substring(7);
+                    }
+                    lines.push(`[${buttonText}]{${href}}`);
                 } else {
                     lines.push(child.innerHTML);
                 }
@@ -611,54 +716,83 @@
 
     // --- RENDER FUNCTIONS (GLOBAL SCOPE) ---
 
-    async function renderSupabaseTasks() {
+    async function renderSupabaseTasks(listElement, isAdmin) {
         const { data: tasks, error } = await supabase.from('tasks').select('*');
-        const taskList = document.getElementById('supabase-task-list');
-        taskList.innerHTML = '';
-        if (error) { taskList.innerHTML = 'Błąd ładowania zadań.'; return; }
+        if (error) { 
+            if(listElement) listElement.innerHTML = 'Błąd ładowania zadań.';
+            return; 
+        }
         tasks.sort((a, b) => { const aIsPriority = a.content.startsWith('!!!'); const bIsPriority = b.content.startsWith('!!!'); if (aIsPriority && !bIsPriority) return -1; if (!aIsPriority && bIsPriority) return 1; if (a.created_at && b.created_at) { return new Date(b.created_at) - new Date(a.created_at); } return 0; });
-        tasks.filter(task => task.visible !== false).forEach(task => {
-            const isPriority = task.content.startsWith('!!!');
-            const itemDiv = document.createElement('div');
-            itemDiv.classList.add('item-row', 'task-item');
-            itemDiv.classList.toggle('done', task.done);
-            if (isPriority) itemDiv.classList.add('priority');
-            itemDiv.dataset.taskId = task.id;
-            itemDiv.dataset.fullContent = task.content;
+        
+        const renderList = (tasksToRender, targetElement) => {
+            targetElement.innerHTML = '';
+            tasksToRender.forEach(task => {
+                const isPriority = task.content.startsWith('!!!');
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('item-row', 'task-item');
+                itemDiv.classList.toggle('done', task.done);
+                if (isPriority) itemDiv.classList.add('priority');
+                itemDiv.dataset.taskId = task.id;
+                itemDiv.dataset.fullContent = task.content;
 
-            const contentWrapper = document.createElement('div');
-            contentWrapper.classList.add('item-content-wrapper');
+                const contentWrapper = document.createElement('div');
+                contentWrapper.classList.add('item-content-wrapper');
 
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = task.done;
-            checkbox.style.marginRight = '10px';
-            checkbox.addEventListener('change', async () => { const { error } = await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id); if(error){ showModal('Błąd', 'Błąd aktualizacji!'); checkbox.checked = !checkbox.checked; } else { itemDiv.classList.toggle('done', checkbox.checked); if (isPriority && checkbox.checked) { const audio = new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-758719.wav'); audio.play(); } } });
-            
-            const taskContent = document.createElement('span');
-            taskContent.classList.add('task-text-container');
-            
-            let contentToParse = task.content;
-            if (isPriority) {
-                contentToParse = task.content.substring(3).trim();
-            }
-            taskContent.innerHTML = parseTaskContent(contentToParse);
-            
-            contentWrapper.appendChild(checkbox);
-            contentWrapper.appendChild(taskContent);
-            
-            const rightSideInfo = document.createElement('div');
-            rightSideInfo.classList.add('right-aligned-info');
-            const assignees = document.createElement('div');
-            assignees.classList.add('assignees');
-            const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
-            assignees.textContent = 'Osoby: ' + (assigneesList.length > 0 ? assigneesList.join(', ') : 'brak');
-            rightSideInfo.appendChild(assignees);
-            if (task.created_at) { const dateInfo = document.createElement('div'); dateInfo.classList.add('date-info'); dateInfo.textContent = new Date(task.created_at).toLocaleDateString('pl-PL'); rightSideInfo.appendChild(dateInfo); }
-            itemDiv.appendChild(contentWrapper);
-            itemDiv.appendChild(rightSideInfo);
-            taskList.appendChild(itemDiv);
-        });
+                const mainCheckbox = document.createElement('input');
+                mainCheckbox.type = 'checkbox';
+                mainCheckbox.checked = task.done;
+                mainCheckbox.style.marginRight = '10px';
+                mainCheckbox.addEventListener('change', async () => { const { error } = await supabase.from('tasks').update({ done: mainCheckbox.checked }).eq('id', task.id); if(error){ showModal('Błąd', 'Błąd aktualizacji!'); mainCheckbox.checked = !mainCheckbox.checked; } else { itemDiv.classList.toggle('done', mainCheckbox.checked); if (isPriority && mainCheckbox.checked) { const audio = new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-758719.wav'); audio.play(); } } });
+                
+                const taskContentContainer = document.createElement('span');
+                taskContentContainer.classList.add('task-text-container');
+                
+                let contentToParse = task.content;
+                if (isPriority) {
+                    contentToParse = task.content.substring(3).trim();
+                }
+                taskContentContainer.innerHTML = parseTaskContent(contentToParse);
+                
+                contentWrapper.appendChild(mainCheckbox);
+                contentWrapper.appendChild(taskContentContainer);
+                
+                const rightSideInfo = document.createElement('div');
+                rightSideInfo.classList.add('right-aligned-info');
+                const assignees = document.createElement('div');
+                assignees.classList.add('assignees');
+                const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
+                assignees.textContent = 'Osoby: ' + (assigneesList.length > 0 ? assigneesList.join(', ') : 'brak');
+                rightSideInfo.appendChild(assignees);
+                if (task.created_at) { const dateInfo = document.createElement('div'); dateInfo.classList.add('date-info'); dateInfo.textContent = new Date(task.created_at).toLocaleDateString('pl-PL'); rightSideInfo.appendChild(dateInfo); }
+                itemDiv.appendChild(contentWrapper);
+                itemDiv.appendChild(rightSideInfo);
+
+                 if (isAdmin) {
+                    const buttonsDiv = document.createElement('div');
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = 'Edytuj';
+                    editBtn.onclick = async () => { const newContent = prompt('Nowa treść zadania:', task.content); const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', task.assignees || ''); if (newContent !== null && newAssignees !== null) { await supabase.from('tasks').update({ content: newContent, assignees: newAssignees }).eq('id', task.id); refreshAllData(); } };
+                    const toggleBtn = document.createElement('button');
+                    toggleBtn.textContent = task.visible === false ? 'Odkryj' : 'Ukryj';
+                    toggleBtn.onclick = async () => { await supabase.from('tasks').update({ visible: !task.visible }).eq('id', task.id); refreshAllData(); };
+                    buttonsDiv.appendChild(editBtn);
+                    buttonsDiv.appendChild(toggleBtn);
+                    itemDiv.appendChild(buttonsDiv);
+                }
+
+                targetElement.appendChild(itemDiv);
+            });
+        };
+
+        if(isAdmin) {
+             const visibleTasks = tasks.filter(t => t.visible !== false);
+             const hiddenTasks = tasks.filter(t => t.visible === false);
+             renderList(visibleTasks, document.getElementById('admin-task-list-visible'));
+             renderList(hiddenTasks, document.getElementById('admin-task-list-hidden'));
+        } else {
+             const visibleTasks = tasks.filter(t => t.visible !== false);
+             renderList(visibleTasks, listElement);
+        }
     }
 
     async function renderUserOrders() {
@@ -740,66 +874,6 @@
         if(currentUserNoteId) { const selectedItem = userNoteTitleList.querySelector(`[data-note-id='${currentUserNoteId}']`); if(selectedItem) selectedItem.classList.add('selected'); } 
     }
 
-    async function renderAdminTasks() {
-        const adminTaskList = document.getElementById('admin-task-list-visible');
-        const adminHiddenTaskList = document.getElementById('admin-task-list-hidden');
-        const { data: tasks, error } = await supabase.from('tasks').select('*');
-        adminTaskList.innerHTML = '';
-        adminHiddenTaskList.innerHTML = '';
-        if (error) { adminTaskList.textContent = 'Błąd ładowania zadań.'; return; }
-        tasks.sort((a, b) => { const aIsPriority = a.content.startsWith('!!!'); const bIsPriority = b.content.startsWith('!!!'); if (aIsPriority && !bIsPriority) return -1; if (!aIsPriority && bIsPriority) return 1; if (a.created_at && b.created_at) { return new Date(b.created_at) - new Date(a.created_at); } return 0; });
-        tasks.forEach(task => {
-            const isPriority = task.content.startsWith('!!!');
-            const div = document.createElement('div');
-            div.classList.add('item-row', 'task-item');
-            div.classList.toggle('done', task.done);
-            if(isPriority) div.classList.add('priority');
-            div.dataset.taskId = task.id;
-            div.dataset.fullContent = task.content;
-
-            const contentWrapper = document.createElement('div');
-            contentWrapper.classList.add('item-content-wrapper');
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = task.done;
-            checkbox.style.marginRight = '10px';
-            checkbox.addEventListener('change', async () => { const { error } = await supabase.from('tasks').update({ done: checkbox.checked }).eq('id', task.id); if(error){ showModal('Błąd', 'Błąd aktualizacji!'); checkbox.checked = !checkbox.checked; } else { div.classList.toggle('done', checkbox.checked); } });
-            
-            const label = document.createElement('label');
-            let taskText = task.content;
-            if (isPriority) {
-                taskText = task.content.substring(3).trim();
-            }
-
-            const taskTextSpan = document.createElement('span');
-            taskTextSpan.innerHTML = parseTaskContent(taskText);
-
-            const otherInfoSpan = document.createElement('span');
-            const dateString = task.created_at ? ` | ${new Date(task.created_at).toLocaleDateString('pl-PL')}` : '';
-            otherInfoSpan.textContent = ` (Przypisani: ${task.assignees || 'brak'}) ${dateString}`;
-            
-            label.appendChild(taskTextSpan);
-            label.appendChild(otherInfoSpan);
-            
-            contentWrapper.appendChild(checkbox);
-            contentWrapper.appendChild(label);
-
-            const buttonsDiv = document.createElement('div');
-            const editBtn = document.createElement('button');
-            editBtn.textContent = 'Edytuj';
-            editBtn.onclick = async () => { const newContent = prompt('Nowa treść zadania:', task.content); const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', task.assignees || ''); if (newContent !== null && newAssignees !== null) { await supabase.from('tasks').update({ content: newContent, assignees: newAssignees }).eq('id', task.id); renderAdminTasks(); } };
-            const toggleBtn = document.createElement('button');
-            toggleBtn.textContent = task.visible === false ? 'Odkryj' : 'Ukryj';
-            toggleBtn.onclick = async () => { await supabase.from('tasks').update({ visible: !task.visible }).eq('id', task.id); renderAdminTasks(); };
-            buttonsDiv.appendChild(editBtn);
-            buttonsDiv.appendChild(toggleBtn);
-            div.appendChild(contentWrapper);
-            div.appendChild(buttonsDiv);
-            (task.visible === false ? adminHiddenTaskList : adminTaskList).appendChild(div);
-        });
-    }
-
     async function renderAdminOrders() {
         const { data: orders, error } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
         const activeList = document.getElementById('admin-order-list-active');
@@ -823,6 +897,7 @@
             dateInfo.textContent = new Date(order.created_at).toLocaleDateString('pl-PL');
             const buttonsDiv = document.createElement('div');
             buttonsDiv.classList.add('order-buttons');
+            
             if (!order.is_completed) {
                 const doneBtn = document.createElement('button');
                 doneBtn.textContent = 'Zamówione';
@@ -833,6 +908,18 @@
                 buttonsDiv.appendChild(editBtn);
                 buttonsDiv.appendChild(doneBtn);
             }
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Usuń';
+            deleteBtn.classList.add('delete-order-btn');
+            deleteBtn.onclick = async () => { 
+                if (confirm('Czy na pewno chcesz usunąć ten element?')) {
+                    await supabase.from('orders').delete().eq('id', order.id); 
+                    renderAdminOrders(); 
+                }
+            };
+            buttonsDiv.appendChild(deleteBtn);
+
             itemDiv.appendChild(contentWrapper);
             itemDiv.appendChild(dateInfo);
             itemDiv.appendChild(buttonsDiv);
@@ -886,13 +973,109 @@
         if(currentNoteId) { const selectedItem = noteTitleList.querySelector(`[data-note-id='${currentNoteId}']`); if(selectedItem) selectedItem.classList.add('selected'); } 
     }
 
+    async function renderUserScheduleRequests() {
+        const listEl = document.getElementById('user-schedule-request-list');
+        const { data, error } = await supabase.from('vacation_requests').select('*').eq('is_visible', true).order('start_date');
+        listEl.innerHTML = '';
+        if (error) { listEl.innerHTML = 'Błąd ładowania wniosków.'; return; }
+        
+        if (data.length === 0) {
+            listEl.innerHTML = 'Brak zgłoszonych wniosków.'; 
+            return;
+        }
+        
+        data.forEach(req => {
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('item-row', 'vacation-request');
+            itemDiv.classList.toggle('accepted', req.is_accepted);
+            
+            let status = req.is_accepted ? '(Zaakceptowany)' : '(Oczekujący)';
+
+            let content = `
+                <span><strong>${req.employee_name}</strong>: ${req.start_date} do ${req.end_date} ${status}</span>
+                <span>${req.notes || ''}</span>
+            `;
+
+            let buttons = `
+                <div class="vacation-user-actions">
+                    <button class="edit-vacation-btn" data-id="${req.id}">Edytuj</button>
+                </div>
+            `;
+
+            itemDiv.innerHTML = content + buttons;
+            listEl.appendChild(itemDiv);
+        });
+    }
+
+
+    async function renderAdminScheduleRequests() {
+        const { data, error } = await supabase.from('vacation_requests').select('*').order('created_at', { ascending: false });
+        const listEl = document.getElementById('admin-schedule-request-list');
+        listEl.innerHTML = '';
+        if (error) { listEl.innerHTML = 'Błąd ładowania wniosków.'; return; }
+
+        const filterStartDate = document.getElementById('admin-filter-start').value;
+        const filterEndDate = document.getElementById('admin-filter-end').value;
+
+        let filteredData = data;
+        if (filterStartDate && filterEndDate) {
+            const filterStart = new Date(filterStartDate);
+            const filterEnd = new Date(filterEndDate);
+
+            filteredData = data.filter(req => {
+                const reqStart = new Date(req.start_date);
+                const reqEnd = new Date(req.end_date);
+                return reqStart <= filterEnd && reqEnd >= filterStart;
+            });
+        }
+        
+        if (filteredData.length === 0) { listEl.innerHTML = 'Brak wniosków spełniających kryteria.'; return; }
+
+        filteredData.forEach(req => {
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('item-row', 'vacation-request');
+            itemDiv.classList.toggle('accepted', req.is_accepted);
+
+            const createdDate = new Date(req.created_at).toLocaleString('pl-PL');
+            const content = `
+                <span><strong>${req.employee_name}</strong>: ${req.start_date} do ${req.end_date} (Zgłoszono: ${createdDate})</span>
+                <span><i>${req.notes || 'Brak notatki'}</i></span>
+            `;
+
+            const actions = `
+                <div class="vacation-admin-actions">
+                    <label>
+                        <input type="checkbox" class="accept-vacation-checkbox" data-id="${req.id}" ${req.is_accepted ? 'checked' : ''}>
+                        Zaakceptowany
+                    </label>
+                    <button class="toggle-visibility-btn" data-id="${req.id}" data-visible="${req.is_visible}">${req.is_visible ? 'Ukryj' : 'Pokaż'}</button>
+                    <button class="edit-vacation-btn" data-id="${req.id}">Edytuj</button>
+                    <button class="delete-vacation-btn" data-id="${req.id}">Usuń</button>
+                </div>
+            `;
+            
+            itemDiv.innerHTML = content + actions;
+            listEl.appendChild(itemDiv);
+        });
+    }
+
     async function refreshAllData() {
         console.log("Odświeżanie danych...");
-        const userPromises = [ renderSupabaseTasks(), renderUserOrders(), renderUserNotes() ];
+        const userPromises = [
+            renderSupabaseTasks(document.getElementById('supabase-task-list'), false), 
+            renderUserOrders(), 
+            renderUserNotes(),
+            renderUserScheduleRequests()
+        ];
         await Promise.all(userPromises);
         
         if (isAdminInitialized) {
-            const adminPromises = [ renderAdminTasks(), renderAdminOrders(), renderNotes() ];
+            const adminPromises = [
+                renderSupabaseTasks(null, true), 
+                renderAdminOrders(), 
+                renderNotes(),
+                renderAdminScheduleRequests()
+            ];
             await Promise.all(adminPromises);
         }
         console.log("Dane odświeżone.");
@@ -941,6 +1124,53 @@
                 button.textContent = 'Edytuj Kod';
             }
         });
+
+        document.getElementById('user-schedule-request-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const employee_name = document.getElementById('user-employee-name').value;
+            const start_date = document.getElementById('user-start-date').value;
+            const end_date = document.getElementById('user-end-date').value;
+            const notes = document.getElementById('user-vacation-notes').value;
+
+            if (new Date(end_date) < new Date(start_date)) {
+                showModal('Błąd', 'Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.');
+                return;
+            }
+
+            const { error } = await supabase.from('vacation_requests').insert([
+                { employee_name, start_date, end_date, notes, is_visible: true }
+            ]);
+
+            if (error) {
+                showModal('Błąd', 'Nie udało się wysłać wniosku.');
+            } else {
+                showModal('Sukces', 'Wniosek został pomyślnie wysłany.');
+                e.target.reset();
+                refreshAllData();
+            }
+        });
+        
+        document.getElementById('user-schedule-request-list').addEventListener('click', async (e) => {
+            const target = e.target;
+            const reqId = target.dataset.id;
+            if (!reqId) return;
+
+            if (target.classList.contains('edit-vacation-btn')) {
+                 const { data, error } = await supabase.from('vacation_requests').select('*').eq('id', reqId).single();
+                 if (error || !data) { showModal('Błąd', 'Nie można znaleźć wniosku.'); return; }
+                 
+                 const new_start_date = prompt('Nowa data rozpoczęcia:', data.start_date);
+                 if (new_start_date === null) return;
+                 const new_end_date = prompt('Nowa data zakończenia:', data.end_date);
+                 if (new_end_date === null) return;
+                 const new_notes = prompt('Nowa notatka:', data.notes);
+                 if (new_notes === null) return;
+
+                 await supabase.from('vacation_requests').update({ start_date: new_start_date, end_date: new_end_date, notes: new_notes }).eq('id', reqId);
+                 renderUserScheduleRequests();
+            }
+        });
+
         refreshAllData();
     }
 
@@ -952,7 +1182,7 @@
     async function deleteAdminNote() { if (!currentAdminNoteId) return; if (confirm('Czy na pewno chcesz usunąć tę notatkę?')) { await supabase.from('notes').delete().eq('id', currentAdminNoteId); clearAdminEditor(); renderNotes(); } }
     
     function initAdminView() {
-        document.getElementById('admin-task-form').addEventListener('submit', async (e) => { e.preventDefault(); const content = document.getElementById('admin-task-input').value.trim(); const assignees = document.getElementById('admin-assignee-input').value.trim(); if (!content) return; await supabase.from('tasks').insert([{ content, assignees, done: false, visible: true }]); e.target.reset(); renderAdminTasks(); });
+        document.getElementById('admin-task-form').addEventListener('submit', async (e) => { e.preventDefault(); const content = document.getElementById('admin-task-input').value.trim(); const assignees = document.getElementById('admin-assignee-input').value.trim(); if (!content) return; await supabase.from('tasks').insert([{ content, assignees, done: false, visible: true }]); e.target.reset(); refreshAllData(); });
         document.getElementById('admin-order-form').addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('admin-order-name').value; const supplier = document.getElementById('admin-order-supplier').value; await supabase.from('orders').insert([{ name, supplier }]); e.target.reset(); renderAdminOrders(); });
         
         document.getElementById('new-note-btn').onclick = clearAdminEditor;
@@ -977,6 +1207,75 @@
             }
         });
         
+        document.getElementById('admin-schedule-request-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const employee_name = document.getElementById('admin-employee-name').value;
+            const start_date = document.getElementById('admin-start-date').value;
+            const end_date = document.getElementById('admin-end-date').value;
+            const notes = document.getElementById('admin-vacation-notes').value;
+
+            if (new Date(end_date) < new Date(start_date)) {
+                showModal('Błąd', 'Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.');
+                return;
+            }
+
+            const { error } = await supabase.from('vacation_requests').insert([
+                { employee_name, start_date, end_date, notes, is_visible: true }
+            ]);
+
+            if (error) {
+                showModal('Błąd', 'Nie udało się wysłać wniosku.');
+            } else {
+                showModal('Sukces', 'Wniosek został pomyślnie wysłany.');
+                e.target.reset();
+                refreshAllData();
+            }
+        });
+
+        document.getElementById('admin-schedule-request-list').addEventListener('click', async (e) => {
+            const target = e.target;
+            const reqId = target.dataset.id;
+            if (!reqId) return;
+
+            if (target.classList.contains('accept-vacation-checkbox')) {
+                const is_accepted = target.checked;
+                await supabase.from('vacation_requests').update({ is_accepted }).eq('id', reqId);
+                target.closest('.vacation-request').classList.toggle('accepted', is_accepted);
+            }
+            if (target.classList.contains('toggle-visibility-btn')) {
+                const is_visible = !(target.dataset.visible === 'true');
+                await supabase.from('vacation_requests').update({ is_visible }).eq('id', reqId);
+                renderAdminScheduleRequests();
+            }
+            if (target.classList.contains('edit-vacation-btn')) {
+                 const { data, error } = await supabase.from('vacation_requests').select('*').eq('id', reqId).single();
+                 if (error || !data) { showModal('Błąd', 'Nie można znaleźć wniosku.'); return; }
+                 
+                 const new_start_date = prompt('Nowa data rozpoczęcia:', data.start_date);
+                 if (new_start_date === null) return;
+                 const new_end_date = prompt('Nowa data zakończenia:', data.end_date);
+                 if (new_end_date === null) return;
+                 const new_notes = prompt('Nowa notatka:', data.notes);
+                 if (new_notes === null) return;
+
+                 await supabase.from('vacation_requests').update({ start_date: new_start_date, end_date: new_end_date, notes: new_notes }).eq('id', reqId);
+                 renderAdminScheduleRequests();
+            }
+             if (target.classList.contains('delete-vacation-btn')) {
+                if (confirm('Czy na pewno chcesz usunąć ten wniosek?')) {
+                    await supabase.from('vacation_requests').delete().eq('id', reqId);
+                    renderAdminScheduleRequests();
+                }
+            }
+        });
+        
+        document.getElementById('admin-filter-btn').addEventListener('click', renderAdminScheduleRequests);
+        document.getElementById('admin-clear-filter-btn').addEventListener('click', () => {
+            document.getElementById('admin-filter-start').value = '';
+            document.getElementById('admin-filter-end').value = '';
+            renderAdminScheduleRequests();
+        });
+
         refreshAllData();
     }
     
