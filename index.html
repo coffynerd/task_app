@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -709,6 +710,7 @@
     function convertRenderedToSource(element) {
         const lines = [];
         element.childNodes.forEach(child => {
+            // Handle DIV elements (usually for lines after the first, or lines with checkboxes)
             if (child.nodeName === 'DIV') {
                 const checkbox = child.querySelector('input[type="checkbox"]');
                 const link = child.querySelector('a');
@@ -716,7 +718,8 @@
 
                 if (checkbox) {
                     const prefix = checkbox.checked ? '& ' : '# ';
-                    lines.push(prefix + child.textContent);
+                    // We use textContent to get just the text, excluding the checkbox itself
+                    lines.push(prefix + child.textContent.trim());
                 } else if (link && button) {
                     const buttonText = button.textContent;
                     let href = link.getAttribute('href');
@@ -727,12 +730,18 @@
                     }
                     lines.push(`[${buttonText}]{${href}}`);
                 } else {
-                    lines.push(child.innerHTML);
+                    // Use textContent for safety, it gets the text without any potential HTML tags
+                    lines.push(child.textContent);
                 }
+            } 
+            // Handle raw text nodes (often the first line in an empty editor)
+            else if (child.nodeName === '#text' && child.textContent.trim()) {
+                lines.push(child.textContent);
             }
         });
         return lines.join('\n');
     }
+
 
     // --- TASK HELPERS ---
     function parseTaskContent(content) {
