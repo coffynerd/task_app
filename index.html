@@ -16,6 +16,8 @@
             --border-light: #ddd;
             --border-dark: #333;
             --priority-color: #B8860B; /* Ciemny złoty dla trybu jasnego */
+            --supabase-source-color: #56a761;
+            --firebase-source-color: #ffca28;
         }
         body {
             font-family: Arial, sans-serif;
@@ -25,12 +27,12 @@
             transition: background-color 0.3s, color 0.3s;
         }
         .nav-bar {
-            overflow: visible; /* Changed from hidden for mobile menu */
+            overflow: visible;
             padding: 0 20px;
             color: white;
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Changed for mobile */
+            justify-content: space-between;
             position: relative;
         }
         .nav-links {
@@ -68,7 +70,7 @@
             color: white;
         }
         .hamburger-btn {
-            display: none; /* Hidden by default */
+            display: none;
             font-size: 1.8em;
             background: none;
             border: none;
@@ -88,7 +90,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap; /* Allow wrapping on small screens */
+            flex-wrap: wrap;
             gap: 10px;
         }
         .item-row.done {
@@ -101,7 +103,7 @@
             font-weight: bold;
         }
         .dark-mode .item-row.priority {
-            color: #ffc101; 
+            color: #ffc101;
         }
         .item-row.priority.done {
             color: red;
@@ -110,9 +112,9 @@
             text-decoration: none;
         }
         .item-content-wrapper {
-              display: flex;
-              align-items: center;
-              flex-grow: 1;
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
         }
         .assignees, .supplier-info {
             color: #555;
@@ -131,16 +133,16 @@
             text-align: right;
         }
         h2, h3 { color: var(--text-light); }
-        form { 
-            margin-top: 20px; 
-            margin-bottom: 20px; 
-            background-color: var(--surface-light); 
-            padding: 15px; 
-            border-radius: 5px; 
+        form {
+            margin-top: 20px;
+            margin-bottom: 20px;
+            background-color: var(--surface-light);
+            padding: 15px;
+            border-radius: 5px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         form input, form textarea { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; resize: none; }
-        
+
         .vacation-request-form {
             display: flex;
             flex-wrap: wrap;
@@ -153,7 +155,7 @@
             gap: 5px;
             flex: 1 1 200px;
         }
-         .vacation-request-form textarea {
+        .vacation-request-form textarea {
             min-height: 36px;
         }
 
@@ -189,7 +191,7 @@
         .page-header a:hover {
             background-color: #218838;
         }
-        
+
         /* --- DARK MODE STYLES --- */
         body.dark-mode {
             background-color: var(--background-dark);
@@ -200,7 +202,7 @@
             background-color: var(--surface-dark);
             border: 1px solid var(--border-dark);
         }
-        .dark-mode form input, .dark-mode form textarea, .dark-mode .note-content-input, .dark-mode .raw-editor {
+        .dark-mode form input, .dark-mode form textarea, .dark-mode .note-content-input, .dark-mode .raw-editor, .dark-mode .modal-input {
             background-color: #2a2a2a;
             color: var(--text-dark);
             border-color: #444;
@@ -212,7 +214,7 @@
             border-color: var(--border-dark);
             filter: invert(90%) hue-rotate(180deg);
         }
-        
+
         /* --- STYLE DLA NOTATNIKA --- */
         .notebook-container { display: flex; gap: 20px; height: 80vh; }
         .note-list-column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-light); padding-right: 20px; }
@@ -239,8 +241,8 @@
         .note-actions { display: flex; align-items: center; }
         .note-pin-btn, .note-publish-btn, .note-share-btn { cursor: pointer; opacity: 0.6; font-size: 1.1em; margin-left: 10px; }
         .note-pin-btn:hover, .note-publish-btn:hover, .note-share-btn:hover { opacity: 1; }
-        .note-list-item.pinned .note-pin-btn { opacity: 1; }
-        .note-list-item.public .note-publish-btn { opacity: 1; color: #007bff; } 
+        .note-list-item.pinned .note-pin-btn { opacity: 1; color: #007bff; }
+        .note-list-item.public .note-publish-btn { opacity: 1; color: #28a745; }
         .editor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         #note-title-input, #user-note-title-input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         #note-color-input, #user-note-color-input { height: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; background-color: white; }
@@ -256,8 +258,8 @@
         .note-editor-buttons { margin-top: 10px; text-align: right; }
         #admin-notes button { background-color: #6c757d; }
         #admin-notes button:hover { background-color: #5a6268; }
-        #delete-note-btn, .delete-order-btn, .delete-vacation-btn { background-color: #dc3545; }
-        #delete-note-btn:hover, .delete-order-btn:hover, .delete-vacation-btn:hover { background-color: #c82333; }
+        #delete-note-btn, .delete-order-btn, .delete-vacation-btn, .delete-task-btn { background-color: #dc3545; }
+        #delete-note-btn:hover, .delete-order-btn:hover, .delete-vacation-btn:hover, .delete-task-btn:hover { background-color: #c82333; }
 
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000;
@@ -268,6 +270,13 @@
         .dark-mode .modal-content { background: var(--surface-dark); color: var(--text-dark); }
         .modal-content h4 { margin-top: 0; }
         .modal-content p { white-space: pre-wrap; }
+        .modal-input {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
 
         /* --- SUBTASK STYLES --- */
         .subtask {
@@ -279,7 +288,7 @@
             text-decoration: line-through;
         }
         .task-text-container {
-             display: inline;
+            display: inline;
         }
         .vacation-request.accepted {
             background-color: #d4edda;
@@ -287,7 +296,25 @@
         .dark-mode .vacation-request.accepted {
             background-color: #1c3d23;
         }
-        
+        .source-tag {
+            font-size: 0.7em;
+            padding: 2px 5px;
+            border-radius: 3px;
+            margin-left: 5px;
+            font-weight: normal;
+            color: white;
+        }
+        .source-tag.supabase {
+            background-color: var(--supabase-source-color);
+        }
+        .source-tag.firebase {
+            background-color: var(--firebase-source-color);
+            color: var(--text-light); /* Make text readable on light yellow */
+        }
+        .dark-mode .source-tag.firebase {
+            color: black;
+        }
+
         /* --- MOBILE STYLES --- */
         @media (max-width: 768px) {
             .nav-links {
@@ -309,19 +336,19 @@
                 text-align: left;
             }
             .nav-bar .nav-links {
-                flex-grow: 0; /* Reset flex-grow */
+                flex-grow: 0;
             }
             .hamburger-btn {
                 display: block;
             }
             .nav-bar .nav-actions {
-                order: 2; /* Move actions to the right */
+                order: 2;
             }
             .nav-bar .nav-links {
-                order: 3; /* Ensure links are below */
+                order: 3;
                 width: 100%;
             }
-            .nav-bar::before { /* Pseudo-element for title */
+            .nav-bar::before {
                 content: "Lista Zadań";
                 order: 1;
                 flex-grow: 1;
@@ -329,7 +356,7 @@
             }
             .notebook-container {
                 flex-direction: column;
-                height: 75vh; /* Adjusted height for mobile */
+                height: 75vh;
             }
             .note-list-column {
                 border-right: none;
@@ -337,8 +364,8 @@
                 border-bottom: 1px solid var(--border-light);
                 padding-bottom: 20px;
                 margin-bottom: 20px;
-                flex-shrink: 0; /* Prevent list from shrinking */
-                max-height: 30%; /* Limit list height */
+                flex-shrink: 0;
+                max-height: 30%;
             }
             .dark-mode .note-list-column {
                 border-bottom-color: var(--border-dark);
@@ -367,7 +394,7 @@
     </style>
 </head>
 <body>
-    <!-- Modal for alerts and AI responses -->
+    <!-- Modal for alerts -->
     <div id="modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h4 id="modal-title"></h4>
@@ -376,15 +403,40 @@
         </div>
     </div>
 
+    <!-- Modal for prompts -->
+    <div id="promptModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h4 id="promptModal-title"></h4>
+            <p id="promptModal-message"></p>
+            <input type="text" id="promptModal-input" class="modal-input">
+            <div style="margin-top: 15px;">
+                <button id="promptModal-ok-btn">OK</button>
+                <button id="promptModal-cancel-btn">Anuluj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for confirms -->
+    <div id="confirmModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h4 id="confirmModal-title"></h4>
+            <p id="confirmModal-message"></p>
+            <div style="margin-top: 15px;">
+                <button id="confirmModal-yes-btn">Tak</button>
+                <button id="confirmModal-no-btn">Nie</button>
+            </div>
+        </div>
+    </div>
+
     <div id="user-view">
         <div class="nav-bar blue-nav">
             <div class="nav-links" id="user-nav-links">
-                <a onclick="showPage('user-tasks')">Lista zadań</a>
-                <a onclick="showPage('user-order')">Do zamówienia</a>
-                <a onclick="showPage('user-schedule')">Grafik</a>
-                <a onclick="showPage('user-schedule-requests')">Wnioski do grafiku</a>
-                <a onclick="showPage('user-notes')">Notatnik</a>
-                <a onclick="switchToAdmin()">Panel Administratora</a>
+                <a data-page="user-tasks">Lista zadań</a>
+                <a data-page="user-order">Do zamówienia</a>
+                <a data-page="user-schedule">Grafik</a>
+                <a data-page="user-schedule-requests">Wnioski do grafiku</a>
+                <a data-page="user-notes">Notatnik</a>
+                <a id="switch-to-admin-btn">Panel Administratora</a>
             </div>
             <div class="nav-actions">
                 <button class="refresh-btn" title="Odśwież dane">🔄</button>
@@ -394,7 +446,7 @@
         </div>
         <div id="user-tasks" class="content active">
             <h2>Lista Zadań</h2>
-            <div id="supabase-task-list">Ładowanie...</div>
+            <div id="user-task-list">Ładowanie...</div>
         </div>
         <div id="user-order" class="content">
             <h2>Do zamówienia</h2>
@@ -454,22 +506,22 @@
                 </div>
                 <button type="submit">Wyślij wniosek</button>
             </form>
-            
+
             <h3>Zgłoszone wnioski</h3>
-            <div id="user-schedule-request-list">Ładowanie...</div>
+            <div id="user-schedule-request-list"></div>
         </div>
     </div>
 
     <div id="admin-view" style="display: none;">
         <div class="nav-bar gray-nav">
             <div class="nav-links" id="admin-nav-links">
-                <a onclick="showPage('admin-tasks')">Lista zadań</a>
-                <a onclick="showPage('admin-order')">Do zamówienia</a>
-                <a onclick="showPage('admin-schedule')">Grafik</a>
-                <a onclick="showPage('admin-schedule-requests')">Wnioski do grafiku</a>
-                <a onclick="showPage('admin-notes')">Notatnik</a>
-                <a onclick="switchToUser()">Panel użytkownika</a>
-                <a onclick="handleCommandClick()">Komendy</a>
+                <a data-page="admin-tasks">Lista zadań</a>
+                <a data-page="admin-order">Do zamówienia</a>
+                <a data-page="admin-schedule">Grafik</a>
+                <a data-page="admin-schedule-requests">Wnioski do grafiku</a>
+                <a data-page="admin-notes">Notatnik</a>
+                <a id="switch-to-user-btn">Panel użytkownika</a>
+                <a id="admin-commands-btn">Komendy</a>
             </div>
             <div class="nav-actions">
                 <button class="refresh-btn" title="Odśwież dane">🔄</button>
@@ -480,26 +532,26 @@
         <div id="admin-tasks" class="content">
             <h2>Panel Administratora</h2>
             <form id="admin-task-form">
-                <h3>Dodaj zadanie</h3>
+                <h3>Dodaj zadanie (tylko Firebase)</h3>
                 <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
                 <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
                 <button type="submit">Dodaj</button>
             </form>
-            <h3>Lista zadań</h3>
+            <h3>Lista zadań (Supabase i Firebase)</h3>
             <div id="admin-task-list-visible">Ładowanie...</div>
-            <h3>Zadania ukryte</h3>
+            <h3>Zadania ukryte (Supabase i Firebase)</h3>
             <div id="admin-task-list-hidden"></div>
         </div>
         <div id="admin-order" class="content">
             <h2>Do zamówienia (Admin)</h2>
-             <form id="admin-order-form">
+            <form id="admin-order-form">
                 <input type="text" id="admin-order-name" placeholder="Nazwa produktu (!!! dla priorytetu)" required>
                 <input type="text" id="admin-order-supplier" placeholder="Dostawca">
                 <button type="submit">Dodaj do listy</button>
             </form>
-            <h3>Pozycje do zamówienia</h3>
+            <h3>Pozycje do zamówienia (Supabase i Firebase)</h3>
             <div id="admin-order-list-active"></div>
-            <h3>Zamówienia zrealizowane</h3>
+            <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
             <div id="admin-order-list-completed"></div>
         </div>
         <div id="admin-schedule" class="content">
@@ -521,7 +573,7 @@
                         <input type="text" id="note-title-input" placeholder="Tytuł notatki...">
                         <input type="color" id="note-color-input" title="Wybierz kolor tytułu">
                     </div>
-                     <div class="note-editor-content-wrapper">
+                    <div class="note-editor-content-wrapper">
                         <div id="note-content-input" class="note-content-input" contenteditable="true"></div>
                         <textarea id="note-content-raw" class="raw-editor" style="display: none;"></textarea>
                     </div>
@@ -535,7 +587,7 @@
             </div>
         </div>
         <div id="admin-schedule-requests" class="content">
-            <h2>Złóż wniosek do grafiku</h2>
+            <h2>Złóż wniosek do grafiku (tylko Firebase)</h2>
             <form id="admin-schedule-request-form" class="vacation-request-form">
                 <div class="vacation-form-row">
                     <label for="admin-employee-name">Imię i nazwisko:</label>
@@ -555,7 +607,7 @@
                 </div>
                 <button type="submit">Wyślij wniosek</button>
             </form>
-            <h2>Zarządzaj wnioskami</h2>
+            <h2>Zarządzaj wnioskami (Supabase i Firebase)</h2>
             <div class="filter-container" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
                 <label for="admin-filter-start">Filtruj od:</label>
                 <input type="date" id="admin-filter-start">
@@ -564,19 +616,76 @@
                 <button id="admin-filter-btn">Filtruj</button>
                 <button id="admin-clear-filter-btn">Wyczyść</button>
             </div>
-            <div id="admin-schedule-request-list">Ładowanie...</div>
+            <h3>Widoczne wnioski</h3>
+            <div id="admin-schedule-request-list-visible">Ładowanie...</div>
+            <h3>Ukryte wnioski</h3>
+            <div id="admin-schedule-request-list-hidden">Ładowanie...</div>
         </div>
     </div>
 
 <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    // --- GLOBAL STATE AND VIEW MANAGEMENT ---
-    let isAdminInitialized = false;
+    // --- CONFIGURATION ---
+    const firebaseConfigFromEnv = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+    const firebaseConfig = firebaseConfigFromEnv || {
+        apiKey: "AIzaSyDT2h4LtrlLP0d2X4jWyaQKabzUbpK_elA",
+        authDomain: "psb-app-58090.firebaseapp.com",
+        projectId: "psb-app-58090",
+        storageBucket: "psb-app-58090.appspot.com",
+        messagingSenderId: "100516614463",
+        appId: "1:100516614463:web:36fe37ee48cee575b8838a"
+    };
     const supabaseUrl = 'https://ugznhwthaztruazsjbhu.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnem5od3RoYXp0cnVhenNqYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NjU4NjAsImV4cCI6MjA2NDA0MTg2MH0.MlBkk-oKSRW7CaUiFf3Edo0KXamVlLaZfLuxGcWL4yU';
     const supabase = createClient(supabaseUrl, supabaseKey);
-    let editorMode = { user: 'render', admin: 'render' }; // 'render' or 'raw'
+
+
+    // --- GLOBAL STATE AND VIEW MANAGEMENT ---
+    let isAdminInitialized = false;
+    let showSourceTagsAdmin = false;
+    let editorMode = { user: 'render', admin: 'render' };
+    let currentUserNoteId = null;
+    let currentAdminNoteId = null;
+
+    // --- Firebase Setup ---
+    let app, db, auth, userId;
+    let isAuthReady = false;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+    try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        setLogLevel('debug');
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Authentication failed, signing in anonymously as fallback:", error);
+                    await signInAnonymously(auth);
+                }
+            }
+            userId = auth.currentUser?.uid || crypto.randomUUID();
+            isAuthReady = true;
+            console.log("Firebase Auth Ready. User ID:", userId);
+            refreshAllData();
+        });
+    } catch (error) {
+        console.error("Firebase initialization failed:", error);
+        document.body.innerHTML = 'Błąd inicjalizacji Firebase. Sprawdź konfigurację w sekcji CONFIGURATION na początku skryptu.';
+    }
+
 
     // --- UI UTILITIES ---
     const modal = document.getElementById('modal');
@@ -590,96 +699,101 @@
         modal.style.display = 'flex';
     }
 
-    function copyToClipboard(text) {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-            document.execCommand('copy');
-            showModal('Sukces', 'Link do udostępnienia notatki został skopiowany do schowka.');
-        } catch (err) {
-            console.error('Copy to clipboard failed:', err);
-            showModal('Błąd', 'Nie udało się skopiować linku.');
-        }
-        document.body.removeChild(textarea);
+    const promptModal = document.getElementById('promptModal');
+    function showPromptModal(title, message, defaultValue = '') {
+        return new Promise(resolve => {
+            promptModal.querySelector('#promptModal-title').textContent = title;
+            promptModal.querySelector('#promptModal-message').textContent = message;
+            const input = promptModal.querySelector('#promptModal-input');
+            input.value = defaultValue;
+            promptModal.style.display = 'flex';
+            input.focus();
+
+            const close = (value) => {
+                promptModal.style.display = 'none';
+                promptModal.querySelector('#promptModal-ok-btn').onclick = null;
+                promptModal.querySelector('#promptModal-cancel-btn').onclick = null;
+                resolve(value);
+            };
+
+            promptModal.querySelector('#promptModal-ok-btn').onclick = () => close(input.value);
+            promptModal.querySelector('#promptModal-cancel-btn').onclick = () => close(null);
+        });
     }
+
+    const confirmModal = document.getElementById('confirmModal');
+    function showConfirmModal(title, message) {
+        return new Promise(resolve => {
+            confirmModal.querySelector('#confirmModal-title').textContent = title;
+            confirmModal.querySelector('#confirmModal-message').textContent = message;
+            confirmModal.style.display = 'flex';
+
+            const close = (value) => {
+                confirmModal.style.display = 'none';
+                confirmModal.querySelector('#confirmModal-yes-btn').onclick = null;
+                confirmModal.querySelector('#confirmModal-no-btn').onclick = null;
+                resolve(value);
+            };
+
+            confirmModal.querySelector('#confirmModal-yes-btn').onclick = () => close(true);
+            confirmModal.querySelector('#confirmModal-no-btn').onclick = () => close(false);
+        });
+    }
+
 
     function showPage(pageId) {
         document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
-        document.getElementById(pageId).classList.add('active');
-        // Close mobile menu on navigation
+        const page = document.getElementById(pageId);
+        if (page) page.classList.add('active');
         document.getElementById('user-nav-links').classList.remove('open');
         document.getElementById('admin-nav-links').classList.remove('open');
     }
 
-    const themeToggleButtons = document.querySelectorAll('.theme-toggle-btn');
+    let themeToggleButtons;
     function updateThemeIcon() {
         const isDarkMode = document.body.classList.contains('dark-mode');
-        themeToggleButtons.forEach(btn => { btn.innerHTML = isDarkMode ? '&#9728;&#65039;' : '&#127769;'; });
+        if (themeToggleButtons) themeToggleButtons.forEach(btn => { btn.innerHTML = isDarkMode ? '&#9728;&#65039;' : '&#127769;'; });
     }
     function toggleTheme() {
         document.body.classList.toggle('dark-mode');
         localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
         updateThemeIcon();
     }
-    
+
     function showAdminView() {
         document.getElementById('user-view').style.display = 'none';
         document.getElementById('admin-view').style.display = 'block';
         showPage('admin-tasks');
         if (!isAdminInitialized) { initAdminView(); isAdminInitialized = true; }
+        refreshAllData();
     }
     
     const passwordActions = {
-        'admin': () => {
-            showAdminView();
-        },
-        'admin_1': () => {
-            localStorage.setItem('defaultView', 'admin');
-            showModal('Sukces', 'Panel administratora został ustawiony jako domyślny.');
-            showAdminView();
-        },
-        'admin_0': () => {
-            localStorage.setItem('defaultView', 'user');
-            showModal('Sukces', 'Panel użytkownika został ustawiony jako domyślny.');
-            switchToUser();
-        },
-        'dev': () => window.location.href = 'https://coffynerd.github.io/blazor1',
-        'iddqd': () => window.location.href = 'https://www.youtube.com/watch?v=dXji8ycMolI',
-        'minecraft': () => window.location.href = 'https://classic.minecraft.net',
+        'admin': showAdminView,
+        'admin_1': () => { localStorage.setItem('defaultView', 'admin'); showModal('Sukces', 'Panel administratora został ustawiony jako domyślny.'); showAdminView(); },
+        'admin_0': () => { localStorage.setItem('defaultView', 'user'); showModal('Sukces', 'Panel użytkownika został ustawiony jako domyślny.'); switchToUser(); },
+        'sql': () => { showSourceTagsAdmin = !showSourceTagsAdmin; showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`); refreshAllData(); },
+        'dev': () => window.open('https://coffynerd.github.io/blazor1', '_blank'),
+        'iddqd': () => window.open('https://www.youtube.com/watch?v=dXji8ycMolI', '_blank'),
+        'minecraft': () => window.open('https://classic.minecraft.net', '_blank'),
         'help': () => {
-            const isAdminViewVisible = document.getElementById('admin-view').style.display === 'block';
-            let commandKeys = Object.keys(passwordActions);
-            let availablePasswords;
-
-            if (isAdminViewVisible) {
-                availablePasswords = commandKeys.filter(p => p !== 'help');
-            } else {
-                availablePasswords = commandKeys.filter(p => !p.startsWith('admin') && p !== 'help');
-            }
-            showModal('Dostępne Hasła', '- ' + availablePasswords.join('\n- '));
+            const isAdminView = document.getElementById('admin-view').style.display === 'block';
+            const commands = Object.keys(passwordActions).filter(cmd => {
+                if (cmd === 'help') return false;
+                if (!isAdminView && (cmd.startsWith('admin') || cmd === 'sql')) return false;
+                return true;
+            });
+            showModal('Dostępne komendy', '- ' + commands.join('\n- '));
         }
     };
-    
-    function handleCommandPrompt() {
-        const password = prompt("Wpisz hasło lub komendę:");
-        if (password === null) return;
-        if (passwordActions.hasOwnProperty(password)) {
+
+    async function handleCommandPrompt() {
+        const password = await showPromptModal("Wpisz hasło lub komendę:", "");
+        if (password !== null && passwordActions[password]) {
             passwordActions[password]();
-        } else {
+        } else if (password !== null) {
             showModal("Błąd", "Niepoprawne hasło lub komenda!");
         }
-    }
-
-    function switchToAdmin() {
-        handleCommandPrompt();
-    }
-    
-    function handleCommandClick() {
-        handleCommandPrompt();
     }
 
     function switchToUser() {
@@ -688,839 +802,937 @@
         showPage('user-tasks');
     }
 
-    window.showPage = showPage;
-    window.switchToAdmin = switchToAdmin;
-    window.switchToUser = switchToUser;
-    window.handleCommandClick = handleCommandClick;
-    
     // --- NOTEBOOK HELPERS ---
     function convertTextToHtml(text) {
         if (!text) return '';
-        
         const buttonRegex = /\[(.*?)\]\{(.*?)\}/g;
-        
-        const lines = text.split('\n');
-        const htmlLines = lines.map(line => {
-            let processedLine = line;
-            const trimmed = line.trim();
-
-            if (trimmed.startsWith('# ')) {
-                return `<div><input type="checkbox">${trimmed.substring(2)}</div>`;
-            } else if (trimmed.startsWith('& ')) {
-                return `<div><input type="checkbox" checked>${trimmed.substring(2)}</div>`;
-            }
-
-            processedLine = processedLine.replace(buttonRegex, (match, buttonText, link) => {
-                let href = link.trim();
-                if (!href.startsWith('http://') && !href.startsWith('https://')) {
-                    href = 'https://' + href;
-                }
-                return `<a href="${href}" target="_blank"><button>${buttonText}</button></a>`;
-            });
-
-            return `<div>${processedLine}</div>`;
-        });
-        return htmlLines.join('');
+        return text.split('\n').map(line => {
+            let pLine = line.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const trimmed = pLine.trim();
+            if (trimmed.startsWith('# ')) return `<div><input type="checkbox">${trimmed.substring(2)}</div>`;
+            if (trimmed.startsWith('& ')) return `<div><input type="checkbox" checked>${trimmed.substring(2)}</div>`;
+            return `<div>${pLine.replace(buttonRegex, (m, btn, lnk) => `<a href="${/^(https?:\/\/)/.test(lnk) ? lnk : 'https://' + lnk}" target="_blank"><button>${btn}</button></a>`)}</div>`;
+        }).join('');
     }
 
     function convertRenderedToSource(element) {
-        const lines = [];
-        element.childNodes.forEach(child => {
-            // Handle DIV elements (usually for lines after the first, or lines with checkboxes)
-            if (child.nodeName === 'DIV') {
-                const checkbox = child.querySelector('input[type="checkbox"]');
-                const link = child.querySelector('a');
-                const button = link ? link.querySelector('button') : null;
-
-                if (checkbox) {
-                    const prefix = checkbox.checked ? '& ' : '# ';
-                    // We use textContent to get just the text, excluding the checkbox itself
-                    lines.push(prefix + child.textContent.trim());
-                } else if (link && button) {
-                    const buttonText = button.textContent;
-                    let href = link.getAttribute('href');
-                    if (href.startsWith('https://')) {
-                        href = href.substring(8);
-                    } else if (href.startsWith('http://')) {
-                        href = href.substring(7);
-                    }
-                    lines.push(`[${buttonText}]{${href}}`);
-                } else {
-                    // Use textContent for safety, it gets the text without any potential HTML tags
-                    lines.push(child.textContent);
-                }
-            } 
-            // Handle raw text nodes (often the first line in an empty editor)
-            else if (child.nodeName === '#text' && child.textContent.trim()) {
-                lines.push(child.textContent);
-            }
-        });
-        return lines.join('\n');
+        return Array.from(element.childNodes).map(child => {
+            if (child.nodeName !== 'DIV') return child.textContent;
+            const checkbox = child.querySelector('input[type="checkbox"]');
+            if (checkbox) return (checkbox.checked ? '& ' : '# ') + child.textContent.trim();
+            const link = child.querySelector('a');
+            if (link) return `[${link.textContent}]{${link.getAttribute('href').replace(/^https?:\/\//, '')}}`;
+            return child.textContent;
+        }).join('\n');
     }
-
 
     // --- TASK HELPERS ---
-    function parseTaskContent(content) {
-        if (!content) return '';
-        const subtaskRegex = /\((#|&)(.*?)\)/g;
+    function parseTaskContent(content = '') {
         let index = 0;
-        return content.replace(subtaskRegex, (match, sign, text) => {
+        return content.replace(/\((#|&)(.*?)\)/g, (match, sign, text) => {
             const isChecked = sign === '&';
-            const textSpan = `<span class="subtask-text ${isChecked ? 'done' : ''}">${text}</span>`;
-            const checkbox = `<input type="checkbox" class="subtask-checkbox" data-index="${index++}" ${isChecked ? 'checked' : ''}>`;
-            return `<span class="subtask">${checkbox}${textSpan}</span>`;
+            return `<span class="subtask"><input type="checkbox" class="subtask-checkbox" data-index="${index++}" ${isChecked ? 'checked' : ''}><span class="subtask-text ${isChecked ? 'done' : ''}">${text}</span></span>`;
         });
     }
 
-    // --- RENDER FUNCTIONS (GLOBAL SCOPE) ---
+    // --- RENDER FUNCTIONS ---
+    async function renderTasks(isAdmin) {
+        const listElement = document.getElementById(isAdmin ? 'admin-task-list-visible' : 'user-task-list');
+        const hiddenListElement = isAdmin ? document.getElementById('admin-task-list-hidden') : null;
 
-    async function renderSupabaseTasks(listElement, isAdmin) {
-        const { data: tasks, error } = await supabase.from('tasks').select('*');
-        if (error) { 
-            if(listElement) listElement.innerHTML = 'Błąd ładowania zadań.';
-            return; 
+        if (!isAuthReady) {
+            if (listElement) listElement.innerHTML = 'Ładowanie uwierzytelniania...';
+            return;
         }
-        tasks.sort((a, b) => { const aIsPriority = a.content.startsWith('!!!'); const bIsPriority = b.content.startsWith('!!!'); if (aIsPriority && !bIsPriority) return -1; if (!aIsPriority && bIsPriority) return 1; if (a.created_at && b.created_at) { return new Date(b.created_at) - new Date(a.created_at); } return 0; });
-        
+
+        const { data: supabaseTasks, error: supabaseError } = await supabase.from('tasks').select('*');
+        if (supabaseError) console.error('Supabase tasks fetch error:', supabaseError);
+        const formattedSupabaseTasks = (supabaseTasks || []).map(task => ({ ...task, source: 'supabase', createdAt: task.created_at, id: `supabase-${task.id}` }));
+
+        const firebaseTasksColRef = collection(db, `artifacts/${appId}/public/data/tasks`);
+        const firebaseTasksSnapshot = await getDocs(firebaseTasksColRef);
+        const firebaseTasks = firebaseTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+
+        const allTasks = [...formattedSupabaseTasks, ...firebaseTasks];
+        allTasks.sort((a, b) => {
+            const aIsPriority = a.content.startsWith('!!!');
+            const bIsPriority = b.content.startsWith('!!!');
+            if (aIsPriority && !bIsPriority) return -1;
+            if (!aIsPriority && bIsPriority) return 1;
+            return (b.createdAt ? new Date(b.createdAt) : 0) - (a.createdAt ? new Date(a.createdAt) : 0);
+        });
+
         const renderList = (tasksToRender, targetElement) => {
-            targetElement.innerHTML = '';
+            if (!targetElement) return;
+            targetElement.innerHTML = tasksToRender.length === 0 ? '<p>Brak zadań.</p>' : '';
             tasksToRender.forEach(task => {
                 const isPriority = task.content.startsWith('!!!');
                 const itemDiv = document.createElement('div');
-                itemDiv.classList.add('item-row', 'task-item');
-                itemDiv.classList.toggle('done', task.done);
-                if (isPriority) itemDiv.classList.add('priority');
+                itemDiv.className = `item-row task-item ${task.done ? 'done' : ''} ${isPriority ? 'priority' : ''}`;
                 itemDiv.dataset.taskId = task.id;
+                itemDiv.dataset.source = task.source;
                 itemDiv.dataset.fullContent = task.content;
 
                 const contentWrapper = document.createElement('div');
-                contentWrapper.classList.add('item-content-wrapper');
+                contentWrapper.className = 'item-content-wrapper';
 
                 const mainCheckbox = document.createElement('input');
                 mainCheckbox.type = 'checkbox';
                 mainCheckbox.checked = task.done;
                 mainCheckbox.style.marginRight = '10px';
-                mainCheckbox.addEventListener('change', async () => { const { error } = await supabase.from('tasks').update({ done: mainCheckbox.checked }).eq('id', task.id); if(error){ showModal('Błąd', 'Błąd aktualizacji!'); mainCheckbox.checked = !mainCheckbox.checked; } else { itemDiv.classList.toggle('done', mainCheckbox.checked); if (isPriority && mainCheckbox.checked) { const audio = new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-758719.wav'); audio.play(); } } });
-                
-                const taskContentContainer = document.createElement('span');
-                taskContentContainer.classList.add('task-text-container');
-                
-                let contentToParse = task.content;
-                if (isPriority) {
-                    contentToParse = task.content.substring(3).trim();
-                }
-                taskContentContainer.innerHTML = parseTaskContent(contentToParse);
-                
-                contentWrapper.appendChild(mainCheckbox);
-                contentWrapper.appendChild(taskContentContainer);
-                
-                const rightSideInfo = document.createElement('div');
-                rightSideInfo.classList.add('right-aligned-info');
-                const assignees = document.createElement('div');
-                assignees.classList.add('assignees');
-                const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
-                assignees.textContent = 'Osoby: ' + (assigneesList.length > 0 ? assigneesList.join(', ') : 'brak');
-                rightSideInfo.appendChild(assignees);
-                if (task.created_at) { const dateInfo = document.createElement('div'); dateInfo.classList.add('date-info'); dateInfo.textContent = new Date(task.created_at).toLocaleDateString('pl-PL'); rightSideInfo.appendChild(dateInfo); }
-                itemDiv.appendChild(contentWrapper);
-                itemDiv.appendChild(rightSideInfo);
+                mainCheckbox.onchange = async () => {
+                    const updateData = { done: mainCheckbox.checked };
+                    try {
+                        if (task.source === 'supabase') {
+                            const { error } = await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-',''));
+                            if (error) throw error;
+                        } else {
+                            await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
+                        }
+                        itemDiv.classList.toggle('done', mainCheckbox.checked);
+                        if (isPriority && mainCheckbox.checked) new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-758719.wav').play();
+                        refreshAllData();
+                    } catch (error) {
+                        showModal('Błąd', 'Błąd aktualizacji zadania: ' + error.message);
+                        mainCheckbox.checked = !mainCheckbox.checked; // Revert UI
+                    }
+                };
 
-                 if (isAdmin) {
+                const taskContentContainer = document.createElement('span');
+                taskContentContainer.className = 'task-text-container';
+                taskContentContainer.innerHTML = parseTaskContent(isPriority ? task.content.substring(3).trim() : task.content);
+                contentWrapper.append(mainCheckbox, taskContentContainer);
+
+                if (isAdmin && showSourceTagsAdmin) {
+                    const sourceTag = document.createElement('span');
+                    sourceTag.className = `source-tag ${task.source}`;
+                    sourceTag.textContent = task.source;
+                    contentWrapper.appendChild(sourceTag);
+                }
+
+                const rightSideInfo = document.createElement('div');
+                rightSideInfo.className = 'right-aligned-info';
+                const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
+                rightSideInfo.innerHTML = `<div class="assignees">Osoby: ${assigneesList.length > 0 ? assigneesList.join(', ') : 'brak'}</div>
+                                           ${task.createdAt ? `<div class="date-info">${new Date(task.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
+                itemDiv.append(contentWrapper, rightSideInfo);
+
+                if (isAdmin) {
                     const buttonsDiv = document.createElement('div');
-                    const editBtn = document.createElement('button');
-                    editBtn.textContent = 'Edytuj';
-                    editBtn.onclick = async () => { const newContent = prompt('Nowa treść zadania:', task.content); const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', task.assignees || ''); if (newContent !== null && newAssignees !== null) { await supabase.from('tasks').update({ content: newContent, assignees: newAssignees }).eq('id', task.id); refreshAllData(); } };
-                    const toggleBtn = document.createElement('button');
-                    toggleBtn.textContent = task.visible === false ? 'Odkryj' : 'Ukryj';
-                    toggleBtn.onclick = async () => { await supabase.from('tasks').update({ visible: !task.visible }).eq('id', task.id); refreshAllData(); };
-                    buttonsDiv.appendChild(editBtn);
-                    buttonsDiv.appendChild(toggleBtn);
+                    buttonsDiv.innerHTML = `<button class="edit-btn">Edytuj</button><button class="toggle-btn">${task.visible === false ? 'Odkryj' : 'Ukryj'}</button><button class="delete-task-btn">Usuń</button>`;
+                    buttonsDiv.querySelector('.edit-btn').onclick = async () => {
+                        const newContent = await showPromptModal('Nowa treść zadania', '', task.content);
+                        if (newContent === null) return;
+                        const newAssignees = await showPromptModal('Nowi przypisani', '(oddzieleni średnikiem)', Array.isArray(task.assignees) ? task.assignees.join(';') : task.assignees || '');
+                        if (newAssignees === null) return;
+                        const updateData = { content: newContent, assignees: newAssignees.split(';').map(s => s.trim()) };
+                        if (task.source === 'supabase') await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
+                        refreshAllData();
+                    };
+                    buttonsDiv.querySelector('.toggle-btn').onclick = async () => {
+                        const updateData = { visible: !(task.visible !== false) };
+                        if (task.source === 'supabase') await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
+                        refreshAllData();
+                    };
+                    buttonsDiv.querySelector('.delete-task-btn').onclick = async () => {
+                        if (await showConfirmModal('Potwierdzenie', 'Czy na pewno chcesz usunąć to zadanie?')) {
+                            if (task.source === 'supabase') await supabase.from('tasks').delete().eq('id', task.id.replace('supabase-',''));
+                            else await deleteDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id));
+                            refreshAllData();
+                        }
+                    };
                     itemDiv.appendChild(buttonsDiv);
                 }
-
                 targetElement.appendChild(itemDiv);
             });
         };
 
-        if(isAdmin) {
-             const visibleTasks = tasks.filter(t => t.visible !== false);
-             const hiddenTasks = tasks.filter(t => t.visible === false);
-             renderList(visibleTasks, document.getElementById('admin-task-list-visible'));
-             renderList(hiddenTasks, document.getElementById('admin-task-list-hidden'));
+        if (isAdmin) {
+            renderList(allTasks.filter(t => t.visible !== false), listElement);
+            renderList(allTasks.filter(t => t.visible === false), hiddenListElement);
         } else {
-             const visibleTasks = tasks.filter(t => t.visible !== false);
-             renderList(visibleTasks, listElement);
+            renderList(allTasks.filter(t => t.visible !== false), document.getElementById('user-task-list'));
         }
     }
 
-    async function renderUserOrders() {
-        const { data: orders, error } = await supabase.from('orders').select('*').eq('is_completed', false).order('created_at', { ascending: true });
-        const orderList = document.getElementById('user-order-list');
-        orderList.innerHTML = '';
-        if (error) { orderList.innerHTML = 'Błąd ładowania listy.'; return; }
+    async function renderOrders(isAdmin) {
+        const activeListElement = document.getElementById(isAdmin ? 'admin-order-list-active' : 'user-order-list');
+        const completedListElement = isAdmin ? document.getElementById('admin-order-list-completed') : null;
 
-        orders.sort((a, b) => {
-            const aIsPriority = a.name.startsWith('!!!');
-            const bIsPriority = b.name.startsWith('!!!');
-            if (aIsPriority && !bIsPriority) return -1;
-            if (!aIsPriority && bIsPriority) return 1;
-            return 0;
-        });
-
-        orders.forEach(order => {
-            const isPriority = order.name.startsWith('!!!');
-            const displayName = isPriority ? order.name.substring(3).trim() : order.name;
-
-            const itemDiv = document.createElement('div');
-            itemDiv.classList.add('item-row', 'order-item');
-            if (isPriority) itemDiv.classList.add('priority');
-
-            const contentWrapper = document.createElement('div');
-            contentWrapper.classList.add('item-content-wrapper');
-            contentWrapper.textContent = displayName;
-
-            const supplierInfo = document.createElement('span');
-            supplierInfo.classList.add('supplier-info');
-            supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
-            contentWrapper.appendChild(supplierInfo);
-
-            const dateInfo = document.createElement('div');
-            dateInfo.classList.add('date-info');
-            dateInfo.textContent = new Date(order.created_at).toLocaleDateString('pl-PL');
-
-            const buttonsDiv = document.createElement('div');
-            buttonsDiv.classList.add('order-buttons');
-
-            const doneBtn = document.createElement('button');
-            doneBtn.textContent = 'Zamówione';
-            doneBtn.onclick = async () => { 
-                if (isPriority) {
-                    const audio = new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-770340.wav');
-                    audio.play();
-                }
-                await supabase.from('orders').update({ is_completed: true }).eq('id', order.id); 
-                renderUserOrders(); 
-            };
-
-            const editBtn = document.createElement('button');
-            editBtn.textContent = 'Edytuj';
-            editBtn.onclick = async () => { const newName = prompt("Nowa nazwa produktu:", order.name); const newSupplier = prompt("Nowy dostawca:", order.supplier); if(newName !== null && newSupplier !== null) { await supabase.from('orders').update({ name: newName, supplier: newSupplier }).eq('id', order.id); renderUserOrders(); } };
-
-            buttonsDiv.appendChild(editBtn);
-            buttonsDiv.appendChild(doneBtn);
-            itemDiv.appendChild(contentWrapper);
-            itemDiv.appendChild(dateInfo);
-            itemDiv.appendChild(buttonsDiv);
-            orderList.appendChild(itemDiv);
-        });
-    }
-
-    async function renderUserNotes() { 
-        const userNoteTitleList = document.getElementById('user-note-title-list');
-        const { data: notes, error } = await supabase.from('notes').select('*').eq('is_public', true).order('is_pinned', { ascending: false }).order('updated_at', { ascending: true }); 
-        if (error) { userNoteTitleList.innerHTML = 'Błąd ładowania notatek.'; return; } 
-        userNoteTitleList.innerHTML = ''; 
-        if (notes.length === 0) { userNoteTitleList.innerHTML = 'Brak notatek.'; return; } 
-        notes.forEach(note => { 
-            const item = document.createElement('div'); 
-            item.classList.add('note-list-item'); 
-            item.classList.toggle('pinned', note.is_pinned); 
-            item.dataset.noteId = note.id; 
-            const titleWrapper = document.createElement('div');
-            titleWrapper.classList.add('note-title-wrapper');
-            const titleSpan = document.createElement('span'); 
-            titleSpan.classList.add('note-title'); 
-            titleSpan.textContent = note.title || 'Nowa notatka'; 
-            titleSpan.style.color = note.title_color || 'inherit'; 
-            const dateSpan = document.createElement('span');
-            dateSpan.classList.add('note-list-date');
-            const displayDate = note.updated_at || note.created_at;
-            dateSpan.textContent = `(${new Date(displayDate).toLocaleDateString('pl-PL')})`;
-            titleWrapper.appendChild(titleSpan);
-            titleWrapper.appendChild(dateSpan);
-            const actionsWrapper = document.createElement('div');
-            actionsWrapper.classList.add('note-actions');
-            const pinBtn = document.createElement('span');
-            pinBtn.classList.add('note-pin-btn');
-            pinBtn.innerHTML = '&#128204;';
-            pinBtn.title = 'Przypnij/Odepnij';
-            pinBtn.onclick = async (e) => {
-                e.stopPropagation();
-                await supabase.from('notes').update({ is_pinned: !note.is_pinned }).eq('id', note.id);
-                renderUserNotes();
-            };
-
-            const shareBtn = document.createElement('span');
-            shareBtn.classList.add('note-share-btn');
-            shareBtn.innerHTML = '&#128279;'; // Link icon
-            shareBtn.title = 'Udostępnij (kopiuj link)';
-            shareBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (note.uuid) {
-                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${note.uuid}`;
-                    copyToClipboard(shareLink);
-                } else {
-                    showModal('Błąd', 'Tej notatki nie można udostępnić, ponieważ nie ma przypisanego UUID.');
-                }
-            };
-
-            actionsWrapper.appendChild(pinBtn);
-            actionsWrapper.appendChild(shareBtn);
-            item.appendChild(titleWrapper); 
-            item.appendChild(actionsWrapper);
-            item.onclick = () => loadUserNoteIntoEditor(note); 
-            userNoteTitleList.appendChild(item); 
-        }); 
-        const currentUserNoteId = document.getElementById('user-note-title-input').dataset.currentId;
-        if(currentUserNoteId) { const selectedItem = userNoteTitleList.querySelector(`[data-note-id='${currentUserNoteId}']`); if(selectedItem) selectedItem.classList.add('selected'); } 
-    }
-
-    async function renderAdminOrders() {
-        const { data: orders, error } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
-        const activeList = document.getElementById('admin-order-list-active');
-        const completedList = document.getElementById('admin-order-list-completed');
-        activeList.innerHTML = '';
-        completedList.innerHTML = '';
-        if (error) { activeList.innerHTML = 'Błąd ładowania listy.'; return; }
-
-        orders.sort((a, b) => {
-            const aIsPriority = a.name.startsWith('!!!');
-            const bIsPriority = b.name.startsWith('!!!');
-            if (aIsPriority && !bIsPriority) return -1;
-            if (!aIsPriority && bIsPriority) return 1;
-            return 0;
-        });
-
-        orders.forEach(order => {
-            const isPriority = order.name.startsWith('!!!');
-            const displayName = isPriority ? order.name.substring(3).trim() : order.name;
-
-            const itemDiv = document.createElement('div');
-            itemDiv.classList.add('item-row', 'order-item');
-            itemDiv.classList.toggle('done', order.is_completed);
-            if (isPriority) itemDiv.classList.add('priority');
-
-            const contentWrapper = document.createElement('div');
-            contentWrapper.classList.add('item-content-wrapper');
-            contentWrapper.textContent = displayName;
-
-            const supplierInfo = document.createElement('span');
-            supplierInfo.classList.add('supplier-info');
-            supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
-            contentWrapper.appendChild(supplierInfo);
-
-            const dateInfo = document.createElement('div');
-            dateInfo.classList.add('date-info');
-            dateInfo.textContent = new Date(order.created_at).toLocaleDateString('pl-PL');
-
-            const buttonsDiv = document.createElement('div');
-            buttonsDiv.classList.add('order-buttons');
-            
-            if (!order.is_completed) {
-                const doneBtn = document.createElement('button');
-                doneBtn.textContent = 'Zamówione';
-                doneBtn.onclick = async () => { 
-                    if (isPriority) {
-                        const audio = new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-770340.wav');
-                        audio.play();
-                    }
-                    await supabase.from('orders').update({ is_completed: true }).eq('id', order.id); 
-                    renderAdminOrders(); 
-                };
-                const editBtn = document.createElement('button');
-                editBtn.textContent = 'Edytuj';
-                editBtn.onclick = async () => { const newName = prompt("Nowa nazwa produktu:", order.name); const newSupplier = prompt("Nowy dostawca:", order.supplier); if(newName !== null && newSupplier !== null) { await supabase.from('orders').update({ name: newName, supplier: newSupplier }).eq('id', order.id); renderAdminOrders(); } };
-                buttonsDiv.appendChild(editBtn);
-                buttonsDiv.appendChild(doneBtn);
-            }
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = 'Usuń';
-            deleteBtn.classList.add('delete-order-btn');
-            deleteBtn.onclick = async () => { 
-                if (confirm('Czy na pewno chcesz usunąć ten element?')) {
-                    await supabase.from('orders').delete().eq('id', order.id); 
-                    renderAdminOrders(); 
-                }
-            };
-            buttonsDiv.appendChild(deleteBtn);
-
-            itemDiv.appendChild(contentWrapper);
-            itemDiv.appendChild(dateInfo);
-            itemDiv.appendChild(buttonsDiv);
-            if(order.is_completed) { completedList.appendChild(itemDiv); } else { activeList.appendChild(itemDiv); }
-        });
-    }
-
-    async function renderNotes() { 
-        const noteTitleList = document.getElementById('note-title-list');
-        const { data, error } = await supabase.from('notes').select('*').order('is_pinned', { ascending: false }).order('updated_at', { ascending: true }); 
-        if (error) { noteTitleList.innerHTML = 'Błąd ładowania notatek.'; return; } 
-        noteTitleList.innerHTML = ''; 
-        data.forEach(note => { 
-            const item = document.createElement('div'); 
-            item.classList.add('note-list-item'); 
-            item.classList.toggle('pinned', note.is_pinned); 
-            item.classList.toggle('public', note.is_public); 
-            item.dataset.noteId = note.id; 
-            const titleWrapper = document.createElement('div'); 
-            titleWrapper.classList.add('note-title-wrapper'); 
-            const titleSpan = document.createElement('span'); 
-            titleSpan.classList.add('note-title'); 
-            titleSpan.textContent = note.title || 'Nowa notatka'; 
-            titleSpan.style.color = note.title_color || 'inherit'; 
-            const dateSpan = document.createElement('span'); 
-            dateSpan.classList.add('note-list-date'); 
-            const displayDate = note.updated_at || note.created_at; 
-            dateSpan.textContent = `(${new Date(displayDate).toLocaleDateString('pl-PL')})`; 
-            titleWrapper.appendChild(titleSpan); 
-            titleWrapper.appendChild(dateSpan); 
-            const actionsWrapper = document.createElement('div'); 
-            actionsWrapper.classList.add('note-actions'); 
-            const pinBtn = document.createElement('span'); 
-            pinBtn.classList.add('note-pin-btn'); 
-            pinBtn.innerHTML = '&#128204;'; 
-            pinBtn.title = 'Przypnij/Odepnij'; 
-            pinBtn.onclick = async (e) => { e.stopPropagation(); await supabase.from('notes').update({ is_pinned: !note.is_pinned }).eq('id', note.id); renderNotes(); }; 
-            
-            const publishBtn = document.createElement('span'); 
-            publishBtn.classList.add('note-publish-btn'); 
-            publishBtn.innerHTML = note.is_public ? '&#128275;' : '&#128274;'; 
-            publishBtn.title = note.is_public ? 'Uczyń prywatną' : 'Upublicznij'; 
-            publishBtn.onclick = async (e) => { 
-                e.stopPropagation(); 
-                const newPublicState = !note.is_public;
-                await supabase.from('notes').update({ is_public: newPublicState }).eq('id', note.id); 
-                renderNotes(); 
-            }; 
-
-            const shareBtn = document.createElement('span');
-            shareBtn.classList.add('note-share-btn');
-            shareBtn.innerHTML = '&#128279;'; // Link icon
-            shareBtn.title = 'Udostępnij (kopiuj link)';
-            shareBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (note.uuid) {
-                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${note.uuid}`;
-                    copyToClipboard(shareLink);
-                } else {
-                    showModal('Błąd', 'Tej notatki nie można udostępnić, ponieważ nie ma przypisanego UUID.');
-                }
-            };
-            
-            actionsWrapper.appendChild(pinBtn); 
-            actionsWrapper.appendChild(publishBtn); 
-            actionsWrapper.appendChild(shareBtn);
-            item.appendChild(titleWrapper); 
-            item.appendChild(actionsWrapper); 
-            item.onclick = () => loadAdminNoteIntoEditor(note); 
-            noteTitleList.appendChild(item);
-        }); 
-        const currentNoteId = document.getElementById('note-title-input').dataset.currentId;
-        if(currentNoteId) { const selectedItem = noteTitleList.querySelector(`[data-note-id='${currentNoteId}']`); if(selectedItem) selectedItem.classList.add('selected'); } 
-    }
-
-    async function renderUserScheduleRequests() {
-        const listEl = document.getElementById('user-schedule-request-list');
-        const { data, error } = await supabase.from('vacation_requests').select('*').eq('is_visible', true).order('start_date');
-        listEl.innerHTML = '';
-        if (error) { listEl.innerHTML = 'Błąd ładowania wniosków.'; return; }
-        
-        if (data.length === 0) {
-            listEl.innerHTML = 'Brak zgłoszonych wniosków.'; 
+        if (!isAuthReady) {
+            if (activeListElement) activeListElement.innerHTML = 'Ładowanie...';
             return;
         }
+
+        const { data: supabaseOrders, error: supabaseError } = await supabase.from('orders').select('*');
+        if (supabaseError) console.error('Supabase orders fetch error:', supabaseError);
+        const formattedSupabaseOrders = (supabaseOrders || []).map(order => ({ ...order, done: order.is_completed, source: 'supabase', createdAt: order.created_at, id: `supabase-${order.id}` }));
+
+        const firebaseOrdersSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/orders`));
+        const firebaseOrders = firebaseOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+
+        const allOrders = [...formattedSupabaseOrders, ...firebaseOrders];
+        allOrders.sort((a, b) => {
+            const aIsPriority = a.name.startsWith('!!!');
+            const bIsPriority = b.name.startsWith('!!!');
+            if (aIsPriority !== bIsPriority) return aIsPriority ? -1 : 1;
+            return (b.createdAt ? new Date(b.createdAt) : 0) - (a.createdAt ? new Date(a.createdAt) : 0);
+        });
+
+        const renderList = (ordersToRender, targetElement) => {
+            if (!targetElement) return;
+            targetElement.innerHTML = ordersToRender.length === 0 ? '<p>Brak pozycji.</p>' : '';
+            ordersToRender.forEach(order => {
+                const isPriority = order.name.startsWith('!!!');
+                const displayName = isPriority ? order.name.substring(3).trim() : order.name;
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `item-row order-item ${order.done ? 'done' : ''} ${isPriority ? 'priority' : ''}`;
+                itemDiv.dataset.orderId = order.id;
+                itemDiv.dataset.source = order.source;
+
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'item-content-wrapper';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = displayName;
+                
+                contentWrapper.append(nameSpan);
+                
+                const supplierInfo = document.createElement('span');
+                supplierInfo.classList.add('supplier-info');
+                supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
+                contentWrapper.appendChild(supplierInfo);
+
+                if (isAdmin && showSourceTagsAdmin) {
+                    const sourceTag = document.createElement('span');
+                    sourceTag.className = `source-tag ${order.source}`;
+                    sourceTag.textContent = order.source;
+                    contentWrapper.appendChild(sourceTag);
+                }
+
+                const rightSideInfo = document.createElement('div');
+                rightSideInfo.className = 'right-aligned-info';
+                rightSideInfo.innerHTML = `${order.createdAt ? `<div class="date-info">${new Date(order.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
+                
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.className = 'order-buttons';
+                
+                const doneBtn = document.createElement('button');
+                doneBtn.textContent = 'Zamówione';
+                doneBtn.onclick = async () => {
+                    if (isPriority) new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-770340.wav').play();
+                    const updateData = { done: true, is_completed: true };
+                    try {
+                        if (order.source === 'supabase') await supabase.from('orders').update(updateData).eq('id', order.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), updateData);
+                        refreshAllData();
+                    } catch (error) {
+                        showModal('Błąd', 'Nie udało się zaktualizować statusu zamówienia: ' + error.message);
+                    }
+                };
+
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Edytuj';
+                editBtn.onclick = async () => {
+                    const newName = await showPromptModal('Nowa nazwa produktu', '', order.name);
+                    if (newName === null) return;
+                    const newSupplier = await showPromptModal('Nowy dostawca', '', order.supplier || '');
+                    if (newSupplier === null) return;
+                    const updateData = { name: newName, supplier: newSupplier };
+                    try {
+                        if (order.source === 'supabase') {
+                            await supabase.from('orders').update(updateData).eq('id', order.id.replace('supabase-',''));
+                        } else {
+                            await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), updateData);
+                        }
+                        refreshAllData();
+                    } catch(error) {
+                        showModal('Błąd', 'Nie udało się zaktualizować pozycji: ' + error.message);
+                    }
+                };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Usuń';
+                deleteBtn.className = 'delete-order-btn';
+                deleteBtn.onclick = async () => {
+                    if (await showConfirmModal('Potwierdzenie', 'Czy na pewno chcesz usunąć tę pozycję?')) {
+                        try {
+                            if (order.source === 'supabase') {
+                                await supabase.from('orders').delete().eq('id', order.id.replace('supabase-',''));
+                            } else {
+                                await deleteDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id));
+                            }
+                            refreshAllData();
+                        } catch (error) {
+                            showModal('Błąd', 'Nie udało się usunąć pozycji: ' + error.message);
+                        }
+                    }
+                };
+                
+                // Determine which buttons to show
+                if (!isAdmin) {
+                    if (!order.done) {
+                        buttonsDiv.appendChild(doneBtn);
+                        if (order.source === 'firebase' && order.submittedByUserId === userId) {
+                            buttonsDiv.appendChild(editBtn);
+                        }
+                    }
+                } else { // Admin view
+                    if (!order.done) {
+                        buttonsDiv.appendChild(editBtn);
+                        buttonsDiv.appendChild(doneBtn);
+                    }
+                    buttonsDiv.appendChild(deleteBtn);
+                }
+                
+                itemDiv.append(contentWrapper, rightSideInfo, buttonsDiv);
+                targetElement.appendChild(itemDiv);
+            });
+        };
         
-        data.forEach(req => {
-            const itemDiv = document.createElement('div');
-            itemDiv.classList.add('item-row', 'vacation-request');
-            itemDiv.classList.toggle('accepted', req.is_accepted);
+        const activeOrders = allOrders.filter(o => o.done !== true);
+        const completedOrders = allOrders.filter(o => o.done === true);
+        
+        if (isAdmin) {
+            renderList(activeOrders, activeListElement);
+            renderList(completedOrders, completedListElement);
+        } else {
+            renderList(activeOrders, activeListElement);
+        }
+    }
+    
+    async function renderNotes(isAdmin) {
+        if (!isAuthReady) return;
+        
+        const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
+        listEl.innerHTML = 'Ładowanie...';
+
+        const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
+        const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public }));
+
+        const fbPath = isAdmin ? `artifacts/${appId}/public/data/notes` : `artifacts/${appId}/users/${userId}/notes`;
+        const fbSnapshot = await getDocs(collection(db, fbPath));
+        const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
+        
+        const allNotes = [...formattedSupabaseNotes, ...firebaseNotes]
+            .filter(note => isAdmin || note.source === 'firebase' || note.public)
+            .sort((a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt) - new Date(a.createdAt)));
+
+        listEl.innerHTML = allNotes.length === 0 ? 'Brak notatek.' : '';
+        allNotes.forEach(note => {
+            const item = document.createElement('div');
+            item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public ? 'public' : ''}`;
+            item.dataset.id = note.id;
+            item.dataset.source = note.source;
+            if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
             
-            let status = req.is_accepted ? '(Zaakceptowany)' : '(Oczekujący)';
+            const titleHtml = `<span class="note-title" style="color:${note.titleColor || 'inherit'}">${note.title}</span>
+                               <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>
+                               ${(isAdmin && showSourceTagsAdmin) ? `<span class="source-tag ${note.source}">${note.source}</span>` : ''}`;
+            
+            item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
 
-            let content = `
-                <span><strong>${req.employee_name}</strong>: ${req.start_date} do ${req.end_date} ${status}</span>
-                <span>${req.notes || ''}</span>
-            `;
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'note-actions';
+            
+            const pinBtn = document.createElement('span');
+            pinBtn.className = 'note-pin-btn';
+            pinBtn.innerHTML = '&#128204;';
+            pinBtn.title = note.pinned ? 'Odepnij' : 'Przypnij';
+            pinBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('pin', note, isAdmin); };
+            
+            const publishBtn = document.createElement('span');
+            publishBtn.className = 'note-publish-btn';
+            publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
+            publishBtn.title = (note.public || note.is_public) ? 'Ustaw jako prywatną' : 'Udostępnij publicznie';
+            publishBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('publish', note, isAdmin); };
 
-            let buttons = `
-                <div class="vacation-user-actions">
-                    <button class="edit-vacation-btn" data-id="${req.id}">Edytuj</button>
-                </div>
-            `;
+            const shareBtn = document.createElement('span');
+            shareBtn.className = 'note-share-btn';
+            shareBtn.innerHTML = '&#128279;';
+            shareBtn.title = 'Udostępnij (kopiuj link)';
+            shareBtn.onclick = (e) => {
+                e.stopPropagation();
+                if(note.uuid) {
+                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${note.uuid}`;
+                    navigator.clipboard.writeText(shareLink).then(() => {
+                        showModal('Sukces', 'Link do notatki skopiowany do schowka.');
+                    }, () => {
+                        showModal('Błąd', 'Nie udało się skopiować linku.');
+                    });
+                } else {
+                    showModal('Błąd', 'Brak UUID do udostępnienia tej notatki.');
+                }
+            };
+            
+            actionsDiv.appendChild(pinBtn); 
 
-            itemDiv.innerHTML = content + buttons;
-            listEl.appendChild(itemDiv);
+            if (isAdmin) {
+                 actionsDiv.appendChild(publishBtn);
+                 if(note.uuid) actionsDiv.appendChild(shareBtn);
+            } else { 
+                if (note.source === 'firebase') {
+                     actionsDiv.appendChild(publishBtn);
+                } else if (note.public || note.is_public) {
+                    if(note.uuid) actionsDiv.appendChild(shareBtn);
+                }
+            }
+
+            item.appendChild(actionsDiv);
+            item.onclick = () => {
+                if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); } 
+                else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
+                document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+            };
+            listEl.appendChild(item);
         });
     }
 
+    async function renderVacationRequests(isAdmin) {
+       const userListElement = document.getElementById('user-schedule-request-list');
+       const adminVisibleListElement = document.getElementById('admin-schedule-request-list-visible');
+       const adminHiddenListElement = document.getElementById('admin-schedule-request-list-hidden');
 
-    async function renderAdminScheduleRequests() {
-        const { data, error } = await supabase.from('vacation_requests').select('*').order('created_at', { ascending: false });
-        const listEl = document.getElementById('admin-schedule-request-list');
-        listEl.innerHTML = '';
-        if (error) { listEl.innerHTML = 'Błąd ładowania wniosków.'; return; }
-
-        const filterStartDate = document.getElementById('admin-filter-start').value;
-        const filterEndDate = document.getElementById('admin-filter-end').value;
-
-        let filteredData = data;
-        if (filterStartDate && filterEndDate) {
-            const filterStart = new Date(filterStartDate);
-            const filterEnd = new Date(filterEndDate);
-
-            filteredData = data.filter(req => {
-                const reqStart = new Date(req.start_date);
-                const reqEnd = new Date(req.end_date);
-                return reqStart <= filterEnd && reqEnd >= filterStart;
-            });
+        if (!isAuthReady) {
+            if (userListElement) userListElement.innerHTML = 'Ładowanie uwierzytelniania...';
+            if (adminVisibleListElement) adminVisibleListElement.innerHTML = 'Ładowanie uwierzytelniania...';
+            return;
         }
-        
-        if (filteredData.length === 0) { listEl.innerHTML = 'Brak wniosków spełniających kryteria.'; return; }
 
-        filteredData.forEach(req => {
-            const itemDiv = document.createElement('div');
-            itemDiv.classList.add('item-row', 'vacation-request');
-            itemDiv.classList.toggle('accepted', req.is_accepted);
+        const { data: supabaseRequests, error: supabaseError } = await supabase.from('vacation_requests').select('*');
+        if (supabaseError) console.error('Supabase requests fetch error:', supabaseError);
+        const formattedSupabaseRequests = (supabaseRequests || []).map(req => ({ ...req, source: 'supabase', createdAt: req.created_at, id: `supabase-${req.id}` }));
 
-            const createdDate = new Date(req.created_at).toLocaleString('pl-PL');
-            const content = `
-                <span><strong>${req.employee_name}</strong>: ${req.start_date} do ${req.end_date} (Zgłoszono: ${createdDate})</span>
-                <span><i>${req.notes || 'Brak notatki'}</i></span>
-            `;
+        const firebaseRequestsSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/vacation_requests`));
+        const firebaseRequests = firebaseRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
 
-            const actions = `
-                <div class="vacation-admin-actions">
-                    <label>
-                        <input type="checkbox" class="accept-vacation-checkbox" data-id="${req.id}" ${req.is_accepted ? 'checked' : ''}>
-                        Zaakceptowany
-                    </label>
-                    <button class="toggle-visibility-btn" data-id="${req.id}" data-visible="${req.is_visible}">${req.is_visible ? 'Ukryj' : 'Pokaż'}</button>
-                    <button class="edit-vacation-btn" data-id="${req.id}">Edytuj</button>
-                    <button class="delete-vacation-btn" data-id="${req.id}">Usuń</button>
-                </div>
-            `;
+        let allRequests = [...formattedSupabaseRequests, ...firebaseRequests];
+        allRequests.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+
+        const renderList = (requestsToRender, targetElement) => {
+            if (!targetElement) return;
+            targetElement.innerHTML = requestsToRender.length === 0 ? '<p>Brak wniosków.</p>' : '';
+            requestsToRender.forEach(req => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `item-row vacation-request ${req.is_accepted ? 'accepted' : ''}`;
+                itemDiv.dataset.id = req.id;
+                itemDiv.dataset.source = req.source;
+                itemDiv.dataset.visible = req.is_visible;
+
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'item-content-wrapper';
+                contentWrapper.innerHTML = `
+                    <span style="font-weight: bold; flex-shrink: 0; min-width: 150px;">${req.employee_name}</span>
+                    <span style="margin-left: 15px; flex-shrink: 0;">${req.start_date} do ${req.end_date}</span>
+                    <span style="margin-left: 15px; font-weight: bold; flex-shrink: 0; color: ${req.is_accepted ? 'green' : 'orange'};">(${req.is_accepted ? 'Zaakceptowany' : 'Oczekujący'})</span>
+                    <span style="flex-grow: 1; text-align: right; color: #666; padding: 0 20px;">${req.notes || ''}</span>
+                `;
+
+                if (isAdmin && showSourceTagsAdmin) {
+                     const sourceTag = document.createElement('span');
+                     sourceTag.className = `source-tag ${req.source}`;
+                     sourceTag.textContent = req.source;
+                     contentWrapper.appendChild(sourceTag);
+                }
+
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.className = 'right-aligned-info';
+                
+                let buttonsHtml = '';
+                if (isAdmin) {
+                    buttonsHtml = `
+                        <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-vacation-checkbox" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
+                        <button class="toggle-visibility-btn">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
+                        <button class="edit-vacation-btn">Edytuj</button>
+                        <button class="delete-vacation-btn">Usuń</button>`;
+                } else {
+                     buttonsHtml = `<button class="edit-vacation-btn">Edytuj</button>`;
+                }
+                
+                buttonsDiv.innerHTML = `<div>${buttonsHtml}</div>`;
+                itemDiv.append(contentWrapper, buttonsDiv);
+                targetElement.appendChild(itemDiv);
+            });
+        };
+
+        if (isAdmin) {
+            const filterStart = document.getElementById('admin-filter-start').value;
+            const filterEnd = document.getElementById('admin-filter-end').value;
+            let filteredData = allRequests;
+            if (filterStart) filteredData = filteredData.filter(req => new Date(req.end_date) >= new Date(filterStart));
+            if (filterEnd) filteredData = filteredData.filter(req => new Date(req.start_date) <= new Date(filterEnd));
             
-            itemDiv.innerHTML = content + actions;
-            listEl.appendChild(itemDiv);
-        });
+            const visibleRequests = filteredData.filter(req => req.is_visible !== false);
+            const hiddenRequests = filteredData.filter(req => req.is_visible === false);
+
+            renderList(visibleRequests, adminVisibleListElement);
+            renderList(hiddenRequests, adminHiddenListElement);
+        } else {
+            const userVisibleRequests = allRequests.filter(req => req.is_visible !== false);
+            renderList(userVisibleRequests, userListElement);
+        }
     }
 
     async function refreshAllData() {
+        if (!isAuthReady) return;
         console.log("Odświeżanie danych...");
-        const userPromises = [
-            renderSupabaseTasks(document.getElementById('supabase-task-list'), false), 
-            renderUserOrders(), 
-            renderUserNotes(),
-            renderUserScheduleRequests()
-        ];
-        await Promise.all(userPromises);
-        
-        if (isAdminInitialized) {
-            const adminPromises = [
-                renderSupabaseTasks(null, true), 
-                renderAdminOrders(), 
-                renderNotes(),
-                renderAdminScheduleRequests()
-            ];
-            await Promise.all(adminPromises);
+        const inAdminView = document.getElementById('admin-view').style.display === 'block';
+        await Promise.all([
+            renderTasks(inAdminView),
+            renderOrders(inAdminView),
+            renderNotes(inAdminView),
+            renderVacationRequests(inAdminView),
+        ]);
+        if (!inAdminView) {
+            await renderNotes(false);
         }
         console.log("Dane odświeżone.");
     }
-
-    // --- USER VIEW INITIALIZATION & NOTE LOGIC ---
-    let currentUserNoteId = null;
-    function clearUserEditor() { const userNoteTitleList = document.getElementById('user-note-title-list'); const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = null; userNoteTitleInput.value = ''; userNoteContentInput.innerHTML = ''; userNoteColorInput.value = '#000000'; userNoteTimestamps.innerHTML = ''; userNoteTitleInput.removeAttribute('data-current-id'); const selected = userNoteTitleList.querySelector('.selected'); if(selected) selected.classList.remove('selected'); editorMode.user = 'render'; document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod'; }
-    function loadUserNoteIntoEditor(note) { const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteContentRaw = document.getElementById('user-note-content-raw'), userNoteTimestamps = document.getElementById('user-note-timestamps'); currentUserNoteId = note.id; userNoteTitleInput.setAttribute('data-current-id', note.id); userNoteTitleInput.value = note.title; userNoteContentInput.innerHTML = convertTextToHtml(note.content); userNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; userNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('user-note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); editorMode.user = 'render'; document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod'; userNoteContentInput.style.display = 'block'; userNoteContentRaw.style.display = 'none'; }
-    async function saveUserNote() { 
-        const userNoteTitleInput = document.getElementById('user-note-title-input'), userNoteColorInput = document.getElementById('user-note-color-input'), userNoteContentInput = document.getElementById('user-note-content-input'), userNoteContentRaw = document.getElementById('user-note-content-raw'); 
-        const title = userNoteTitleInput.value;
-        const content = editorMode.user === 'raw' ? userNoteContentRaw.value : convertRenderedToSource(userNoteContentInput);
-        const title_color = userNoteColorInput.value; 
-        if (!title) { showModal('Błąd', 'Tytuł notatki jest wymagany.'); return; } 
-        if (currentUserNoteId) { 
-            await supabase.from('notes').update({ title, content, title_color, updated_at: new Date() }).eq('id', currentUserNoteId); 
-        } else { 
-            const { data } = await supabase.from('notes').insert([{ title, content, title_color, is_public: true }]).select(); 
-            if(data && data.length > 0) {
-                currentUserNoteId = data[0].id; 
-            }
-        } 
-        renderUserNotes(); 
-    }
     
+    async function handleNoteAction(action, note, isAdmin) {
+        const source = note.source;
+        const noteId = source === 'supabase' ? note.id.replace('supabase-', '') : note.id;
+        const fbPath = isAdmin ? `artifacts/${appId}/public/data/notes` : `artifacts/${appId}/users/${userId}/notes`;
+        try {
+            if (action === 'pin') {
+                const newPinnedState = !(note.pinned || note.is_pinned);
+                if (source === 'supabase') {
+                    const { error } = await supabase.from('notes').update({ is_pinned: newPinnedState }).eq('id', noteId);
+                    if (error) throw error;
+                } else {
+                    await updateDoc(doc(db, fbPath, noteId), { pinned: newPinnedState });
+                }
+            } else if (action === 'publish') {
+                const newPublicState = !(note.public || note.is_public);
+                if (source === 'firebase' && !isAdmin && newPublicState) {
+                    if (!await showConfirmModal('Udostępnianie', 'Czy na pewno chcesz przenieść tę notatkę do publicznych? Ta akcja jest nieodwracalna.')) return;
+                    const publicNotesRef = collection(db, `artifacts/${appId}/public/data/notes`);
+                    const privateNoteRef = doc(db, `artifacts/${appId}/users/${userId}/notes`, noteId);
+                    const {id, source, ...noteData} = note;
+                    await addDoc(publicNotesRef, { ...noteData, is_public: true, ownerId: userId, originalId: noteId });
+                    await deleteDoc(privateNoteRef);
+                } else if (isAdmin) {
+                    if(source === 'supabase') {
+                        const { error } = await supabase.from('notes').update({ is_public: newPublicState }).eq('id', noteId);
+                        if (error) throw error;
+                    } else {
+                        const noteRef = doc(db, `artifacts/${appId}/public/data/notes`, noteId);
+                        await updateDoc(noteRef, { is_public: newPublicState });
+                    }
+                }
+            }
+            renderNotes(isAdmin);
+            if(!isAdmin) renderNotes(true);
+        } catch (error) {
+            showModal('Błąd', 'Nie udało się wykonać akcji na notatce: ' + error.message);
+        }
+    }
+
+    // --- USER VIEW ---
+    function clearUserEditor() {
+        currentUserNoteId = null;
+        document.getElementById('user-note-title-input').value = '';
+        document.getElementById('user-note-color-input').value = '#000000';
+        document.getElementById('user-note-content-input').innerHTML = '';
+        document.getElementById('user-note-content-raw').value = '';
+        document.getElementById('user-note-timestamps').textContent = '';
+        document.querySelectorAll('#user-note-title-list .selected').forEach(item => item.classList.remove('selected'));
+        editorMode.user = 'render';
+        document.getElementById('user-note-content-input').style.display = 'block';
+        document.getElementById('user-note-content-raw').style.display = 'none';
+        document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod';
+    }
+
+    function loadUserNoteIntoEditor(note) {
+        currentUserNoteId = note.id;
+        document.getElementById('user-note-title-input').value = note.title || '';
+        document.getElementById('user-note-color-input').value = note.titleColor || note.title_color ||'#000000';
+        document.getElementById('user-note-content-input').innerHTML = convertTextToHtml(note.content);
+        const date = note.updatedAt ? new Date(note.updatedAt.seconds * 1000) : new Date(note.updated_at || note.created_at);
+        const timestamps = `Ostatnia edycja: ${date.toLocaleString()}`;
+        document.getElementById('user-note-timestamps').textContent = timestamps;
+        editorMode.user = 'render';
+        document.getElementById('user-note-content-input').style.display = 'block';
+        document.getElementById('user-note-content-raw').style.display = 'none';
+        document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod';
+    }
+
+    async function saveUserNote() {
+        const title = document.getElementById('user-note-title-input').value.trim();
+        if (!title) { showModal('Błąd', 'Tytuł notatki nie może być pusty!'); return; }
+        const content = editorMode.user === 'raw' ? document.getElementById('user-note-content-raw').value : convertRenderedToSource(document.getElementById('user-note-content-input'));
+        const noteData = { title, content, titleColor: document.getElementById('user-note-color-input').value, updatedAt: new Date() };
+
+        const notesCollection = collection(db, `artifacts/${appId}/users/${userId}/notes`);
+        if (currentUserNoteId && !currentUserNoteId.startsWith('supabase')) {
+            await updateDoc(doc(notesCollection, currentUserNoteId), noteData);
+        } else {
+            await addDoc(notesCollection, { ...noteData, createdAt: new Date(), pinned: false, is_public: false, submittedByUserId: userId });
+            clearUserEditor();
+        }
+        renderNotes(false);
+    }
+
     function initUserView() {
-        document.getElementById('user-order-form').addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('user-order-name').value; const supplier = document.getElementById('user-order-supplier').value; await supabase.from('orders').insert([{ name, supplier }]); e.target.reset(); renderUserOrders(); });
+        document.getElementById('user-order-form').onsubmit = async (e) => { 
+            e.preventDefault(); 
+            const nameInput = document.getElementById('user-order-name');
+            const supplierInput = document.getElementById('user-order-supplier');
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/orders`), { 
+                    name: nameInput.value, 
+                    supplier: supplierInput.value, 
+                    done: false, 
+                    createdAt: new Date(), 
+                    submittedByUserId: userId 
+                });
+                nameInput.value = '';
+                supplierInput.value = '';
+                renderOrders(false);
+            } catch (error) {
+                showModal('Błąd zapisu', 'Nie udało się dodać pozycji do Firebase. Sprawdź konsolę, aby uzyskać więcej informacji.');
+                console.error("Firebase addDoc error:", error);
+            }
+        };
         document.getElementById('user-new-note-btn').onclick = clearUserEditor;
         document.getElementById('user-save-note-btn').onclick = saveUserNote;
-        document.getElementById('user-toggle-raw-btn').addEventListener('click', () => {
+        document.getElementById('user-toggle-raw-btn').onclick = (e) => { 
             const contentInput = document.getElementById('user-note-content-input');
             const rawInput = document.getElementById('user-note-content-raw');
-            const button = document.getElementById('user-toggle-raw-btn');
             if (editorMode.user === 'render') {
                 rawInput.value = convertRenderedToSource(contentInput);
                 contentInput.style.display = 'none';
                 rawInput.style.display = 'block';
                 editorMode.user = 'raw';
-                button.textContent = 'Podgląd Wizualny';
+                e.target.textContent = 'Podgląd Wizualny';
             } else {
                 contentInput.innerHTML = convertTextToHtml(rawInput.value);
                 rawInput.style.display = 'none';
                 contentInput.style.display = 'block';
                 editorMode.user = 'render';
-                button.textContent = 'Edytuj Kod';
+                e.target.textContent = 'Edytuj Kod';
             }
-        });
-
-        document.getElementById('user-schedule-request-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const employee_name = document.getElementById('user-employee-name').value;
-            const start_date = document.getElementById('user-start-date').value;
-            const end_date = document.getElementById('user-end-date').value;
-            const notes = document.getElementById('user-vacation-notes').value;
-
+        };
+        document.getElementById('user-schedule-request-form').onsubmit = async (e) => { 
+            e.preventDefault(); 
+            const form = e.target;
+            const employee_name = form.querySelector('#user-employee-name').value;
+            const start_date = form.querySelector('#user-start-date').value;
+            const end_date = form.querySelector('#user-end-date').value;
             if (new Date(end_date) < new Date(start_date)) {
                 showModal('Błąd', 'Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.');
                 return;
             }
-
-            const { error } = await supabase.from('vacation_requests').insert([
-                { employee_name, start_date, end_date, notes, is_visible: true }
-            ]);
-
-            if (error) {
-                showModal('Błąd', 'Nie udało się wysłać wniosku.');
-            } else {
-                showModal('Sukces', 'Wniosek został pomyślnie wysłany.');
-                e.target.reset();
-                refreshAllData();
+            localStorage.setItem('lastUserName', employee_name);
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/vacation_requests`), {
+                    employee_name, start_date, end_date,
+                    notes: form.querySelector('#user-vacation-notes').value,
+                    is_visible: true, is_accepted: false, createdAt: new Date(), submittedByUserId: userId
+                });
+                showModal('Sukces', 'Wniosek został wysłany.');
+                form.reset();
+                renderVacationRequests(false);
+            } catch (error) {
+                showModal('Błąd zapisu', 'Nie udało się wysłać wniosku. Sprawdź konsolę, aby uzyskać więcej informacji.');
+                console.error("Firebase addDoc error:", error);
             }
-        });
-        
-        document.getElementById('user-schedule-request-list').addEventListener('click', async (e) => {
-            const target = e.target;
-            const reqId = target.dataset.id;
-            if (!reqId) return;
-
-            if (target.classList.contains('edit-vacation-btn')) {
-                 const { data, error } = await supabase.from('vacation_requests').select('*').eq('id', reqId).single();
-                 if (error || !data) { showModal('Błąd', 'Nie można znaleźć wniosku.'); return; }
-                 
-                 const new_start_date = prompt('Nowa data rozpoczęcia:', data.start_date);
-                 if (new_start_date === null) return;
-                 const new_end_date = prompt('Nowa data zakończenia:', data.end_date);
-                 if (new_end_date === null) return;
-                 const new_notes = prompt('Nowa notatka:', data.notes);
-                 if (new_notes === null) return;
-
-                 await supabase.from('vacation_requests').update({ start_date: new_start_date, end_date: new_end_date, notes: new_notes }).eq('id', reqId);
-                 renderUserScheduleRequests();
-            }
-        });
-
-        refreshAllData();
+        };
+    }
+    
+    // --- ADMIN VIEW ---
+    function clearAdminEditor() {
+        currentAdminNoteId = null;
+        document.getElementById('note-title-input').value = '';
+        document.getElementById('note-color-input').value = '#000000';
+        document.getElementById('note-content-input').innerHTML = '';
+        document.getElementById('note-content-raw').value = '';
+        document.getElementById('note-timestamps').textContent = '';
+        document.querySelectorAll('#note-title-list .selected').forEach(item => item.classList.remove('selected'));
+        editorMode.admin = 'render';
+        document.getElementById('note-content-input').style.display = 'block';
+        document.getElementById('note-content-raw').style.display = 'none';
+        document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
     }
 
-    // --- ADMIN VIEW INITIALIZATION & NOTE LOGIC ---
-    let currentAdminNoteId = null;
-    function clearAdminEditor() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = null; adminNoteTitleInput.value = ''; adminNoteContentInput.innerHTML = ''; adminNoteColorInput.value = '#000000'; adminNoteTimestamps.innerHTML = ''; adminNoteTitleInput.removeAttribute('data-current-id'); const selected = document.getElementById('note-title-list').querySelector('.selected'); if(selected) selected.classList.remove('selected'); editorMode.admin = 'render'; document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod'; }
-    function loadAdminNoteIntoEditor(note) { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteContentRaw = document.getElementById('note-content-raw'), adminNoteTimestamps = document.getElementById('note-timestamps'); currentAdminNoteId = note.id; adminNoteTitleInput.setAttribute('data-current-id', note.id); adminNoteTitleInput.value = note.title; adminNoteContentInput.innerHTML = convertTextToHtml(note.content); adminNoteColorInput.value = note.title_color || '#000000'; const created = new Date(note.created_at).toLocaleString('pl-PL'); const updated = note.updated_at ? new Date(note.updated_at).toLocaleString('pl-PL') : '---'; adminNoteTimestamps.innerHTML = `Utworzono: ${created} | Ost. edycja: ${updated}`; document.getElementById('note-title-list').querySelectorAll('.note-list-item').forEach(item => { item.classList.toggle('selected', item.dataset.noteId == note.id); }); editorMode.admin = 'render'; document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod'; adminNoteContentInput.style.display = 'block'; adminNoteContentRaw.style.display = 'none';}
-    async function saveAdminNote() { const adminNoteTitleInput = document.getElementById('note-title-input'), adminNoteColorInput = document.getElementById('note-color-input'), adminNoteContentInput = document.getElementById('note-content-input'), adminNoteContentRaw = document.getElementById('note-content-raw'); const title = adminNoteTitleInput.value; const content = editorMode.admin === 'raw' ? adminNoteContentRaw.value : convertRenderedToSource(adminNoteContentInput); const title_color = adminNoteColorInput.value; if (!title) { showModal('Błąd', 'Tytuł notatki jest wymagany.'); return; } if (currentAdminNoteId) { await supabase.from('notes').update({ title, content, title_color, updated_at: new Date() }).eq('id', currentAdminNoteId); } else { const { data } = await supabase.from('notes').insert([{ title, content, title_color, is_public: false }]).select(); if(data && data.length > 0) { currentAdminNoteId = data[0].id; loadAdminNoteIntoEditor(data[0]); } } renderNotes(); }
-    async function deleteAdminNote() { if (!currentAdminNoteId) return; if (confirm('Czy na pewno chcesz usunąć tę notatkę?')) { await supabase.from('notes').delete().eq('id', currentAdminNoteId); clearAdminEditor(); renderNotes(); } }
+    function loadAdminNoteIntoEditor(note) {
+        currentAdminNoteId = note.id;
+        document.getElementById('note-title-input').value = note.title || '';
+        document.getElementById('note-color-input').value = note.titleColor || note.title_color || '#000000';
+        document.getElementById('note-content-input').innerHTML = convertTextToHtml(note.content);
+        const ts = note.updatedAt || note.updated_at || note.createdAt;
+        const date = ts ? (ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts)) : null;
+        document.getElementById('note-timestamps').textContent = date ? `Ostatnia edycja: ${date.toLocaleString()}`: '';
+        editorMode.admin = 'render';
+        document.getElementById('note-content-input').style.display = 'block';
+        document.getElementById('note-content-raw').style.display = 'none';
+        document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
+    }
+
+    async function saveAdminNote() {
+        const title = document.getElementById('note-title-input').value.trim();
+        if (!title) { showModal('Błąd', 'Tytuł jest wymagany'); return; }
+        const content = editorMode.admin === 'raw' ? document.getElementById('note-content-raw').value : convertRenderedToSource(document.getElementById('note-content-input'));
+        const noteData = { title, content, title_color: document.getElementById('note-color-input').value, updated_at: new Date().toISOString() };
+        const firebaseNoteData = { title, content, titleColor: document.getElementById('note-color-input').value, updatedAt: new Date() };
+        
+        try {
+            if (currentAdminNoteId) {
+                if (currentAdminNoteId.startsWith('supabase')) {
+                    await supabase.from('notes').update(noteData).eq('id', currentAdminNoteId.replace('supabase-',''));
+                } else {
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), firebaseNoteData);
+                }
+            } else { 
+                await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...firebaseNoteData, createdAt: new Date(), pinned: false, is_public: true });
+                clearAdminEditor();
+            }
+            renderNotes(true);
+        } catch(error) {
+            showModal('Błąd zapisu', 'Nie udało się zapisać notatki: ' + error.message);
+        }
+    }
+    
+    async function deleteAdminNote() {
+        if (!currentAdminNoteId || !await showConfirmModal('Potwierdzenie', 'Na pewno usunąć tę notatkę?')) return;
+        try {
+            if (currentAdminNoteId.startsWith('supabase')) {
+                await supabase.from('notes').delete().eq('id', currentAdminNoteId.replace('supabase-', ''));
+            } else {
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId));
+            }
+            clearAdminEditor();
+            renderNotes(true);
+        } catch (error) {
+            showModal('Błąd', 'Nie udało się usunąć notatki: ' + error.message);
+        }
+    }
     
     function initAdminView() {
-        document.getElementById('admin-task-form').addEventListener('submit', async (e) => { e.preventDefault(); const content = document.getElementById('admin-task-input').value.trim(); const assignees = document.getElementById('admin-assignee-input').value.trim(); if (!content) return; await supabase.from('tasks').insert([{ content, assignees, done: false, visible: true }]); e.target.reset(); refreshAllData(); });
-        document.getElementById('admin-order-form').addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('admin-order-name').value; const supplier = document.getElementById('admin-order-supplier').value; await supabase.from('orders').insert([{ name, supplier }]); e.target.reset(); renderAdminOrders(); });
-        
+        document.getElementById('admin-task-form').onsubmit = async (e) => { 
+            e.preventDefault();
+            const form = e.target;
+            const content = form.querySelector('#admin-task-input').value.trim();
+            if (!content) return;
+            const assignees = form.querySelector('#admin-assignee-input').value.trim();
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), {
+                    content, assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
+                    done: false, visible: true, createdAt: new Date(), submittedByUserId: userId
+                });
+                form.reset();
+                renderTasks(true);
+            } catch (error) {
+                showModal('Błąd zapisu', 'Nie udało się dodać zadania: ' + error.message);
+            }
+        };
+        document.getElementById('admin-order-form').onsubmit = async (e) => { 
+            e.preventDefault(); 
+            const nameInput = document.getElementById('admin-order-name');
+            const supplierInput = document.getElementById('admin-order-supplier');
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/orders`), { name: nameInput.value, supplier: supplierInput.value, done: false, createdAt: new Date(), submittedByUserId: userId });
+                nameInput.value = '';
+                supplierInput.value = '';
+                renderOrders(true);
+            } catch (error) {
+                showModal('Błąd zapisu', 'Nie udało się dodać pozycji: ' + error.message);
+            }
+        };
         document.getElementById('new-note-btn').onclick = clearAdminEditor;
         document.getElementById('save-note-btn').onclick = saveAdminNote;
         document.getElementById('delete-note-btn').onclick = deleteAdminNote;
-        document.getElementById('admin-toggle-raw-btn').addEventListener('click', () => {
+        document.getElementById('admin-toggle-raw-btn').onclick = (e) => {
             const contentInput = document.getElementById('note-content-input');
             const rawInput = document.getElementById('note-content-raw');
-            const button = document.getElementById('admin-toggle-raw-btn');
             if (editorMode.admin === 'render') {
                 rawInput.value = convertRenderedToSource(contentInput);
                 contentInput.style.display = 'none';
                 rawInput.style.display = 'block';
                 editorMode.admin = 'raw';
-                button.textContent = 'Podgląd Wizualny';
+                e.target.textContent = 'Podgląd Wizualny';
             } else {
                 contentInput.innerHTML = convertTextToHtml(rawInput.value);
                 rawInput.style.display = 'none';
                 contentInput.style.display = 'block';
                 editorMode.admin = 'render';
-                button.textContent = 'Edytuj Kod';
+                e.target.textContent = 'Edytuj Kod';
             }
-        });
-        
-        document.getElementById('admin-schedule-request-form').addEventListener('submit', async (e) => {
+        };
+        document.getElementById('admin-schedule-request-form').onsubmit = async (e) => { 
             e.preventDefault();
-            const employee_name = document.getElementById('admin-employee-name').value;
-            const start_date = document.getElementById('admin-start-date').value;
-            const end_date = document.getElementById('admin-end-date').value;
-            const notes = document.getElementById('admin-vacation-notes').value;
-
+            const form = e.target;
+            const employee_name = form.querySelector('#admin-employee-name').value;
+            const start_date = form.querySelector('#admin-start-date').value;
+            const end_date = form.querySelector('#admin-end-date').value;
             if (new Date(end_date) < new Date(start_date)) {
                 showModal('Błąd', 'Data zakończenia nie może być wcześniejsza niż data rozpoczęcia.');
                 return;
             }
-
-            const { error } = await supabase.from('vacation_requests').insert([
-                { employee_name, start_date, end_date, notes, is_visible: true }
-            ]);
-
-            if (error) {
-                showModal('Błąd', 'Nie udało się wysłać wniosku.');
-            } else {
-                showModal('Sukces', 'Wniosek został pomyślnie wysłany.');
-                e.target.reset();
-                refreshAllData();
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/vacation_requests`), {
+                    employee_name, start_date, end_date,
+                    notes: form.querySelector('#admin-vacation-notes').value,
+                    is_visible: true, is_accepted: false, createdAt: new Date(), submittedByUserId: userId
+                });
+                showModal('Sukces', 'Wniosek został wysłany.');
+                form.reset();
+                renderVacationRequests(true);
+            } catch (error) {
+                showModal('Błąd zapisu', 'Nie udało się wysłać wniosku: ' + error.message);
             }
-        });
-
-        document.getElementById('admin-schedule-request-list').addEventListener('click', async (e) => {
-            const target = e.target;
-            const reqId = target.dataset.id;
-            if (!reqId) return;
-
-            if (target.classList.contains('accept-vacation-checkbox')) {
-                const is_accepted = target.checked;
-                await supabase.from('vacation_requests').update({ is_accepted }).eq('id', reqId);
-                target.closest('.vacation-request').classList.toggle('accepted', is_accepted);
-            }
-            if (target.classList.contains('toggle-visibility-btn')) {
-                const is_visible = !(target.dataset.visible === 'true');
-                await supabase.from('vacation_requests').update({ is_visible }).eq('id', reqId);
-                renderAdminScheduleRequests();
-            }
-            if (target.classList.contains('edit-vacation-btn')) {
-                 const { data, error } = await supabase.from('vacation_requests').select('*').eq('id', reqId).single();
-                 if (error || !data) { showModal('Błąd', 'Nie można znaleźć wniosku.'); return; }
-                 
-                 const new_start_date = prompt('Nowa data rozpoczęcia:', data.start_date);
-                 if (new_start_date === null) return;
-                 const new_end_date = prompt('Nowa data zakończenia:', data.end_date);
-                 if (new_end_date === null) return;
-                 const new_notes = prompt('Nowa notatka:', data.notes);
-                 if (new_notes === null) return;
-
-                 await supabase.from('vacation_requests').update({ start_date: new_start_date, end_date: new_end_date, notes: new_notes }).eq('id', reqId);
-                 renderAdminScheduleRequests();
-            }
-             if (target.classList.contains('delete-vacation-btn')) {
-                if (confirm('Czy na pewno chcesz usunąć ten wniosek?')) {
-                    await supabase.from('vacation_requests').delete().eq('id', reqId);
-                    renderAdminScheduleRequests();
-                }
-            }
-        });
-        
-        document.getElementById('admin-filter-btn').addEventListener('click', renderAdminScheduleRequests);
-        document.getElementById('admin-clear-filter-btn').addEventListener('click', () => {
+        };
+        document.getElementById('admin-filter-btn').onclick = () => renderVacationRequests(true);
+        document.getElementById('admin-clear-filter-btn').onclick = () => {
             document.getElementById('admin-filter-start').value = '';
             document.getElementById('admin-filter-end').value = '';
-            renderAdminScheduleRequests();
-        });
-
-        refreshAllData();
-    }
-    
-    function setupTaskListeners() {
-        const taskLists = [
-            document.getElementById('supabase-task-list'),
-            document.getElementById('admin-task-list-visible'),
-            document.getElementById('admin-task-list-hidden')
-        ];
-
-        taskLists.forEach(list => {
-            if (!list) return;
-            list.addEventListener('change', async (e) => {
-                if (e.target.classList.contains('subtask-checkbox')) {
-                    const checkbox = e.target;
-                    const textSpan = checkbox.nextElementSibling;
-                    const taskRow = checkbox.closest('.item-row');
-                    
-                    if (!taskRow) return;
-
-                    const taskId = taskRow.dataset.taskId;
-                    let fullContent = taskRow.dataset.fullContent;
-                    const clickedIndex = parseInt(checkbox.dataset.index, 10);
-                    const isChecked = checkbox.checked;
-
-                    textSpan.classList.toggle('done', isChecked);
-
-                    const subtaskRegex = /\((#|&)(.*?)\)/g;
-                    let currentIndex = 0;
-                    const newContent = fullContent.replace(subtaskRegex, (match, sign, text) => {
-                        if (currentIndex === clickedIndex) {
-                            const newSign = isChecked ? '&' : '#';
-                            return `(${newSign}${text})`;
-                        }
-                        currentIndex++;
-                        return match;
-                    });
-                    
-                    taskRow.dataset.fullContent = newContent;
-
-                    const { error } = await supabase
-                        .from('tasks')
-                        .update({ content: newContent })
-                        .eq('id', taskId);
-
-                    if (error) {
-                        showModal('Błąd', 'Nie udało się zaktualizować podzadania.');
-                        checkbox.checked = !isChecked;
-                        textSpan.classList.toggle('done', !isChecked);
-                        taskRow.dataset.fullContent = fullContent;
-                    }
-                }
-            });
-        });
+            renderVacationRequests(true);
+        };
     }
 
-    // --- APP INITIALIZATION ---
+    // --- EVENT LISTENERS & INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', () => {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') {
-            document.body.classList.add('dark-mode');
-        }
+        themeToggleButtons = document.querySelectorAll('.theme-toggle-btn');
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
 
-        const savedView = localStorage.getItem('defaultView');
-        if (savedView === 'admin') {
+        if (localStorage.getItem('defaultView') === 'admin') {
             showAdminView();
         } else {
             initUserView();
+            document.getElementById('user-view').style.display = 'block';
         }
 
-        document.querySelectorAll('.refresh-btn').forEach(btn => btn.addEventListener('click', refreshAllData));
-        themeToggleButtons.forEach(btn => btn.addEventListener('click', toggleTheme));
-        
-
-        // Hamburger Menu Logic
-        document.getElementById('user-hamburger-btn').addEventListener('click', () => {
-            document.getElementById('user-nav-links').classList.toggle('open');
-        });
-        document.getElementById('admin-hamburger-btn').addEventListener('click', () => {
-            document.getElementById('admin-nav-links').classList.toggle('open');
+        document.querySelectorAll('.refresh-btn').forEach(btn => btn.onclick = refreshAllData);
+        themeToggleButtons.forEach(btn => btn.onclick = toggleTheme);
+        document.querySelectorAll('.hamburger-btn').forEach(btn => {
+            btn.onclick = () => btn.closest('.nav-bar').querySelector('.nav-links').classList.toggle('open');
         });
 
-        // Handle clicks on links within note content
-        function handleNoteClick(e) {
-            const link = e.target.closest('a');
-            if (link && link.href) {
+        document.body.addEventListener('click', (e) => {
+            const navLink = e.target.closest('a[data-page]');
+            if (navLink) {
                 e.preventDefault();
-                window.open(link.href, '_blank');
+                showPage(navLink.dataset.page);
             }
-        }
-        document.getElementById('user-note-content-input').addEventListener('click', handleNoteClick);
-        document.getElementById('note-content-input').addEventListener('click', handleNoteClick);
+            if (e.target.closest('#switch-to-admin-btn') || e.target.closest('#admin-commands-btn')) handleCommandPrompt();
+            if (e.target.closest('#switch-to-user-btn')) switchToUser();
+
+            const vacationList = e.target.closest('#user-schedule-request-list, #admin-schedule-request-list-visible, #admin-schedule-request-list-hidden');
+            if(vacationList) handleVacationListClick(e, vacationList.id.includes('admin'));
+        });
         
         setupTaskListeners();
+        initUserView(); 
+        initAdminView();
     });
+
+    function setupTaskListeners() {
+       document.body.addEventListener('change', async (e) => {
+           if(e.target.classList.contains('subtask-checkbox')) {
+                const checkbox = e.target;
+                const taskRow = checkbox.closest('.item-row');
+                const taskId = taskRow.dataset.taskId;
+                const source = taskRow.dataset.source;
+                let fullContent = taskRow.dataset.fullContent;
+                const clickedIndex = parseInt(checkbox.dataset.index, 10);
+                const isChecked = checkbox.checked;
+
+                checkbox.nextElementSibling.classList.toggle('done', isChecked);
+
+                let currentIndex = 0;
+                const newContent = fullContent.replace(/\((#|&)(.*?)\)/g, (match, sign, text) => {
+                    if (currentIndex++ === clickedIndex) return `(${isChecked ? '&' : '#'}${text})`;
+                    return match;
+                });
+                
+                try {
+                    const updateData = { content: newContent };
+                    if (source === 'supabase') {
+                       const { error } = await supabase.from('tasks').update(updateData).eq('id', taskId.replace('supabase-',''));
+                       if(error) throw error;
+                    } else {
+                       await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, taskId), updateData);
+                    }
+                    taskRow.dataset.fullContent = newContent;
+                } catch (error) {
+                    showModal('Błąd', 'Nie udało się zaktualizować podzadania: ' + error.message);
+                    checkbox.checked = !isChecked; // Revert UI
+                    checkbox.nextElementSibling.classList.toggle('done', !isChecked);
+                    taskRow.dataset.fullContent = fullContent; // Revert dataset
+                }
+           }
+       });
+    }
+
+    async function handleVacationListClick(e, isAdmin) {
+        const target = e.target;
+        const reqDiv = target.closest('.vacation-request');
+        if (!reqDiv) return;
+
+        const reqId = reqDiv.dataset.id;
+        const source = reqDiv.dataset.source;
+        const dbId = reqId.replace('supabase-','');
+
+        if (target.matches('.accept-vacation-checkbox')) {
+            const updateData = { is_accepted: target.checked };
+            try {
+                if (source === 'supabase') await supabase.from('vacation_requests').update(updateData).eq('id', dbId);
+                else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
+                reqDiv.classList.toggle('accepted', target.checked);
+            } catch(error) {
+                showModal('Błąd', 'Nie udało się zaktualizować statusu: ' + error.message);
+                target.checked = !target.checked;
+            }
+        } else if (target.matches('.toggle-visibility-btn')) {
+            const isCurrentlyVisible = reqDiv.dataset.visible !== 'false';
+            const newVisibility = !isCurrentlyVisible;
+            const updateData = { is_visible: newVisibility };
+            try {
+                if (source === 'supabase') await supabase.from('vacation_requests').update(updateData).eq('id', dbId);
+                else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
+                renderVacationRequests(true);
+            } catch(error) {
+                showModal('Błąd', 'Nie udało się zmienić widoczności: ' + error.message);
+            }
+        } else if (target.matches('.edit-vacation-btn')) {
+            let currentData;
+            if (source === 'supabase') { const { data } = await supabase.from('vacation_requests').select('*').eq('id', dbId).single(); currentData = data; }
+            else { const docSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId)); currentData = docSnap.data(); }
+            if (!currentData) return showModal('Błąd', 'Nie znaleziono wniosku.');
+            
+            const new_start_date = await showPromptModal('Nowa data od', '', currentData.start_date);
+            if (new_start_date === null) return;
+            const new_end_date = await showPromptModal('Nowa data do', '', currentData.end_date);
+            if (new_end_date === null) return;
+            const new_notes = await showPromptModal('Nowa notatka', '', currentData.notes);
+            if (new_notes === null) return;
+            const updateData = { start_date: new_start_date, end_date: new_end_date, notes: new_notes };
+
+            try {
+                if (source === 'supabase') await supabase.from('vacation_requests').update(updateData).eq('id', dbId);
+                else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
+                renderVacationRequests(isAdmin);
+            } catch (error) {
+                showModal('Błąd', 'Nie udało się zedytować wniosku: ' + error.message);
+            }
+        } else if (target.matches('.delete-vacation-btn')) {
+            if (await showConfirmModal('Potwierdzenie', 'Czy na pewno chcesz usunąć ten wniosek?')) {
+                try {
+                    if (source === 'supabase') await supabase.from('vacation_requests').delete().eq('id', dbId);
+                    else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId));
+                    renderVacationRequests(isAdmin);
+                } catch(error) {
+                    showModal('Błąd', 'Nie udało się usunąć wniosku: ' + error.message);
+                }
+            }
+        }
+    }
 </script>
 </body>
 </html>
-
 
