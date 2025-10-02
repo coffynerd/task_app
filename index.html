@@ -403,31 +403,6 @@
         </div>
     </div>
 
-    <!-- Modal for prompts -->
-    <div id="promptModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h4 id="promptModal-title"></h4>
-            <p id="promptModal-message"></p>
-            <input type="text" id="promptModal-input" class="modal-input">
-            <div style="margin-top: 15px;">
-                <button id="promptModal-ok-btn">OK</button>
-                <button id="promptModal-cancel-btn">Anuluj</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for confirms -->
-    <div id="confirmModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h4 id="confirmModal-title"></h4>
-            <p id="confirmModal-message"></p>
-            <div style="margin-top: 15px;">
-                <button id="confirmModal-yes-btn">Tak</button>
-                <button id="confirmModal-no-btn">Nie</button>
-            </div>
-        </div>
-    </div>
-
     <div id="user-view">
         <div class="nav-bar blue-nav">
             <div class="nav-links" id="user-nav-links">
@@ -699,48 +674,6 @@
         modal.style.display = 'flex';
     }
 
-    const promptModal = document.getElementById('promptModal');
-    function showPromptModal(title, message, defaultValue = '') {
-        return new Promise(resolve => {
-            promptModal.querySelector('#promptModal-title').textContent = title;
-            promptModal.querySelector('#promptModal-message').textContent = message;
-            const input = promptModal.querySelector('#promptModal-input');
-            input.value = defaultValue;
-            promptModal.style.display = 'flex';
-            input.focus();
-
-            const close = (value) => {
-                promptModal.style.display = 'none';
-                promptModal.querySelector('#promptModal-ok-btn').onclick = null;
-                promptModal.querySelector('#promptModal-cancel-btn').onclick = null;
-                resolve(value);
-            };
-
-            promptModal.querySelector('#promptModal-ok-btn').onclick = () => close(input.value);
-            promptModal.querySelector('#promptModal-cancel-btn').onclick = () => close(null);
-        });
-    }
-
-    const confirmModal = document.getElementById('confirmModal');
-    function showConfirmModal(title, message) {
-        return new Promise(resolve => {
-            confirmModal.querySelector('#confirmModal-title').textContent = title;
-            confirmModal.querySelector('#confirmModal-message').textContent = message;
-            confirmModal.style.display = 'flex';
-
-            const close = (value) => {
-                confirmModal.style.display = 'none';
-                confirmModal.querySelector('#confirmModal-yes-btn').onclick = null;
-                confirmModal.querySelector('#confirmModal-no-btn').onclick = null;
-                resolve(value);
-            };
-
-            confirmModal.querySelector('#confirmModal-yes-btn').onclick = () => close(true);
-            confirmModal.querySelector('#confirmModal-no-btn').onclick = () => close(false);
-        });
-    }
-
-
     function showPage(pageId) {
         document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
         const page = document.getElementById(pageId);
@@ -787,11 +720,12 @@
         }
     };
 
-    async function handleCommandPrompt() {
-        const password = await showPromptModal("Wpisz hasło lub komendę:", "");
-        if (password !== null && passwordActions[password]) {
+    function handleCommandPrompt() {
+        const password = prompt("Wpisz hasło lub komendę:");
+        if (password === null) return;
+        if (passwordActions.hasOwnProperty(password)) {
             passwordActions[password]();
-        } else if (password !== null) {
+        } else {
             showModal("Błąd", "Niepoprawne hasło lub komenda!");
         }
     }
@@ -903,7 +837,7 @@
                 taskContentContainer.innerHTML = parseTaskContent(isPriority ? task.content.substring(3).trim() : task.content);
                 contentWrapper.append(mainCheckbox, taskContentContainer);
 
-                if (isAdmin && showSourceTagsAdmin) {
+                if ((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) {
                     const sourceTag = document.createElement('span');
                     sourceTag.className = `source-tag ${task.source}`;
                     sourceTag.textContent = task.source;
@@ -921,9 +855,9 @@
                     const buttonsDiv = document.createElement('div');
                     buttonsDiv.innerHTML = `<button class="edit-btn">Edytuj</button><button class="toggle-btn">${task.visible === false ? 'Odkryj' : 'Ukryj'}</button><button class="delete-task-btn">Usuń</button>`;
                     buttonsDiv.querySelector('.edit-btn').onclick = async () => {
-                        const newContent = await showPromptModal('Nowa treść zadania', '', task.content);
+                        const newContent = prompt('Nowa treść zadania:', task.content);
                         if (newContent === null) return;
-                        const newAssignees = await showPromptModal('Nowi przypisani', '(oddzieleni średnikiem)', Array.isArray(task.assignees) ? task.assignees.join(';') : task.assignees || '');
+                        const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', Array.isArray(task.assignees) ? task.assignees.join(';') : task.assignees || '');
                         if (newAssignees === null) return;
                         const updateData = { content: newContent, assignees: newAssignees.split(';').map(s => s.trim()) };
                         if (task.source === 'supabase') await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-',''));
@@ -937,7 +871,7 @@
                         refreshAllData();
                     };
                     buttonsDiv.querySelector('.delete-task-btn').onclick = async () => {
-                        if (await showConfirmModal('Potwierdzenie', 'Czy na pewno chcesz usunąć to zadanie?')) {
+                        if (confirm('Czy na pewno chcesz usunąć to zadanie?')) {
                             if (task.source === 'supabase') await supabase.from('tasks').delete().eq('id', task.id.replace('supabase-',''));
                             else await deleteDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id));
                             refreshAllData();
@@ -1006,7 +940,7 @@
                 supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
                 contentWrapper.appendChild(supplierInfo);
 
-                if (isAdmin && showSourceTagsAdmin) {
+                if ((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) {
                     const sourceTag = document.createElement('span');
                     sourceTag.className = `source-tag ${order.source}`;
                     sourceTag.textContent = order.source;
@@ -1037,9 +971,9 @@
                 const editBtn = document.createElement('button');
                 editBtn.textContent = 'Edytuj';
                 editBtn.onclick = async () => {
-                    const newName = await showPromptModal('Nowa nazwa produktu', '', order.name);
+                    const newName = prompt('Nowa nazwa produktu:', order.name);
                     if (newName === null) return;
-                    const newSupplier = await showPromptModal('Nowy dostawca', '', order.supplier || '');
+                    const newSupplier = prompt('Nowy dostawca:', order.supplier || '');
                     if (newSupplier === null) return;
                     const updateData = { name: newName, supplier: newSupplier };
                     try {
@@ -1058,7 +992,7 @@
                 deleteBtn.textContent = 'Usuń';
                 deleteBtn.className = 'delete-order-btn';
                 deleteBtn.onclick = async () => {
-                    if (await showConfirmModal('Potwierdzenie', 'Czy na pewno chcesz usunąć tę pozycję?')) {
+                    if (confirm('Czy na pewno chcesz usunąć tę pozycję?')) {
                         try {
                             if (order.source === 'supabase') {
                                 await supabase.from('orders').delete().eq('id', order.id.replace('supabase-',''));
@@ -1072,7 +1006,6 @@
                     }
                 };
                 
-                // Determine which buttons to show
                 if (!isAdmin) {
                     if (!order.done) {
                         buttonsDiv.appendChild(doneBtn);
@@ -1080,7 +1013,7 @@
                             buttonsDiv.appendChild(editBtn);
                         }
                     }
-                } else { // Admin view
+                } else {
                     if (!order.done) {
                         buttonsDiv.appendChild(editBtn);
                         buttonsDiv.appendChild(doneBtn);
@@ -1113,13 +1046,13 @@
         const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
         const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public }));
 
-        const fbPath = isAdmin ? `artifacts/${appId}/public/data/notes` : `artifacts/${appId}/users/${userId}/notes`;
+        const fbPath = isAdmin ? `artifacts/${appId}/public/data/notes` : `artifacts/${appId}/public/data/notes`;
         const fbSnapshot = await getDocs(collection(db, fbPath));
         const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
         
         const allNotes = [...formattedSupabaseNotes, ...firebaseNotes]
-            .filter(note => isAdmin || note.source === 'firebase' || note.public)
-            .sort((a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt) - new Date(a.createdAt)));
+            .filter(note => isAdmin || note.public || note.is_public)
+            .sort((a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)));
 
         listEl.innerHTML = allNotes.length === 0 ? 'Brak notatek.' : '';
         allNotes.forEach(note => {
@@ -1129,9 +1062,9 @@
             item.dataset.source = note.source;
             if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
             
-            const titleHtml = `<span class="note-title" style="color:${note.titleColor || 'inherit'}">${note.title}</span>
+            const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title}</span>
                                <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>
-                               ${(isAdmin && showSourceTagsAdmin) ? `<span class="source-tag ${note.source}">${note.source}</span>` : ''}`;
+                               ${((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) ? `<span class="source-tag ${note.source}">${note.source}</span>` : ''}`;
             
             item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
 
@@ -1147,7 +1080,7 @@
             const publishBtn = document.createElement('span');
             publishBtn.className = 'note-publish-btn';
             publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
-            publishBtn.title = (note.public || note.is_public) ? 'Ustaw jako prywatną' : 'Udostępnij publicznie';
+            publishBtn.title = (note.public || note.is_public) ? 'Ustaw jako prywatną' : 'Upublicznij';
             publishBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('publish', note, isAdmin); };
 
             const shareBtn = document.createElement('span');
@@ -1156,30 +1089,21 @@
             shareBtn.title = 'Udostępnij (kopiuj link)';
             shareBtn.onclick = (e) => {
                 e.stopPropagation();
-                if(note.uuid) {
-                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${note.uuid}`;
-                    navigator.clipboard.writeText(shareLink).then(() => {
-                        showModal('Sukces', 'Link do notatki skopiowany do schowka.');
-                    }, () => {
-                        showModal('Błąd', 'Nie udało się skopiować linku.');
-                    });
-                } else {
-                    showModal('Błąd', 'Brak UUID do udostępnienia tej notatki.');
-                }
+                const note_uuid = note.uuid || note.id;
+                const shareLink = `${window.location.origin}${window.location.pathname.replace('index.html', 'notatka.html')}?uuid=${note_uuid}`;
+                navigator.clipboard.writeText(shareLink).then(() => {
+                    showModal('Sukces', 'Link do notatki skopiowany do schowka.');
+                }, () => {
+                    showModal('Błąd', 'Nie udało się skopiować linku.');
+                });
             };
             
             actionsDiv.appendChild(pinBtn); 
 
             if (isAdmin) {
                  actionsDiv.appendChild(publishBtn);
-                 if(note.uuid) actionsDiv.appendChild(shareBtn);
-            } else { 
-                if (note.source === 'firebase') {
-                     actionsDiv.appendChild(publishBtn);
-                } else if (note.public || note.is_public) {
-                    if(note.uuid) actionsDiv.appendChild(shareBtn);
-                }
             }
+            if(note.uuid || note.source === 'firebase') actionsDiv.appendChild(shareBtn);
 
             item.appendChild(actionsDiv);
             item.onclick = () => {
@@ -1198,8 +1122,8 @@
        const adminHiddenListElement = document.getElementById('admin-schedule-request-list-hidden');
 
         if (!isAuthReady) {
-            if (userListElement) userListElement.innerHTML = 'Ładowanie uwierzytelniania...';
-            if (adminVisibleListElement) adminVisibleListElement.innerHTML = 'Ładowanie uwierzytelniania...';
+            if (userListElement) userListElement.innerHTML = 'Ładowanie...';
+            if (adminVisibleListElement) adminVisibleListElement.innerHTML = 'Ładowanie...';
             return;
         }
 
@@ -1232,7 +1156,7 @@
                     <span style="flex-grow: 1; text-align: right; color: #666; padding: 0 20px;">${req.notes || ''}</span>
                 `;
 
-                if (isAdmin && showSourceTagsAdmin) {
+                if ((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) {
                      const sourceTag = document.createElement('span');
                      sourceTag.className = `source-tag ${req.source}`;
                      sourceTag.textContent = req.source;
@@ -1296,7 +1220,7 @@
     async function handleNoteAction(action, note, isAdmin) {
         const source = note.source;
         const noteId = source === 'supabase' ? note.id.replace('supabase-', '') : note.id;
-        const fbPath = isAdmin ? `artifacts/${appId}/public/data/notes` : `artifacts/${appId}/users/${userId}/notes`;
+        const fbPath = `artifacts/${appId}/public/data/notes`;
         try {
             if (action === 'pin') {
                 const newPinnedState = !(note.pinned || note.is_pinned);
@@ -1307,26 +1231,21 @@
                     await updateDoc(doc(db, fbPath, noteId), { pinned: newPinnedState });
                 }
             } else if (action === 'publish') {
-                const newPublicState = !(note.public || note.is_public);
-                if (source === 'firebase' && !isAdmin && newPublicState) {
-                    if (!await showConfirmModal('Udostępnianie', 'Czy na pewno chcesz przenieść tę notatkę do publicznych? Ta akcja jest nieodwracalna.')) return;
-                    const publicNotesRef = collection(db, `artifacts/${appId}/public/data/notes`);
-                    const privateNoteRef = doc(db, `artifacts/${appId}/users/${userId}/notes`, noteId);
-                    const {id, source, ...noteData} = note;
-                    await addDoc(publicNotesRef, { ...noteData, is_public: true, ownerId: userId, originalId: noteId });
-                    await deleteDoc(privateNoteRef);
-                } else if (isAdmin) {
+                if (isAdmin) {
+                    const newPublicState = !(note.public || note.is_public);
                     if(source === 'supabase') {
                         const { error } = await supabase.from('notes').update({ is_public: newPublicState }).eq('id', noteId);
                         if (error) throw error;
                     } else {
-                        const noteRef = doc(db, `artifacts/${appId}/public/data/notes`, noteId);
-                        await updateDoc(noteRef, { is_public: newPublicState });
+                        const noteRef = doc(db, fbPath, noteId);
+                        await updateDoc(noteRef, { public: newPublicState });
                     }
+                } else {
+                    showModal('Błąd', 'Tylko administrator może zmieniać status publiczny notatki.');
                 }
             }
             renderNotes(isAdmin);
-            if(!isAdmin) renderNotes(true);
+            renderNotes(!isAdmin); // Refresh both views
         } catch (error) {
             showModal('Błąd', 'Nie udało się wykonać akcji na notatce: ' + error.message);
         }
@@ -1367,14 +1286,14 @@
         const content = editorMode.user === 'raw' ? document.getElementById('user-note-content-raw').value : convertRenderedToSource(document.getElementById('user-note-content-input'));
         const noteData = { title, content, titleColor: document.getElementById('user-note-color-input').value, updatedAt: new Date() };
 
-        const notesCollection = collection(db, `artifacts/${appId}/users/${userId}/notes`);
-        if (currentUserNoteId && !currentUserNoteId.startsWith('supabase')) {
-            await updateDoc(doc(notesCollection, currentUserNoteId), noteData);
+        if (currentUserNoteId && currentUserNoteId.startsWith('firebase')) {
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentUserNoteId), noteData);
         } else {
-            await addDoc(notesCollection, { ...noteData, createdAt: new Date(), pinned: false, is_public: false, submittedByUserId: userId });
+            await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...noteData, createdAt: new Date(), pinned: false, public: true, submittedByUserId: userId, uuid: crypto.randomUUID() });
             clearUserEditor();
         }
         renderNotes(false);
+        renderNotes(true);
     }
 
     function initUserView() {
@@ -1465,7 +1384,7 @@
         document.getElementById('note-color-input').value = note.titleColor || note.title_color || '#000000';
         document.getElementById('note-content-input').innerHTML = convertTextToHtml(note.content);
         const ts = note.updatedAt || note.updated_at || note.createdAt;
-        const date = ts ? (ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts)) : null;
+        const date = ts ? (ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts)) : new Date(ts);
         document.getElementById('note-timestamps').textContent = date ? `Ostatnia edycja: ${date.toLocaleString()}`: '';
         editorMode.admin = 'render';
         document.getElementById('note-content-input').style.display = 'block';
@@ -1488,7 +1407,7 @@
                     await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), firebaseNoteData);
                 }
             } else { 
-                await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...firebaseNoteData, createdAt: new Date(), pinned: false, is_public: true });
+                await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...firebaseNoteData, createdAt: new Date(), pinned: false, public: false, uuid: crypto.randomUUID() });
                 clearAdminEditor();
             }
             renderNotes(true);
@@ -1498,7 +1417,7 @@
     }
     
     async function deleteAdminNote() {
-        if (!currentAdminNoteId || !await showConfirmModal('Potwierdzenie', 'Na pewno usunąć tę notatkę?')) return;
+        if (!currentAdminNoteId || !confirm('Czy na pewno chcesz usunąć tę notatkę?')) return;
         try {
             if (currentAdminNoteId.startsWith('supabase')) {
                 await supabase.from('notes').delete().eq('id', currentAdminNoteId.replace('supabase-', ''));
@@ -1705,11 +1624,11 @@
             else { const docSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId)); currentData = docSnap.data(); }
             if (!currentData) return showModal('Błąd', 'Nie znaleziono wniosku.');
             
-            const new_start_date = await showPromptModal('Nowa data od', '', currentData.start_date);
+            const new_start_date = prompt('Nowa data rozpoczęcia:', currentData.start_date);
             if (new_start_date === null) return;
-            const new_end_date = await showPromptModal('Nowa data do', '', currentData.end_date);
+            const new_end_date = prompt('Nowa data zakończenia:', currentData.end_date);
             if (new_end_date === null) return;
-            const new_notes = await showPromptModal('Nowa notatka', '', currentData.notes);
+            const new_notes = prompt('Nowa notatka:', currentData.notes);
             if (new_notes === null) return;
             const updateData = { start_date: new_start_date, end_date: new_end_date, notes: new_notes };
 
@@ -1721,7 +1640,7 @@
                 showModal('Błąd', 'Nie udało się zedytować wniosku: ' + error.message);
             }
         } else if (target.matches('.delete-vacation-btn')) {
-            if (await showConfirmModal('Potwierdzenie', 'Czy na pewno chcesz usunąć ten wniosek?')) {
+            if (confirm('Czy na pewno chcesz usunąć ten wniosek?')) {
                 try {
                     if (source === 'supabase') await supabase.from('vacation_requests').delete().eq('id', dbId);
                     else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId));
