@@ -713,7 +713,7 @@
             const isAdminView = document.getElementById('admin-view').style.display === 'block';
             const commands = Object.keys(passwordActions).filter(cmd => {
                 if (cmd === 'help') return false;
-                if (!isAdminView && (cmd.startsWith('admin') || cmd === 'sql')) return false;
+                if (!isAdminView && (cmd.startsWith('admin'))) return false;
                 return true;
             });
             showModal('Dostępne komendy', '- ' + commands.join('\n- '));
@@ -740,24 +740,73 @@
     function convertTextToHtml(text) {
         if (!text) return '';
         const buttonRegex = /\[(.*?)\]\{(.*?)\}/g;
-        return text.split('\n').map(line => {
-            let pLine = line.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            const trimmed = pLine.trim();
-            if (trimmed.startsWith('# ')) return `<div><input type="checkbox">${trimmed.substring(2)}</div>`;
-            if (trimmed.startsWith('& ')) return `<div><input type="checkbox" checked>${trimmed.substring(2)}</div>`;
-            return `<div>${pLine.replace(buttonRegex, (m, btn, lnk) => `<a href="${/^(https?:\/\/)/.test(lnk) ? lnk : 'https://' + lnk}" target="_blank"><button>${btn}</button></a>`)}</div>`;
-        }).join('');
+        const htmlBlockRegex = /\(html\)\{([\s\S]*?)\}\(html\)/g;
+
+        const parts = text.split(htmlBlockRegex);
+
+        const processedParts = parts.map((part, index) => {
+            if (index % 2 === 1) { // This is the captured HTML content
+                return `<div class="raw-html-block">${part}</div>`;
+            } else { // This is regular text
+                return part.split('\n').map(line => {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('# ')) {
+                        const content = trimmed.substring(2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        return `<div><input type="checkbox">${content}</div>`;
+                    }
+                    if (trimmed.startsWith('& ')) {
+                        const content = trimmed.substring(2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        return `<div><input type="checkbox" checked>${content}</div>`;
+                    }
+                    
+                    let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    processedLine = processedLine.replace(buttonRegex, (match, buttonText, link) => {
+                        let href = link.trim();
+                        if (!href.startsWith('http://') && !href.startsWith('https://')) {
+                            href = 'https://' + href;
+                        }
+                        const unescapedButtonText = buttonText.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                        return `<a href="${href}" target="_blank"><button>${unescapedButtonText}</button></a>`;
+                    });
+                    
+                    return `<div>${processedLine}</div>`;
+                }).join('');
+            }
+        });
+
+        return processedParts.join('');
     }
 
     function convertRenderedToSource(element) {
-        return Array.from(element.childNodes).map(child => {
-            if (child.nodeName !== 'DIV') return child.textContent;
+        const lines = [];
+        element.childNodes.forEach(child => {
+            if (child.nodeName !== 'DIV') {
+                if (child.textContent.trim()) lines.push(child.textContent);
+                return;
+            }
+            if (child.classList.contains('raw-html-block')) {
+                lines.push(`(html){${child.innerHTML}}(html)`);
+                return;
+            }
+
             const checkbox = child.querySelector('input[type="checkbox"]');
-            if (checkbox) return (checkbox.checked ? '& ' : '# ') + child.textContent.trim();
             const link = child.querySelector('a');
-            if (link) return `[${link.textContent}]{${link.getAttribute('href').replace(/^https?:\/\//, '')}}`;
-            return child.textContent;
-        }).join('\n');
+            const button = link ? link.querySelector('button') : null;
+
+            if (checkbox) {
+                const prefix = checkbox.checked ? '& ' : '# ';
+                lines.push(prefix + child.textContent.trim());
+            } else if (link && button) {
+                const buttonText = button.textContent;
+                let href = link.getAttribute('href');
+                if (href.startsWith('https://')) href = href.substring(8);
+                else if (href.startsWith('http://')) href = href.substring(7);
+                lines.push(`[${buttonText}]{${href}}`);
+            } else {
+                lines.push(child.textContent);
+            }
+        });
+        return lines.join('\n');
     }
 
     // --- TASK HELPERS ---
@@ -1089,13 +1138,17 @@
             shareBtn.title = 'Udostępnij (kopiuj link)';
             shareBtn.onclick = (e) => {
                 e.stopPropagation();
-                const note_uuid = note.uuid || note.id;
-                const shareLink = `${window.location.origin}${window.location.pathname.replace('index.html', 'notatka.html')}?uuid=${note_uuid}`;
-                navigator.clipboard.writeText(shareLink).then(() => {
-                    showModal('Sukces', 'Link do notatki skopiowany do schowka.');
-                }, () => {
-                    showModal('Błąd', 'Nie udało się skopiować linku.');
-                });
+                const identifier = note.uuid || note.id;
+                if(identifier) {
+                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${identifier}`;
+                    navigator.clipboard.writeText(shareLink).then(() => {
+                        showModal('Sukces', 'Link do notatki skopiowany do schowka.');
+                    }, () => {
+                        showModal('Błąd', 'Nie udało się skopiować linku.');
+                    });
+                } else {
+                    showModal('Błąd', 'Brak identyfikatora do udostępnienia tej notatki.');
+                }
             };
             
             actionsDiv.appendChild(pinBtn); 
@@ -1221,6 +1274,7 @@
         const source = note.source;
         const noteId = source === 'supabase' ? note.id.replace('supabase-', '') : note.id;
         const fbPath = `artifacts/${appId}/public/data/notes`;
+
         try {
             if (action === 'pin') {
                 const newPinnedState = !(note.pinned || note.is_pinned);
@@ -1244,8 +1298,8 @@
                     showModal('Błąd', 'Tylko administrator może zmieniać status publiczny notatki.');
                 }
             }
-            renderNotes(isAdmin);
-            renderNotes(!isAdmin); // Refresh both views
+            renderNotes(true);
+            renderNotes(false);
         } catch (error) {
             showModal('Błąd', 'Nie udało się wykonać akcji na notatce: ' + error.message);
         }
@@ -1545,6 +1599,33 @@
             if(vacationList) handleVacationListClick(e, vacationList.id.includes('admin'));
         });
         
+        function handleNoteClick(e) {
+            const link = e.target.closest('a');
+            if (link && link.href) {
+                e.preventDefault();
+                window.open(link.href, '_blank');
+            }
+        }
+        document.getElementById('user-note-content-input').addEventListener('click', handleNoteClick);
+        document.getElementById('note-content-input').addEventListener('click', handleNoteClick);
+
+        async function handleCheckboxAutoSave(e) {
+            if (e.target.tagName === 'INPUT' && e.target.type === 'checkbox') {
+                const isAdmin = e.currentTarget.id === 'note-content-input';
+                
+                setTimeout(() => {
+                    if (isAdmin) {
+                        saveAdminNote();
+                    } else {
+                        saveUserNote();
+                    }
+                }, 100);
+            }
+        }
+        document.getElementById('user-note-content-input').addEventListener('change', handleCheckboxAutoSave);
+        document.getElementById('note-content-input').addEventListener('change', handleCheckboxAutoSave);
+
+
         setupTaskListeners();
         initUserView(); 
         initAdminView();
@@ -1654,4 +1735,3 @@
 </script>
 </body>
 </html>
-
