@@ -622,6 +622,7 @@
 
     // --- GLOBAL STATE AND VIEW MANAGEMENT ---
     let isAdminInitialized = false;
+    let isUserInitialized = false;
     let showSourceTagsAdmin = false;
     let editorMode = { user: 'render', admin: 'render' };
     let currentUserNoteId = null;
@@ -734,13 +735,18 @@
         document.getElementById('admin-view').style.display = 'none';
         document.getElementById('user-view').style.display = 'block';
         showPage('user-tasks');
+        if (!isUserInitialized) {
+            initUserView();
+            isUserInitialized = true;
+        }
+        refreshAllData();
     }
 
     // --- NOTEBOOK HELPERS ---
     function convertTextToHtml(text) {
         if (!text) return '';
         const buttonRegex = /\[(.*?)\]\{(.*?)\}/g;
-        const htmlBlockRegex = /\(html\)\{([\s\S]*?)\}\(html\)/g;
+        const htmlBlockRegex = /\(html\){([\s\S]*?)}\(html\)/g;
 
         const parts = text.split(htmlBlockRegex);
 
@@ -749,17 +755,16 @@
                 return `<div class="raw-html-block">${part}</div>`;
             } else { // This is regular text
                 return part.split('\n').map(line => {
+                    let processedLine = line.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     const trimmed = line.trim();
+
                     if (trimmed.startsWith('# ')) {
-                        const content = trimmed.substring(2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                        return `<div><input type="checkbox">${content}</div>`;
+                        return `<div><input type="checkbox">${trimmed.substring(2).replace(/&/g, "&amp;")}</div>`;
                     }
-                    if (trimmed.startsWith('& ')) {
-                        const content = trimmed.substring(2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                        return `<div><input type="checkbox" checked>${content}</div>`;
+                    if (trimmed.startsWith('& ')) { 
+                        return `<div><input type="checkbox" checked>${trimmed.substring(2).replace(/&/g, "&amp;")}</div>`;
                     }
                     
-                    let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     processedLine = processedLine.replace(buttonRegex, (match, buttonText, link) => {
                         let href = link.trim();
                         if (!href.startsWith('http://') && !href.startsWith('https://')) {
@@ -1140,7 +1145,7 @@
                 e.stopPropagation();
                 const identifier = note.uuid || note.id;
                 if(identifier) {
-                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${identifier}`;
+                    const shareLink = `${window.location.origin}${window.location.pathname.replace('index.html', 'notatka.html')}?uuid=${identifier}`;
                     navigator.clipboard.writeText(shareLink).then(() => {
                         showModal('Sukces', 'Link do notatki skopiowany do schowka.');
                     }, () => {
@@ -1318,10 +1323,22 @@
         document.getElementById('user-note-content-input').style.display = 'block';
         document.getElementById('user-note-content-raw').style.display = 'none';
         document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod';
+        document.getElementById('user-save-note-btn').disabled = false;
+        document.getElementById('user-save-note-btn').title = "";
     }
 
     function loadUserNoteIntoEditor(note) {
         currentUserNoteId = note.id;
+        const saveButton = document.getElementById('user-save-note-btn');
+        
+        if(note.source === 'supabase' || (note.source === 'firebase' && note.submittedByUserId !== userId)) {
+            saveButton.disabled = true;
+            saveButton.title = "Nie można edytować tej notatki.";
+        } else {
+            saveButton.disabled = false;
+            saveButton.title = "";
+        }
+        
         document.getElementById('user-note-title-input').value = note.title || '';
         document.getElementById('user-note-color-input').value = note.titleColor || note.title_color ||'#000000';
         document.getElementById('user-note-content-input').innerHTML = convertTextToHtml(note.content);
@@ -1342,7 +1359,7 @@
 
         if (currentUserNoteId && currentUserNoteId.startsWith('firebase')) {
             await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentUserNoteId), noteData);
-        } else {
+        } else if (!currentUserNoteId) {
             await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...noteData, createdAt: new Date(), pinned: false, public: true, submittedByUserId: userId, uuid: crypto.randomUUID() });
             clearUserEditor();
         }
@@ -1577,6 +1594,7 @@
             showAdminView();
         } else {
             initUserView();
+            isUserInitialized = true;
             document.getElementById('user-view').style.display = 'block';
         }
 
@@ -1627,7 +1645,6 @@
 
 
         setupTaskListeners();
-        initUserView(); 
         initAdminView();
     });
 
@@ -1735,3 +1752,4 @@
 </script>
 </body>
 </html>
+
