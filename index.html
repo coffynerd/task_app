@@ -707,7 +707,7 @@
         'admin_1': () => { localStorage.setItem('defaultView', 'admin'); showModal('Sukces', 'Panel administratora został ustawiony jako domyślny.'); showAdminView(); },
         'admin_0': () => { localStorage.setItem('defaultView', 'user'); showModal('Sukces', 'Panel użytkownika został ustawiony jako domyślny.'); switchToUser(); },
         'sql': () => { showSourceTagsAdmin = !showSourceTagsAdmin; showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`); refreshAllData(); },
-        'dev': () => window.open('https://coffynerd.github.io/blazor1', '_blank'),
+        'dev': () => window.open('https://coffynerd.github.io/publicnotebook/', '_blank'),
         'iddqd': () => window.open('https://www.youtube.com/watch?v=dXji8ycMolI', '_blank'),
         'minecraft': () => window.open('https://classic.minecraft.net', '_blank'),
         'help': () => {
@@ -755,14 +755,15 @@
                 return `<div class="raw-html-block">${part}</div>`;
             } else { // This is regular text
                 return part.split('\n').map(line => {
-                    let processedLine = line.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     const trimmed = line.trim();
 
                     if (trimmed.startsWith('# ')) {
                         return `<div><input type="checkbox">${trimmed.substring(2).replace(/&/g, "&amp;")}</div>`;
                     }
                     if (trimmed.startsWith('& ')) { 
-                        return `<div><input type="checkbox" checked>${trimmed.substring(2).replace(/&/g, "&amp;")}</div>`;
+                        const content = trimmed.substring(2).replace(/&/g, "&amp;");
+                        return `<div><input type="checkbox" checked>${content}</div>`;
                     }
                     
                     processedLine = processedLine.replace(buttonRegex, (match, buttonText, link) => {
@@ -1145,7 +1146,7 @@
                 e.stopPropagation();
                 const identifier = note.uuid || note.id;
                 if(identifier) {
-                    const shareLink = `${window.location.origin}${window.location.pathname.replace('index.html', 'notatka.html')}?uuid=${identifier}`;
+                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${identifier}`;
                     navigator.clipboard.writeText(shareLink).then(() => {
                         showModal('Sukces', 'Link do notatki skopiowany do schowka.');
                     }, () => {
@@ -1224,18 +1225,21 @@
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'right-aligned-info';
                 
-                let buttonsHtml = '';
                 if (isAdmin) {
-                    buttonsHtml = `
-                        <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-vacation-checkbox" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
-                        <button class="toggle-visibility-btn">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
-                        <button class="edit-vacation-btn">Edytuj</button>
-                        <button class="delete-vacation-btn">Usuń</button>`;
+                    const date = new Date(req.createdAt || req.created_at);
+                    const dateInfo = !isNaN(date) ? `<div class="date-info">${date.toLocaleString('pl-PL')}</div>` : '';
+                    buttonsDiv.innerHTML = `
+                        ${dateInfo}
+                        <div>
+                            <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-vacation-checkbox" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
+                            <button class="toggle-visibility-btn">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
+                            <button class="edit-vacation-btn">Edytuj</button>
+                            <button class="delete-vacation-btn">Usuń</button>
+                        </div>`;
                 } else {
-                     buttonsHtml = `<button class="edit-vacation-btn">Edytuj</button>`;
+                     buttonsDiv.innerHTML = `<div><button class="edit-vacation-btn">Edytuj</button></div>`;
                 }
                 
-                buttonsDiv.innerHTML = `<div>${buttonsHtml}</div>`;
                 itemDiv.append(contentWrapper, buttonsDiv);
                 targetElement.appendChild(itemDiv);
             });
@@ -1331,13 +1335,8 @@
         currentUserNoteId = note.id;
         const saveButton = document.getElementById('user-save-note-btn');
         
-        if(note.source === 'supabase' || (note.source === 'firebase' && note.submittedByUserId !== userId)) {
-            saveButton.disabled = true;
-            saveButton.title = "Nie można edytować tej notatki.";
-        } else {
-            saveButton.disabled = false;
-            saveButton.title = "";
-        }
+        saveButton.disabled = false;
+        saveButton.title = "";
         
         document.getElementById('user-note-title-input').value = note.title || '';
         document.getElementById('user-note-color-input').value = note.titleColor || note.title_color ||'#000000';
@@ -1352,16 +1351,27 @@
     }
 
     async function saveUserNote() {
+        if(document.getElementById('user-save-note-btn').disabled) {
+            showModal("Błąd", "Nie masz uprawnień do zapisu tej notatki.");
+            return;
+        }
+
         const title = document.getElementById('user-note-title-input').value.trim();
         if (!title) { showModal('Błąd', 'Tytuł notatki nie może być pusty!'); return; }
         const content = editorMode.user === 'raw' ? document.getElementById('user-note-content-raw').value : convertRenderedToSource(document.getElementById('user-note-content-input'));
         const noteData = { title, content, titleColor: document.getElementById('user-note-color-input').value, updatedAt: new Date() };
 
-        if (currentUserNoteId && currentUserNoteId.startsWith('firebase')) {
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentUserNoteId), noteData);
-        } else if (!currentUserNoteId) {
-            await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...noteData, createdAt: new Date(), pinned: false, public: true, submittedByUserId: userId, uuid: crypto.randomUUID() });
-            clearUserEditor();
+        if (currentUserNoteId) {
+            const source = document.querySelector(`#user-note-title-list .note-list-item[data-id="${currentUserNoteId}"]`).dataset.source;
+             if (source === 'supabase') {
+                const { error } = await supabase.from('notes').update({ title: noteData.title, content: noteData.content, title_color: noteData.titleColor, updated_at: new Date().toISOString() }).eq('id', currentUserNoteId.replace('supabase-',''));
+                if (error) throw new Error('Supabase update failed');
+            } else {
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentUserNoteId), noteData);
+            }
+        } else {
+            const newDocRef = await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...noteData, createdAt: new Date(), pinned: false, public: true, submittedByUserId: userId, uuid: crypto.randomUUID() });
+            currentUserNoteId = newDocRef.id;
         }
         renderNotes(false);
         renderNotes(true);
@@ -1590,12 +1600,15 @@
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
 
+        initUserView();
+        initAdminView();
+
         if (localStorage.getItem('defaultView') === 'admin') {
             showAdminView();
         } else {
-            initUserView();
-            isUserInitialized = true;
             document.getElementById('user-view').style.display = 'block';
+            isUserInitialized = true; // Set this flag
+            refreshAllData();
         }
 
         document.querySelectorAll('.refresh-btn').forEach(btn => btn.onclick = refreshAllData);
@@ -1645,7 +1658,6 @@
 
 
         setupTaskListeners();
-        initAdminView();
     });
 
     function setupTaskListeners() {
