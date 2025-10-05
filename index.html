@@ -1013,10 +1013,13 @@
                 doneBtn.textContent = 'Zamówione';
                 doneBtn.onclick = async () => {
                     if (isPriority) new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-770340.wav').play();
-                    const updateData = { done: true, is_completed: true };
+                    
                     try {
-                        if (order.source === 'supabase') await supabase.from('orders').update(updateData).eq('id', order.id.replace('supabase-',''));
-                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), updateData);
+                        if (order.source === 'supabase') {
+                             await supabase.from('orders').update({ is_completed: true }).eq('id', order.id.replace('supabase-',''));
+                        } else {
+                             await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), { done: true });
+                        }
                         refreshAllData();
                     } catch (error) {
                         showModal('Błąd', 'Nie udało się zaktualizować statusu zamówienia: ' + error.message);
@@ -1351,11 +1354,6 @@
     }
 
     async function saveUserNote() {
-        if(document.getElementById('user-save-note-btn').disabled) {
-            showModal("Błąd", "Nie masz uprawnień do zapisu tej notatki.");
-            return;
-        }
-
         const title = document.getElementById('user-note-title-input').value.trim();
         if (!title) { showModal('Błąd', 'Tytuł notatki nie może być pusty!'); return; }
         const content = editorMode.user === 'raw' ? document.getElementById('user-note-content-raw').value : convertRenderedToSource(document.getElementById('user-note-content-input'));
