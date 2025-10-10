@@ -18,6 +18,7 @@
             --priority-color: #B8860B; /* Ciemny złoty dla trybu jasnego */
             --supabase-source-color: #56a761;
             --firebase-source-color: #ffca28;
+            --user-task-color: #007bff;
         }
         body {
             font-family: Arial, sans-serif;
@@ -102,10 +103,16 @@
             color: var(--priority-color);
             font-weight: bold;
         }
+        .item-row.user-submitted {
+            color: var(--user-task-color);
+        }
         .dark-mode .item-row.priority {
             color: #ffc101;
         }
-        .item-row.priority.done {
+        .dark-mode .item-row.user-submitted {
+            color: #3399ff;
+        }
+        .item-row.user-submitted.done, .item-row.priority.done {
             color: red;
         }
         .order-item.done {
@@ -293,8 +300,14 @@
         .vacation-request.accepted {
             background-color: #d4edda;
         }
+        .vacation-request.rejected {
+            background-color: #f8d7da;
+        }
         .dark-mode .vacation-request.accepted {
             background-color: #1c3d23;
+        }
+        .dark-mode .vacation-request.rejected {
+            background-color: #4d1f23;
         }
         .source-tag {
             font-size: 0.7em;
@@ -421,6 +434,12 @@
         </div>
         <div id="user-tasks" class="content active">
             <h2>Lista Zadań</h2>
+            <form id="user-task-form">
+                <h3>Dodaj zadanie</h3>
+                <input type="text" id="user-task-input" placeholder="Treść zadania" required>
+                <input type="text" id="user-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
+                <button type="submit">Dodaj</button>
+            </form>
             <div id="user-task-list">Ładowanie...</div>
         </div>
         <div id="user-order" class="content">
@@ -703,31 +722,89 @@
     }
     
     const passwordActions = {
-        'admin': showAdminView,
-        'admin_1': () => { localStorage.setItem('defaultView', 'admin'); showModal('Sukces', 'Panel administratora został ustawiony jako domyślny.'); showAdminView(); },
-        'admin_0': () => { localStorage.setItem('defaultView', 'user'); showModal('Sukces', 'Panel użytkownika został ustawiony jako domyślny.'); switchToUser(); },
+        'admin_1': async () => {
+            const password = prompt("Potwierdź hasłem administratora:");
+            if (password === null) return;
+            if (await checkAdminPassword(password)) {
+                 localStorage.setItem('defaultView', 'admin'); 
+                 showModal('Sukces', 'Panel administratora został ustawiony jako domyślny.'); 
+                 showAdminView();
+            } else {
+                 showModal('Błąd', 'Niepoprawne hasło!');
+            }
+        },
+        'admin_0': async () => {
+            const password = prompt("Potwierdź hasłem administratora:");
+            if (password === null) return;
+            if (await checkAdminPassword(password)) {
+                localStorage.setItem('defaultView', 'user'); 
+                showModal('Sukces', 'Panel użytkownika został ustawiony jako domyślny.'); 
+                switchToUser();
+            } else {
+                showModal('Błąd', 'Niepoprawne hasło!');
+            }
+        },
+        'passwd': async () => {
+             const newPass1 = prompt("Wpisz nowe hasło:");
+             if (newPass1 === null) return;
+             const newPass2 = prompt("Powtórz nowe hasło:");
+             if (newPass2 === null) return;
+
+             if (newPass1 && newPass1 === newPass2) {
+                try {
+                    const docRef = doc(db, `artifacts/${appId}/config/admin`);
+                    await setDoc(docRef, { password: newPass1 });
+                    showModal('Sukces', 'Hasło zostało zmienione.');
+                } catch (e) {
+                    showModal('Błąd', 'Nie udało się zmienić hasła.');
+                }
+             } else {
+                showModal('Błąd', 'Hasła nie są takie same lub pole jest puste.');
+             }
+        },
         'sql': () => { showSourceTagsAdmin = !showSourceTagsAdmin; showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`); refreshAllData(); },
         'dev': () => window.open('https://coffynerd.github.io/publicnotebook/', '_blank'),
         'iddqd': () => window.open('https://www.youtube.com/watch?v=dXji8ycMolI', '_blank'),
         'minecraft': () => window.open('https://classic.minecraft.net', '_blank'),
         'help': () => {
             const isAdminView = document.getElementById('admin-view').style.display === 'block';
-            const commands = Object.keys(passwordActions).filter(cmd => {
-                if (cmd === 'help') return false;
-                if (!isAdminView && (cmd.startsWith('admin'))) return false;
-                return true;
-            });
+            let commands = ['sql', 'dev', 'iddqd', 'minecraft', 'help', 'admin_1', 'admin_0'];
+            if (isAdminView) {
+                commands.push('passwd');
+            }
             showModal('Dostępne komendy', '- ' + commands.join('\n- '));
         }
     };
+    
+    async function checkAdminPassword(password) {
+        const docRef = doc(db, `artifacts/${appId}/config/admin`);
+        try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                return docSnap.data().password === password;
+            } else {
+                // If doc doesn't exist, create it with a default password "admin"
+                await setDoc(docRef, { password: 'admin' });
+                return password === 'admin';
+            }
+        } catch (e) {
+            console.error("Error checking password:", e);
+            return false;
+        }
+    }
 
-    function handleCommandPrompt() {
-        const password = prompt("Wpisz hasło lub komendę:");
-        if (password === null) return;
-        if (passwordActions.hasOwnProperty(password)) {
-            passwordActions[password]();
+    async function handleCommandPrompt() {
+        const userInput = prompt("Wpisz hasło lub komendę:");
+        if (userInput === null) return;
+
+        if (passwordActions.hasOwnProperty(userInput)) {
+            passwordActions[userInput]();
         } else {
-            showModal("Błąd", "Niepoprawne hasło lub komenda!");
+             if (await checkAdminPassword(userInput)) {
+                showAdminView();
+             } else {
+                showModal("Błąd", "Niepoprawne hasło lub komenda!");
+             }
         }
     }
 
@@ -755,17 +832,17 @@
                 return `<div class="raw-html-block">${part}</div>`;
             } else { // This is regular text
                 return part.split('\n').map(line => {
-                    let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     const trimmed = line.trim();
-
                     if (trimmed.startsWith('# ')) {
-                        return `<div><input type="checkbox">${trimmed.substring(2).replace(/&/g, "&amp;")}</div>`;
+                        const content = trimmed.substring(2).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        return `<div><input type="checkbox">${content}</div>`;
                     }
                     if (trimmed.startsWith('& ')) { 
                         const content = trimmed.substring(2).replace(/&/g, "&amp;");
                         return `<div><input type="checkbox" checked>${content}</div>`;
                     }
                     
+                    let processedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     processedLine = processedLine.replace(buttonRegex, (match, buttonText, link) => {
                         let href = link.trim();
                         if (!href.startsWith('http://') && !href.startsWith('https://')) {
@@ -858,9 +935,13 @@
                 const isPriority = task.content.startsWith('!!!');
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `item-row task-item ${task.done ? 'done' : ''} ${isPriority ? 'priority' : ''}`;
+                if (task.source === 'firebase' && task.userAdded) {
+                    itemDiv.classList.add('user-submitted');
+                }
                 itemDiv.dataset.taskId = task.id;
                 itemDiv.dataset.source = task.source;
                 itemDiv.dataset.fullContent = task.content;
+                itemDiv.dataset.authorId = task.submittedByUserId;
 
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'item-content-wrapper';
@@ -933,6 +1014,27 @@
                         }
                     };
                     itemDiv.appendChild(buttonsDiv);
+                } else {
+                    if (task.source === 'firebase' && task.submittedByUserId === userId) {
+                        const buttonsDiv = document.createElement('div');
+                        buttonsDiv.innerHTML = `<button class="edit-btn">Edytuj</button><button class="delete-task-btn">Usuń</button>`;
+                        buttonsDiv.querySelector('.edit-btn').onclick = async () => {
+                            const newContent = prompt('Nowa treść zadania:', task.content);
+                            if (newContent === null) return;
+                            const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', Array.isArray(task.assignees) ? task.assignees.join(';') : task.assignees || '');
+                            if (newAssignees === null) return;
+                            const updateData = { content: newContent, assignees: newAssignees.split(';').map(s => s.trim()) };
+                            await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
+                            refreshAllData();
+                        };
+                        buttonsDiv.querySelector('.delete-task-btn').onclick = async () => {
+                            if (confirm('Czy na pewno chcesz usunąć to zadanie?')) {
+                                await deleteDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id));
+                                refreshAllData();
+                            }
+                        };
+                        itemDiv.appendChild(buttonsDiv);
+                    }
                 }
                 targetElement.appendChild(itemDiv);
             });
@@ -1104,7 +1206,7 @@
         const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
         const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public }));
 
-        const fbPath = isAdmin ? `artifacts/${appId}/public/data/notes` : `artifacts/${appId}/public/data/notes`;
+        const fbPath = `artifacts/${appId}/public/data/notes`;
         const fbSnapshot = await getDocs(collection(db, fbPath));
         const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
         
@@ -1115,9 +1217,10 @@
         listEl.innerHTML = allNotes.length === 0 ? 'Brak notatek.' : '';
         allNotes.forEach(note => {
             const item = document.createElement('div');
-            item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public ? 'public' : ''}`;
+            item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public || note.is_public ? 'public' : ''}`;
             item.dataset.id = note.id;
             item.dataset.source = note.source;
+            item.dataset.authorId = note.submittedByUserId;
             if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
             
             const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title}</span>
@@ -1204,18 +1307,35 @@
             targetElement.innerHTML = requestsToRender.length === 0 ? '<p>Brak wniosków.</p>' : '';
             requestsToRender.forEach(req => {
                 const itemDiv = document.createElement('div');
-                itemDiv.className = `item-row vacation-request ${req.is_accepted ? 'accepted' : ''}`;
+                itemDiv.className = `item-row vacation-request`;
+                 let statusText = 'Oczekujący';
+                let statusColor = 'orange';
+
+                if (req.is_accepted === true) {
+                    statusText = 'Zaakceptowany';
+                    statusColor = 'green';
+                    itemDiv.classList.add('accepted');
+                } else if (req.rejection_reason) {
+                    statusText = 'Odrzucony';
+                    statusColor = 'red';
+                    itemDiv.classList.add('rejected');
+                }
+
                 itemDiv.dataset.id = req.id;
                 itemDiv.dataset.source = req.source;
                 itemDiv.dataset.visible = req.is_visible;
 
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'item-content-wrapper';
+                let notesText = req.notes || '';
+                if(req.rejection_reason) {
+                    notesText += ` (Powód odrzucenia: ${req.rejection_reason})`;
+                }
                 contentWrapper.innerHTML = `
                     <span style="font-weight: bold; flex-shrink: 0; min-width: 150px;">${req.employee_name}</span>
                     <span style="margin-left: 15px; flex-shrink: 0;">${req.start_date} do ${req.end_date}</span>
-                    <span style="margin-left: 15px; font-weight: bold; flex-shrink: 0; color: ${req.is_accepted ? 'green' : 'orange'};">(${req.is_accepted ? 'Zaakceptowany' : 'Oczekujący'})</span>
-                    <span style="flex-grow: 1; text-align: right; color: #666; padding: 0 20px;">${req.notes || ''}</span>
+                    <span style="margin-left: 15px; font-weight: bold; flex-shrink: 0; color: ${statusColor};">(${statusText})</span>
+                    <span style="flex-grow: 1; text-align: right; color: #666; padding: 0 20px;">${notesText}</span>
                 `;
 
                 if ((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) {
@@ -1231,12 +1351,17 @@
                 if (isAdmin) {
                     const date = new Date(req.createdAt || req.created_at);
                     const dateInfo = !isNaN(date) ? `<div class="date-info">${date.toLocaleString('pl-PL')}</div>` : '';
+                    let rejectButton = '';
+                    if (req.source === 'firebase') {
+                        rejectButton = `<button class="reject-vacation-btn">Odrzuć</button>`;
+                    }
                     buttonsDiv.innerHTML = `
                         ${dateInfo}
                         <div>
                             <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-vacation-checkbox" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
                             <button class="toggle-visibility-btn">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
                             <button class="edit-vacation-btn">Edytuj</button>
+                            ${rejectButton}
                             <button class="delete-vacation-btn">Usuń</button>
                         </div>`;
                 } else {
@@ -1438,6 +1563,29 @@
             } catch (error) {
                 showModal('Błąd zapisu', 'Nie udało się wysłać wniosku. Sprawdź konsolę, aby uzyskać więcej informacji.');
                 console.error("Firebase addDoc error:", error);
+            }
+        };
+        document.getElementById('user-task-form').onsubmit = async (e) => { 
+            e.preventDefault();
+            const form = e.target;
+            const content = form.querySelector('#user-task-input').value.trim();
+            if (!content) return;
+            const assignees = form.querySelector('#user-assignee-input').value.trim();
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), {
+                    content,
+                    assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
+                    done: false,
+                    visible: true,
+                    createdAt: new Date(),
+                    submittedByUserId: userId,
+                    userAdded: true
+                });
+                form.reset();
+                renderTasks(false);
+                renderTasks(true);
+            } catch (error) {
+                showModal('Błąd zapisu', 'Nie udało się dodać zadania: ' + error.message);
             }
         };
     }
@@ -1706,11 +1854,11 @@
         const dbId = reqId.replace('supabase-','');
 
         if (target.matches('.accept-vacation-checkbox')) {
-            const updateData = { is_accepted: target.checked };
+            const updateData = { is_accepted: target.checked, rejection_reason: "" };
             try {
                 if (source === 'supabase') await supabase.from('vacation_requests').update(updateData).eq('id', dbId);
                 else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
-                reqDiv.classList.toggle('accepted', target.checked);
+                renderVacationRequests(isAdmin);
             } catch(error) {
                 showModal('Błąd', 'Nie udało się zaktualizować statusu: ' + error.message);
                 target.checked = !target.checked;
@@ -1755,6 +1903,25 @@
                     renderVacationRequests(isAdmin);
                 } catch(error) {
                     showModal('Błąd', 'Nie udało się usunąć wniosku: ' + error.message);
+                }
+            }
+        } else if (target.matches('.reject-vacation-btn')) {
+             if (source !== 'firebase') {
+                showModal('Błąd', 'Odrzucać można tylko wnioski zapisane w nowej bazie danych.');
+                return;
+            }
+            const reason = prompt("Podaj powód odrzucenia:");
+            if (reason !== null) {
+                if (reason.trim() === "") {
+                    showModal("Błąd", "Powód odrzucenia nie może być pusty.");
+                    return;
+                }
+                const updateData = { is_accepted: false, rejection_reason: reason };
+                try {
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
+                    renderVacationRequests(isAdmin);
+                } catch(error) {
+                    showModal('Błąd', 'Nie udało się odrzucić wniosku: ' + error.message);
                 }
             }
         }
