@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista Zadań</title>
     <link rel="icon" href="favicon.png" type="image/png">
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+EAN13+Text&display=swap" rel="stylesheet">
     <style>
         :root {
             --background-light: #f0f2f5;
@@ -284,6 +286,11 @@
             margin-top: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
+        }
+        .ean-barcode {
+            font-family: 'Libre Barcode EAN13 Text', system-ui;
+            font-size: 110px;
+            line-height: 1;
         }
 
         /* --- SUBTASK STYLES --- */
@@ -825,28 +832,29 @@
         if (!text) return '';
         const buttonRegex = /\[(.*?)\]\{(.*?)\}/g;
         const htmlBlockRegex = /\(html\){([\s\S]*?)}\(html\)/g;
-        const barcodeRegex = /@(\d+)/g;
+        const eanRegex = /ean\((?:["@']?)(\d+)(?:["']?)\)/g;
 
-        let processedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        
+        let processedText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
         processedText = processedText.replace(htmlBlockRegex, (match, htmlContent) => {
             const unescapedHtml = htmlContent.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
             return `</div><div class="raw-html-block">${unescapedHtml}</div><div>`;
         });
         
-        processedText = processedText.replace(barcodeRegex, (match, code) => {
-            return `<svg class="barcode" jsbarcode-value="${code}" jsbarcode-format="EAN13" jsbarcode-width="2" jsbarcode-height="50" jsbarcode-displayValue="true"></svg>`;
+        processedText = processedText.replace(eanRegex, (match, code) => {
+            return `</div><div class="ean-barcode">${code}</div><div>`;
         });
-
+        
         const lines = processedText.split('\n');
         const finalHtml = lines.map(line => {
-            const trimmed = line.trim();
+             if(line.includes('ean-barcode')) return line;
 
+            const trimmed = line.trim();
             if (trimmed.startsWith('# ')) {
                 return `<div><input type="checkbox">${trimmed.substring(2)}</div>`;
             }
-            if (trimmed.startsWith('& ')) { 
-                return `<div><input type="checkbox" checked>${trimmed.substring(2)}</div>`;
+            if (trimmed.startsWith('&amp; ')) { 
+                return `<div><input type="checkbox" checked>${trimmed.substring(5)}</div>`;
             }
             
             let processedLine = line.replace(buttonRegex, (match, buttonText, link) => {
@@ -867,7 +875,7 @@
     function convertRenderedToSource(element) {
         const lines = [];
         element.childNodes.forEach(child => {
-            if (child.nodeName !== 'DIV') {
+            if (child.nodeType !== 1) { 
                 if (child.textContent.trim()) lines.push(child.textContent);
                 return;
             }
@@ -875,11 +883,14 @@
                 lines.push(`(html){${child.innerHTML}}(html)`);
                 return;
             }
+             if (child.classList.contains('ean-barcode')) {
+                lines.push(`ean(${child.textContent})`);
+                return;
+            }
 
             const checkbox = child.querySelector('input[type="checkbox"]');
             const link = child.querySelector('a');
             const button = link ? link.querySelector('button') : null;
-            const barcode = child.querySelector('svg.barcode');
 
             if (checkbox) {
                 const prefix = checkbox.checked ? '& ' : '# ';
@@ -890,8 +901,6 @@
                 if (href.startsWith('https://')) href = href.substring(8);
                 else if (href.startsWith('http://')) href = href.substring(7);
                 lines.push(`[${buttonText}]{${href}}`);
-            } else if (barcode) {
-                lines.push(`@${barcode.getAttribute('jsbarcode-value')}`);
             } else {
                 lines.push(child.textContent);
             }
