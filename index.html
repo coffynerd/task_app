@@ -121,6 +121,16 @@
         .order-item.done {
             text-decoration: none;
         }
+        .item-row.due-date-warning:not(.done) .task-text-container,
+        .item-row.due-date-warning:not(.done) .due-date-text {
+            color: purple;
+            font-weight: bold;
+        }
+        .dark-mode .item-row.due-date-warning:not(.done) .task-text-container,
+        .dark-mode .item-row.due-date-warning:not(.done) .due-date-text {
+            color: #c58af9;
+        }
+
         .item-content-wrapper {
             display: flex;
             align-items: center;
@@ -138,6 +148,11 @@
             padding-left: 20px;
             text-align: right;
             white-space: nowrap;
+        }
+        .due-date-text {
+            margin-left: 15px;
+            font-size: 1em;
+            font-weight: normal;
         }
         .right-aligned-info {
             text-align: right;
@@ -260,6 +275,7 @@
             flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: none;
         }
         .note-content-input { overflow-y: auto; }
+        .note-content-input div { min-height: 1.2em; }
         .note-content-input div { display: flex; align-items: center; }
         .note-content-input input[type="checkbox"] { margin-right: 8px; flex-shrink: 0; }
         .note-content-input img, .note-content-input video { max-width: 100%; height: auto; }
@@ -446,6 +462,7 @@
                 <h3>Dodaj zadanie</h3>
                 <input type="text" id="user-task-input" placeholder="Treść zadania" required>
                 <input type="text" id="user-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
+                <input type="date" id="user-due-date-input" title="Termin wykonania">
                 <button type="submit">Dodaj</button>
             </form>
             <div id="user-task-list">Ładowanie...</div>
@@ -537,6 +554,7 @@
                 <h3>Dodaj zadanie (tylko Firebase)</h3>
                 <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
                 <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
+                <input type="date" id="admin-due-date-input" title="Termin wykonania">
                 <button type="submit">Dodaj</button>
             </form>
             <h3>Lista zadań (Supabase i Firebase)</h3>
@@ -830,80 +848,124 @@
     // --- NOTEBOOK HELPERS ---
     function convertTextToHtml(text) {
         if (!text) return '';
-        const buttonRegex = /\[(.*?)\]\{(.*?)\}/g;
-        const htmlBlockRegex = /\(html\){([\s\S]*?)}\(html\)/g;
-        const eanRegex = /ean\((?:["@']?)(\d+)(?:["']?)\)/g;
+        const lines = text.split('\n');
+        let inHtmlBlock = false;
+        let htmlContent = '';
+        const output = [];
 
-        let processedText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        for (const line of lines) {
+            if (line.trim() === '(html){') {
+                inHtmlBlock = true;
+                htmlContent = '';
+                continue;
+            }
 
-        processedText = processedText.replace(htmlBlockRegex, (match, htmlContent) => {
-            const unescapedHtml = htmlContent.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
-            return `</div><div class="raw-html-block">${unescapedHtml}</div><div>`;
-        });
-        
-        processedText = processedText.replace(eanRegex, (match, code) => {
-            return `</div><div class="ean-barcode">${code}</div><div>`;
-        });
-        
-        const lines = processedText.split('\n');
-        const finalHtml = lines.map(line => {
-             if(line.includes('ean-barcode')) return line;
+            if (line.trim() === '}(html)' && inHtmlBlock) {
+                inHtmlBlock = false;
+                output.push(`<div class="raw-html-block">${htmlContent}</div>`);
+                continue;
+            }
+
+            if (inHtmlBlock) {
+                htmlContent += (htmlContent ? '\n' : '') + line;
+                continue;
+            }
+            
+            if (line.trim() === '') {
+                output.push('<div><br></div>');
+                continue;
+            }
+
+            let hasCheckbox = false;
+            let isChecked = false;
+            let lineContent = line;
 
             const trimmed = line.trim();
             if (trimmed.startsWith('# ')) {
-                return `<div><input type="checkbox">${trimmed.substring(2)}</div>`;
+                hasCheckbox = true;
+                isChecked = false;
+                lineContent = trimmed.substring(2);
+            } else if (trimmed.startsWith('& ')) {
+                hasCheckbox = true;
+                isChecked = true;
+                lineContent = trimmed.substring(2);
             }
-            if (trimmed.startsWith('&amp; ')) { 
-                return `<div><input type="checkbox" checked>${trimmed.substring(5)}</div>`;
-            }
+
+            let renderedContent = lineContent.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            renderedContent = renderedContent.replace(/ean\((.+?)\)/g, (match, content) => {
+                const displayCode = content.replace(/[@"']/g, '');
+                const escapedMatch = match.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+                return `<span class="ean-barcode" data-ean-source="${escapedMatch}">${displayCode}</span>`;
+            });
             
-            let processedLine = line.replace(buttonRegex, (match, buttonText, link) => {
+            renderedContent = renderedContent.replace(/\[(.*?)\]\{(.*?)\}/g, (match, buttonText, link) => {
                 let href = link.trim();
-                if (!href.startsWith('http://') && !href.startsWith('https://')) {
-                    href = 'https://' + href;
-                }
+                if (!href.startsWith('http://') && !href.startsWith('https://')) href = 'https://' + href;
                 const unescapedButtonText = buttonText.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
                 return `<a href="${href}" target="_blank"><button>${unescapedButtonText}</button></a>`;
             });
             
-            return `<div>${processedLine}</div>`;
-        }).join('');
+            if (hasCheckbox) {
+                output.push(`<div><input type="checkbox" ${isChecked ? 'checked' : ''}>${renderedContent}</div>`);
+            } else {
+                output.push(`<div>${renderedContent}</div>`);
+            }
+        }
+        
+         if (inHtmlBlock) { // Just in case it's not closed
+            output.push(`<div class="raw-html-block">${htmlContent}</div>`);
+        }
 
-        return finalHtml;
+        return output.join('');
     }
+
 
     function convertRenderedToSource(element) {
         const lines = [];
-        element.childNodes.forEach(child => {
-            if (child.nodeType !== 1) { 
-                if (child.textContent.trim()) lines.push(child.textContent);
-                return;
-            }
-            if (child.classList.contains('raw-html-block')) {
-                lines.push(`(html){${child.innerHTML}}(html)`);
-                return;
-            }
-             if (child.classList.contains('ean-barcode')) {
-                lines.push(`ean(${child.textContent})`);
-                return;
-            }
+        element.childNodes.forEach(node => {
+            if (node.nodeType !== 1) return; 
 
-            const checkbox = child.querySelector('input[type="checkbox"]');
-            const link = child.querySelector('a');
-            const button = link ? link.querySelector('button') : null;
-
+            if (node.innerHTML === '<br>') {
+                lines.push('');
+                return;
+            }
+            
+            if (node.classList.contains('raw-html-block')) {
+                lines.push(`(html){\n${node.innerHTML}\n}(html)`);
+                return;
+            }
+            
+            let line = '';
+            const checkbox = node.querySelector('input[type="checkbox"]');
             if (checkbox) {
-                const prefix = checkbox.checked ? '& ' : '# ';
-                lines.push(prefix + child.textContent.trim());
-            } else if (link && button) {
-                const buttonText = button.textContent;
-                let href = link.getAttribute('href');
-                if (href.startsWith('https://')) href = href.substring(8);
-                else if (href.startsWith('http://')) href = href.substring(7);
-                lines.push(`[${buttonText}]{${href}}`);
-            } else {
-                lines.push(child.textContent);
+                line += checkbox.checked ? '& ' : '# ';
             }
+
+            const processNode = (currentNode) => {
+                 currentNode.childNodes.forEach(child => {
+                    if (child.nodeType === 3) { // Text Node
+                        line += child.textContent;
+                    } else if (child.nodeType === 1) { // Element Node
+                        if (child.tagName === 'INPUT' && child.type === 'checkbox') return;
+
+                        if (child.classList.contains('ean-barcode')) {
+                             line += child.dataset.eanSource.replace(/&apos;/g, "'").replace(/&quot;/g, '"');
+                        } else if (child.tagName === 'A' && child.querySelector('button')) {
+                            const button = child.querySelector('button');
+                            let href = child.getAttribute('href');
+                            if (href.startsWith('https://')) href = href.substring(8);
+                            else if (href.startsWith('http://')) href = href.substring(7);
+                            line += `[${button.textContent}]{${href}}`;
+                        } else {
+                           processNode(child); // Recurse
+                        }
+                    }
+                });
+            };
+            
+            processNode(node);
+            lines.push(line);
         });
         return lines.join('\n');
     }
@@ -958,6 +1020,7 @@
                 itemDiv.dataset.source = task.source;
                 itemDiv.dataset.fullContent = task.content;
                 itemDiv.dataset.authorId = task.submittedByUserId;
+                itemDiv.dataset.dueDate = task.dueDate;
 
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'item-content-wrapper';
@@ -989,6 +1052,26 @@
                 taskContentContainer.innerHTML = parseTaskContent(isPriority ? task.content.substring(3).trim() : task.content);
                 contentWrapper.append(mainCheckbox, taskContentContainer);
 
+                if (task.dueDate) {
+                    const dueDateSpan = document.createElement('span');
+                    dueDateSpan.classList.add('due-date-text');
+                    
+                    const dateParts = task.dueDate.split('-');
+                    const dueDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    const day = dueDate.getDate().toString().padStart(2, '0');
+                    const month = (dueDate.getMonth() + 1).toString().padStart(2, '0');
+                    dueDateSpan.textContent = `Wykonać do: ${day}.${month}`;
+
+                    if (dueDate <= today && !task.done) {
+                         itemDiv.classList.add('due-date-warning');
+                    }
+                    contentWrapper.appendChild(dueDateSpan);
+                }
+
                 if ((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) {
                     const sourceTag = document.createElement('span');
                     sourceTag.className = `source-tag ${task.source}`;
@@ -1011,7 +1094,8 @@
                         if (newContent === null) return;
                         const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', Array.isArray(task.assignees) ? task.assignees.join(';') : task.assignees || '');
                         if (newAssignees === null) return;
-                        const updateData = { content: newContent, assignees: newAssignees.split(';').map(s => s.trim()) };
+                        const newDueDate = prompt('Nowy termin wykonania (YYYY-MM-DD):', task.dueDate || '');
+                        const updateData = { content: newContent, assignees: newAssignees.split(';').map(s => s.trim()), dueDate: newDueDate || null };
                         if (task.source === 'supabase') await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-',''));
                         else await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
                         refreshAllData();
@@ -1039,7 +1123,8 @@
                             if (newContent === null) return;
                             const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', Array.isArray(task.assignees) ? task.assignees.join(';') : task.assignees || '');
                             if (newAssignees === null) return;
-                            const updateData = { content: newContent, assignees: newAssignees.split(';').map(s => s.trim()) };
+                             const newDueDate = prompt('Nowy termin wykonania (YYYY-MM-DD):', task.dueDate || '');
+                            const updateData = { content: newContent, assignees: newAssignees.split(';').map(s => s.trim()), dueDate: newDueDate || null };
                             await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
                             refreshAllData();
                         };
@@ -1587,16 +1672,21 @@
             const content = form.querySelector('#user-task-input').value.trim();
             if (!content) return;
             const assignees = form.querySelector('#user-assignee-input').value.trim();
+             const dueDate = form.querySelector('#user-due-date-input').value;
+            const taskData = {
+                content,
+                assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
+                done: false,
+                visible: true,
+                createdAt: new Date(),
+                submittedByUserId: userId,
+                userAdded: true
+            };
+            if(dueDate) {
+                taskData.dueDate = dueDate;
+            }
             try {
-                await addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), {
-                    content,
-                    assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
-                    done: false,
-                    visible: true,
-                    createdAt: new Date(),
-                    submittedByUserId: userId,
-                    userAdded: true
-                });
+                await addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), taskData);
                 form.reset();
                 renderTasks(false);
                 renderTasks(true);
@@ -1681,11 +1771,20 @@
             const content = form.querySelector('#admin-task-input').value.trim();
             if (!content) return;
             const assignees = form.querySelector('#admin-assignee-input').value.trim();
+            const dueDate = form.querySelector('#admin-due-date-input').value;
+            const taskData = {
+                content,
+                assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
+                done: false,
+                visible: true,
+                createdAt: new Date(),
+                submittedByUserId: userId
+            };
+            if(dueDate) {
+                taskData.dueDate = dueDate;
+            }
             try {
-                await addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), {
-                    content, assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
-                    done: false, visible: true, createdAt: new Date(), submittedByUserId: userId
-                });
+                await addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), taskData);
                 form.reset();
                 renderTasks(true);
             } catch (error) {
