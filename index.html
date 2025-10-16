@@ -351,6 +351,14 @@
         .dark-mode .source-tag.firebase {
             color: black;
         }
+        .days-of-week {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .days-of-week label {
+            cursor: pointer;
+        }
 
         /* --- MOBILE STYLES --- */
         @media (max-width: 768px) {
@@ -535,6 +543,7 @@
         <div class="nav-bar gray-nav">
             <div class="nav-links" id="admin-nav-links">
                 <a data-page="admin-tasks">Lista zadań</a>
+                <a data-page="admin-recurring-tasks">Zadania cykliczne</a>
                 <a data-page="admin-order">Do zamówienia</a>
                 <a data-page="admin-schedule">Grafik</a>
                 <a data-page="admin-schedule-requests">Wnioski do grafiku</a>
@@ -573,6 +582,26 @@
             <div id="admin-order-list-active"></div>
             <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
             <div id="admin-order-list-completed"></div>
+        </div>
+         <div id="admin-recurring-tasks" class="content">
+            <h2>Zadania cykliczne</h2>
+            <form id="recurring-task-form">
+                <h3>Dodaj zadanie cykliczne</h3>
+                <input type="text" id="recurring-task-content" placeholder="Treść zadania" required>
+                <input type="text" id="recurring-task-assignees" placeholder="Przypisane osoby (średnik ;)">
+                <div class="days-of-week">
+                    <label><input type="checkbox" name="day" value="1"> Pn</label>
+                    <label><input type="checkbox" name="day" value="2"> Wt</label>
+                    <label><input type="checkbox" name="day" value="3"> Śr</label>
+                    <label><input type="checkbox" name="day" value="4"> Cz</label>
+                    <label><input type="checkbox" name="day" value="5"> Pt</label>
+                    <label><input type="checkbox" name="day" value="6"> So</label>
+                    <label><input type="checkbox" name="day" value="7"> Nd</label>
+                </div>
+                <button type="submit">Dodaj</button>
+            </form>
+            <h3>Istniejące zadania cykliczne</h3>
+            <div id="recurring-task-list"></div>
         </div>
         <div id="admin-schedule" class="content">
             <div class="page-header">
@@ -700,6 +729,7 @@
             userId = auth.currentUser?.uid || crypto.randomUUID();
             isAuthReady = true;
             console.log("Firebase Auth Ready. User ID:", userId);
+            await checkAndCreateRecurringTasks();
             refreshAllData();
         });
     } catch (error) {
@@ -854,20 +884,28 @@
         const output = [];
 
         for (const line of lines) {
-            if (line.trim() === '(html){') {
+            if (line.trim().startsWith('(html){')) {
                 inHtmlBlock = true;
-                htmlContent = '';
-                continue;
-            }
-
-            if (line.trim() === '}(html)' && inHtmlBlock) {
-                inHtmlBlock = false;
-                output.push(`<div class="raw-html-block">${htmlContent}</div>`);
+                htmlContent = line.substring(line.indexOf('{') + 1);
+                // Check for single line block
+                if (line.trim().endsWith('}(html)')) {
+                    htmlContent = htmlContent.slice(0, -6);
+                    output.push(`<div class="raw-html-block">${htmlContent}</div>`);
+                    inHtmlBlock = false;
+                    htmlContent = '';
+                }
                 continue;
             }
 
             if (inHtmlBlock) {
-                htmlContent += (htmlContent ? '\n' : '') + line;
+                if (line.trim().endsWith('}(html)')) {
+                    htmlContent += '\n' + line.slice(0, -6);
+                    output.push(`<div class="raw-html-block">${htmlContent}</div>`);
+                    inHtmlBlock = false;
+                    htmlContent = '';
+                } else {
+                    htmlContent += '\n' + line;
+                }
                 continue;
             }
             
@@ -932,7 +970,7 @@
             }
             
             if (node.classList.contains('raw-html-block')) {
-                lines.push(`(html){\n${node.innerHTML}\n}(html)`);
+                lines.push(`(html){${node.innerHTML}}(html)`);
                 return;
             }
             
@@ -1496,15 +1534,20 @@
         if (!isAuthReady) return;
         console.log("Odświeżanie danych...");
         const inAdminView = document.getElementById('admin-view').style.display === 'block';
-        await Promise.all([
+        const promises = [
             renderTasks(inAdminView),
             renderOrders(inAdminView),
-            renderNotes(inAdminView),
-            renderVacationRequests(inAdminView),
-        ]);
-        if (!inAdminView) {
-            await renderNotes(false);
+            renderNotes(true), 
+            renderNotes(false), 
+            renderVacationRequests(inAdminView)
+        ];
+
+        if (inAdminView) {
+            promises.push(renderRecurringTasks());
         }
+
+        await Promise.all(promises);
+        
         console.log("Dane odświeżone.");
     }
     
@@ -1853,7 +1896,137 @@
             document.getElementById('admin-filter-end').value = '';
             renderVacationRequests(true);
         };
+        document.getElementById('recurring-task-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const content = form.querySelector('#recurring-task-content').value.trim();
+            if (!content) return;
+            const assignees = form.querySelector('#recurring-task-assignees').value.trim();
+            const days = Array.from(form.querySelectorAll('input[name="day"]:checked')).map(cb => parseInt(cb.value));
+            
+            if(days.length === 0){
+                showModal('Błąd', 'Musisz wybrać co najmniej jeden dzień.');
+                return;
+            }
+
+            try {
+                 await addDoc(collection(db, `artifacts/${appId}/public/data/recurring_tasks`), {
+                    content,
+                    assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
+                    days,
+                    lastCreated: null
+                });
+                form.reset();
+                renderRecurringTasks();
+            } catch (error) {
+                 showModal('Błąd zapisu', 'Nie udało się dodać zadania cyklicznego: ' + error.message);
+            }
+        };
     }
+
+    // --- RECURRING TASKS ---
+    async function renderRecurringTasks() {
+        const listEl = document.getElementById('recurring-task-list');
+        if(!listEl) return;
+        listEl.innerHTML = 'Ładowanie...';
+        const recurringTasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/recurring_tasks`));
+        const recurringTasks = recurringTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        listEl.innerHTML = recurringTasks.length === 0 ? '<p>Brak zadań cyklicznych.</p>' : '';
+        const dayNames = ['N/A', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
+
+        recurringTasks.forEach(task => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item-row';
+            const days = task.days.map(d => dayNames[d]).join(', ');
+            itemDiv.innerHTML = `
+                <div class="item-content-wrapper">
+                    <span>${task.content}</span>
+                    <span class="assignees">Osoby: ${task.assignees.join(', ') || 'brak'}</span>
+                     <span class="assignees">Dni: ${days}</span>
+                </div>
+                 <div>
+                    <button class="edit-recurring-btn">Edytuj</button>
+                    <button class="delete-recurring-btn">Usuń</button>
+                </div>
+            `;
+             itemDiv.querySelector('.edit-recurring-btn').onclick = async () => {
+                const newContent = prompt('Nowa treść zadania:', task.content);
+                if (newContent === null) return;
+
+                const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', (task.assignees || []).join(';'));
+                if (newAssignees === null) return;
+
+                const newDaysStr = prompt('Nowe dni (cyfry 1-7 oddzielone przecinkami, 1=Pn, 7=Nd):', task.days.join(','));
+                if (newDaysStr === null) return;
+
+                const newDays = newDaysStr.split(',').map(d => parseInt(d.trim())).filter(d => d >= 1 && d <= 7);
+                if (newDays.length === 0) {
+                    showModal('Błąd', 'Musisz podać przynajmniej jeden poprawny dzień (1-7).');
+                    return;
+                }
+                
+                const updateData = {
+                    content: newContent,
+                    assignees: newAssignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
+                    days: newDays
+                };
+                
+                try {
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/recurring_tasks`, task.id), updateData);
+                    renderRecurringTasks();
+                } catch (error) {
+                    showModal('Błąd', 'Nie udało się zaktualizować zadania cyklicznego.');
+                }
+            };
+            itemDiv.querySelector('.delete-recurring-btn').onclick = async () => {
+                if (confirm('Czy na pewno chcesz usunąć to zadanie cykliczne?')) {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/recurring_tasks`, task.id));
+                    renderRecurringTasks();
+                }
+            };
+            listEl.appendChild(itemDiv);
+        });
+    }
+
+    async function checkAndCreateRecurringTasks() {
+        if (!isAuthReady) return;
+        console.log("Checking recurring tasks...");
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        let dayOfWeek = today.getDay(); 
+        if (dayOfWeek === 0) dayOfWeek = 7; 
+
+        const recurringTasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/recurring_tasks`));
+        
+        const promises = [];
+        let createdAny = false;
+
+        recurringTasksSnapshot.forEach(doc => {
+            const recurringTask = { id: doc.id, ...doc.data() };
+            if (recurringTask.days.includes(dayOfWeek) && recurringTask.lastCreated !== todayStr) {
+                console.log(`Creating recurring task: ${recurringTask.content}`);
+                createdAny = true;
+                promises.push(addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), {
+                    content: recurringTask.content,
+                    assignees: recurringTask.assignees,
+                    createdAt: new Date(),
+                    done: false,
+                    visible: true
+                }));
+                promises.push(updateDoc(doc.ref, { lastCreated: todayStr }));
+            }
+        });
+        
+        await Promise.all(promises);
+        if (createdAny) {
+             console.log("Finished creating recurring tasks, refreshing list.");
+            refreshAllData();
+        } else {
+             console.log("No new recurring tasks to create today.");
+        }
+    }
+
 
     // --- EVENT LISTENERS & INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', () => {
