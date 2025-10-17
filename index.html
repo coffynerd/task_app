@@ -1010,10 +1010,20 @@
     // --- TASK HELPERS ---
     function parseTaskContent(content = '') {
         let index = 0;
-        return content.replace(/\((#|&)(.*?)\)/g, (match, sign, text) => {
+        let processedContent = content.replace(/\((#|&)(.*?)\)/g, (match, sign, text) => {
             const isChecked = sign === '&';
             return `<span class="subtask"><input type="checkbox" class="subtask-checkbox" data-index="${index++}" ${isChecked ? 'checked' : ''}><span class="subtask-text ${isChecked ? 'done' : ''}">${text}</span></span>`;
         });
+        
+        processedContent = processedContent.replace(/{([^}]+?)}/g, (match, link) => {
+             let href = link.trim();
+             if (!href.startsWith('http://') && !href.startsWith('https://')) {
+                href = 'https://' + href;
+             }
+             return `<a href="${href}" target="_blank" style="margin-left: 10px;"><button>załącznik</button></a>`;
+        });
+        
+        return processedContent;
     }
 
     // --- RENDER FUNCTIONS ---
