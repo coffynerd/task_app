@@ -884,7 +884,7 @@
         const output = [];
 
         for (const line of lines) {
-            if (line.trim().startsWith('(html){') && !inHtmlBlock) {
+             if (line.trim().startsWith('(html){') && !inHtmlBlock) {
                 inHtmlBlock = true;
                 htmlContent = line.substring(line.indexOf('{') + 1);
                 if (line.trim().endsWith('}(html)')) {
