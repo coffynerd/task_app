@@ -884,12 +884,11 @@
         const output = [];
 
         for (const line of lines) {
-            if (line.trim().startsWith('(html){')) {
+            if (line.trim().startsWith('(html){') && !inHtmlBlock) {
                 inHtmlBlock = true;
                 htmlContent = line.substring(line.indexOf('{') + 1);
-                // Check for single line block
                 if (line.trim().endsWith('}(html)')) {
-                    htmlContent = htmlContent.slice(0, -6);
+                    htmlContent = htmlContent.slice(0, htmlContent.lastIndexOf('}(html)'));
                     output.push(`<div class="raw-html-block">${htmlContent}</div>`);
                     inHtmlBlock = false;
                     htmlContent = '';
@@ -899,12 +898,12 @@
 
             if (inHtmlBlock) {
                 if (line.trim().endsWith('}(html)')) {
-                    htmlContent += '\n' + line.slice(0, -6);
+                    htmlContent += '\n' + line.slice(0, line.lastIndexOf('}(html)'));
                     output.push(`<div class="raw-html-block">${htmlContent}</div>`);
                     inHtmlBlock = false;
                     htmlContent = '';
                 } else {
-                    htmlContent += '\n' + line;
+                    htmlContent += (htmlContent ? '\n' : '') + line;
                 }
                 continue;
             }
