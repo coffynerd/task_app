@@ -439,238 +439,238 @@
     </style>
 </head>
 <body>
-    <!-- Modal for alerts -->
-    <div id="modal" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
-            <h4 id="modal-title"></h4>
-            <p id="modal-text"></p>
-            <button id="modal-close-btn">Zamknij</button>
+<!-- Modal for alerts -->
+<div id="modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h4 id="modal-title"></h4>
+        <p id="modal-text"></p>
+        <button id="modal-close-btn">Zamknij</button>
+    </div>
+</div>
+
+<div id="user-view">
+    <div class="nav-bar blue-nav">
+        <div class="nav-links" id="user-nav-links">
+            <a data-page="user-tasks">Lista zadań</a>
+            <a data-page="user-order">Do zamówienia</a>
+            <a data-page="user-schedule">Grafik</a>
+            <a data-page="user-schedule-requests">Wnioski do grafiku</a>
+            <a data-page="user-notes">Notatnik</a>
+            <a id="switch-to-admin-btn">Panel Administratora</a>
+        </div>
+        <div class="nav-actions">
+            <button class="refresh-btn" title="Odśwież dane">🔄</button>
+            <button class="theme-toggle-btn"></button>
+            <button class="hamburger-btn" id="user-hamburger-btn">&#9776;</button>
         </div>
     </div>
+    <div id="user-tasks" class="content active">
+        <h2>Lista Zadań</h2>
+        <form id="user-task-form">
+            <h3>Dodaj zadanie</h3>
+            <input type="text" id="user-task-input" placeholder="Treść zadania" required>
+            <input type="text" id="user-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
+            <input type="date" id="user-due-date-input" title="Termin wykonania">
+            <button type="submit">Dodaj</button>
+        </form>
+        <div id="user-task-list">Ładowanie...</div>
+    </div>
+    <div id="user-order" class="content">
+        <h2>Do zamówienia</h2>
+        <form id="user-order-form">
+            <input type="text" id="user-order-name" placeholder="Nazwa produktu (!!! dla priorytetu)" required>
+            <input type="text" id="user-order-supplier" placeholder="Dostawca">
+            <button type="submit">Dodaj do listy</button>
+        </form>
+        <div id="user-order-list"></div>
+    </div>
+    <div id="user-schedule" class="content">
+        <h2>Grafik</h2>
+        <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?gid=0&single=true&widget=true&headers=false"></iframe>
+    </div>
+    <div id="user-notes" class="content">
+        <h2>Notatnik</h2>
+        <div class="notebook-container">
+            <div class="note-list-column">
+                <button id="user-new-note-btn">+ Nowa notatka</button>
+                <div id="user-note-title-list">Brak notatek</div>
+            </div>
+            <div class="note-editor-column">
+                <div class="editor-header">
+                    <input type="text" id="user-note-title-input" placeholder="Tytuł notatki...">
+                    <input type="color" id="user-note-color-input" title="Wybierz kolor tytułu" value="#000000">
+                </div>
+                <div class="note-editor-content-wrapper">
+                    <div id="user-note-content-input" class="note-content-input" contenteditable="true"></div>
+                    <textarea id="user-note-content-raw" class="raw-editor" style="display: none;"></textarea>
+                </div>
+                <div id="user-note-timestamps"></div>
+                <div class="note-editor-buttons">
+                    <button id="user-toggle-raw-btn">Edytuj Kod</button>
+                    <button id="user-save-note-btn">Zapisz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="user-schedule-requests" class="content">
+        <h2>Złóż wniosek do grafiku</h2>
+        <form id="user-schedule-request-form" class="vacation-request-form">
+            <div class="vacation-form-row">
+                <label for="user-employee-name">Imię i nazwisko:</label>
+                <input type="text" id="user-employee-name" required>
+            </div>
+            <div class="vacation-form-row">
+                <label for="user-start-date">Data od:</label>
+                <input type="date" id="user-start-date" required>
+            </div>
+            <div class="vacation-form-row">
+                <label for="user-end-date">Data do:</label>
+                <input type="date" id="user-end-date" required>
+            </div>
+            <div class="vacation-form-row">
+                <label for="user-vacation-notes">Notatka:</label>
+                <textarea id="user-vacation-notes"></textarea>
+            </div>
+            <button type="submit">Wyślij wniosek</button>
+        </form>
 
-    <div id="user-view">
-        <div class="nav-bar blue-nav">
-            <div class="nav-links" id="user-nav-links">
-                <a data-page="user-tasks">Lista zadań</a>
-                <a data-page="user-order">Do zamówienia</a>
-                <a data-page="user-schedule">Grafik</a>
-                <a data-page="user-schedule-requests">Wnioski do grafiku</a>
-                <a data-page="user-notes">Notatnik</a>
-                <a id="switch-to-admin-btn">Panel Administratora</a>
+        <h3>Zgłoszone wnioski</h3>
+        <div id="user-schedule-request-list"></div>
+    </div>
+</div>
+
+<div id="admin-view" style="display: none;">
+    <div class="nav-bar gray-nav">
+        <div class="nav-links" id="admin-nav-links">
+            <a data-page="admin-tasks">Lista zadań</a>
+            <a data-page="admin-recurring-tasks">Zadania cykliczne</a>
+            <a data-page="admin-order">Do zamówienia</a>
+            <a data-page="admin-schedule">Grafik</a>
+            <a data-page="admin-schedule-requests">Wnioski do grafiku</a>
+            <a data-page="admin-notes">Notatnik</a>
+            <a id="switch-to-user-btn">Panel użytkownika</a>
+            <a id="admin-commands-btn">Komendy</a>
+        </div>
+        <div class="nav-actions">
+            <button class="refresh-btn" title="Odśwież dane">🔄</button>
+            <button class="theme-toggle-btn"></button>
+            <button class="hamburger-btn" id="admin-hamburger-btn">&#9776;</button>
+        </div>
+    </div>
+    <div id="admin-tasks" class="content">
+        <h2>Panel Administratora</h2>
+        <form id="admin-task-form">
+            <h3>Dodaj zadanie (tylko Firebase)</h3>
+            <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
+            <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
+            <input type="date" id="admin-due-date-input" title="Termin wykonania">
+            <button type="submit">Dodaj</button>
+        </form>
+        <h3>Lista zadań (Supabase i Firebase)</h3>
+        <div id="admin-task-list-visible">Ładowanie...</div>
+        <h3>Zadania ukryte (Supabase i Firebase)</h3>
+        <div id="admin-task-list-hidden"></div>
+    </div>
+    <div id="admin-order" class="content">
+        <h2>Do zamówienia (Admin)</h2>
+        <form id="admin-order-form">
+            <input type="text" id="admin-order-name" placeholder="Nazwa produktu (!!! dla priorytetu)" required>
+            <input type="text" id="admin-order-supplier" placeholder="Dostawca">
+            <button type="submit">Dodaj do listy</button>
+        </form>
+        <h3>Pozycje do zamówienia (Supabase i Firebase)</h3>
+        <div id="admin-order-list-active"></div>
+        <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
+        <div id="admin-order-list-completed"></div>
+    </div>
+    <div id="admin-recurring-tasks" class="content">
+        <h2>Zadania cykliczne</h2>
+        <form id="recurring-task-form">
+            <h3>Dodaj zadanie cykliczne</h3>
+            <input type="text" id="recurring-task-content" placeholder="Treść zadania" required>
+            <input type="text" id="recurring-task-assignees" placeholder="Przypisane osoby (średnik ;)">
+            <div class="days-of-week">
+                <label><input type="checkbox" name="day" value="1"> Pn</label>
+                <label><input type="checkbox" name="day" value="2"> Wt</label>
+                <label><input type="checkbox" name="day" value="3"> Śr</label>
+                <label><input type="checkbox" name="day" value="4"> Cz</label>
+                <label><input type="checkbox" name="day" value="5"> Pt</label>
+                <label><input type="checkbox" name="day" value="6"> So</label>
+                <label><input type="checkbox" name="day" value="7"> Nd</label>
             </div>
-            <div class="nav-actions">
-                <button class="refresh-btn" title="Odśwież dane">🔄</button>
-                <button class="theme-toggle-btn"></button>
-                <button class="hamburger-btn" id="user-hamburger-btn">&#9776;</button>
-            </div>
-        </div>
-        <div id="user-tasks" class="content active">
-            <h2>Lista Zadań</h2>
-            <form id="user-task-form">
-                <h3>Dodaj zadanie</h3>
-                <input type="text" id="user-task-input" placeholder="Treść zadania" required>
-                <input type="text" id="user-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
-                <input type="date" id="user-due-date-input" title="Termin wykonania">
-                <button type="submit">Dodaj</button>
-            </form>
-            <div id="user-task-list">Ładowanie...</div>
-        </div>
-        <div id="user-order" class="content">
-            <h2>Do zamówienia</h2>
-            <form id="user-order-form">
-                <input type="text" id="user-order-name" placeholder="Nazwa produktu (!!! dla priorytetu)" required>
-                <input type="text" id="user-order-supplier" placeholder="Dostawca">
-                <button type="submit">Dodaj do listy</button>
-            </form>
-            <div id="user-order-list"></div>
-        </div>
-        <div id="user-schedule" class="content">
+            <button type="submit">Dodaj</button>
+        </form>
+        <h3>Istniejące zadania cykliczne</h3>
+        <div id="recurring-task-list"></div>
+    </div>
+    <div id="admin-schedule" class="content">
+        <div class="page-header">
             <h2>Grafik</h2>
-            <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?gid=0&single=true&widget=true&headers=false"></iframe>
+            <a href="https://docs.google.com/spreadsheets/d/1nKe6cmb0Tz60gZykzb1Rw06pq1tG0c2FTdktCS2OYV0/edit?usp=sharing" target="_blank">Edytuj</a>
         </div>
-        <div id="user-notes" class="content">
-            <h2>Notatnik</h2>
-            <div class="notebook-container">
-                <div class="note-list-column">
-                    <button id="user-new-note-btn">+ Nowa notatka</button>
-                    <div id="user-note-title-list">Brak notatek</div>
+        <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?widget=true&headers=false&rm=minimal"></iframe>
+    </div>
+    <div id="admin-notes" class="content">
+        <h2>Notatnik</h2>
+        <div class="notebook-container">
+            <div class="note-list-column">
+                <button id="new-note-btn">+ Nowa notatka</button>
+                <div id="note-title-list">Ładowanie...</div>
+            </div>
+            <div class="note-editor-column">
+                <div class="editor-header">
+                    <input type="text" id="note-title-input" placeholder="Tytuł notatki...">
+                    <input type="color" id="note-color-input" title="Wybierz kolor tytułu">
                 </div>
-                <div class="note-editor-column">
-                    <div class="editor-header">
-                        <input type="text" id="user-note-title-input" placeholder="Tytuł notatki...">
-                        <input type="color" id="user-note-color-input" title="Wybierz kolor tytułu" value="#000000">
-                    </div>
-                    <div class="note-editor-content-wrapper">
-                        <div id="user-note-content-input" class="note-content-input" contenteditable="true"></div>
-                        <textarea id="user-note-content-raw" class="raw-editor" style="display: none;"></textarea>
-                    </div>
-                    <div id="user-note-timestamps"></div>
-                    <div class="note-editor-buttons">
-                        <button id="user-toggle-raw-btn">Edytuj Kod</button>
-                        <button id="user-save-note-btn">Zapisz</button>
-                    </div>
+                <div class="note-editor-content-wrapper">
+                    <div id="note-content-input" class="note-content-input" contenteditable="true"></div>
+                    <textarea id="note-content-raw" class="raw-editor" style="display: none;"></textarea>
+                </div>
+                <div id="note-timestamps"></div>
+                <div class="note-editor-buttons">
+                    <button id="admin-toggle-raw-btn">Edytuj Kod</button>
+                    <button id="delete-note-btn">Usuń</button>
+                    <button id="save-note-btn">Zapisz</button>
                 </div>
             </div>
-        </div>
-        <div id="user-schedule-requests" class="content">
-            <h2>Złóż wniosek do grafiku</h2>
-            <form id="user-schedule-request-form" class="vacation-request-form">
-                <div class="vacation-form-row">
-                    <label for="user-employee-name">Imię i nazwisko:</label>
-                    <input type="text" id="user-employee-name" required>
-                </div>
-                <div class="vacation-form-row">
-                    <label for="user-start-date">Data od:</label>
-                    <input type="date" id="user-start-date" required>
-                </div>
-                <div class="vacation-form-row">
-                    <label for="user-end-date">Data do:</label>
-                    <input type="date" id="user-end-date" required>
-                </div>
-                <div class="vacation-form-row">
-                    <label for="user-vacation-notes">Notatka:</label>
-                    <textarea id="user-vacation-notes"></textarea>
-                </div>
-                <button type="submit">Wyślij wniosek</button>
-            </form>
-
-            <h3>Zgłoszone wnioski</h3>
-            <div id="user-schedule-request-list"></div>
         </div>
     </div>
-
-    <div id="admin-view" style="display: none;">
-        <div class="nav-bar gray-nav">
-            <div class="nav-links" id="admin-nav-links">
-                <a data-page="admin-tasks">Lista zadań</a>
-                <a data-page="admin-recurring-tasks">Zadania cykliczne</a>
-                <a data-page="admin-order">Do zamówienia</a>
-                <a data-page="admin-schedule">Grafik</a>
-                <a data-page="admin-schedule-requests">Wnioski do grafiku</a>
-                <a data-page="admin-notes">Notatnik</a>
-                <a id="switch-to-user-btn">Panel użytkownika</a>
-                <a id="admin-commands-btn">Komendy</a>
+    <div id="admin-schedule-requests" class="content">
+        <h2>Złóż wniosek do grafiku (tylko Firebase)</h2>
+        <form id="admin-schedule-request-form" class="vacation-request-form">
+            <div class="vacation-form-row">
+                <label for="admin-employee-name">Imię i nazwisko:</label>
+                <input type="text" id="admin-employee-name" required>
             </div>
-            <div class="nav-actions">
-                <button class="refresh-btn" title="Odśwież dane">🔄</button>
-                <button class="theme-toggle-btn"></button>
-                <button class="hamburger-btn" id="admin-hamburger-btn">&#9776;</button>
+            <div class="vacation-form-row">
+                <label for="admin-start-date">Data od:</label>
+                <input type="date" id="admin-start-date" required>
             </div>
-        </div>
-        <div id="admin-tasks" class="content">
-            <h2>Panel Administratora</h2>
-            <form id="admin-task-form">
-                <h3>Dodaj zadanie (tylko Firebase)</h3>
-                <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
-                <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
-                <input type="date" id="admin-due-date-input" title="Termin wykonania">
-                <button type="submit">Dodaj</button>
-            </form>
-            <h3>Lista zadań (Supabase i Firebase)</h3>
-            <div id="admin-task-list-visible">Ładowanie...</div>
-            <h3>Zadania ukryte (Supabase i Firebase)</h3>
-            <div id="admin-task-list-hidden"></div>
-        </div>
-        <div id="admin-order" class="content">
-            <h2>Do zamówienia (Admin)</h2>
-            <form id="admin-order-form">
-                <input type="text" id="admin-order-name" placeholder="Nazwa produktu (!!! dla priorytetu)" required>
-                <input type="text" id="admin-order-supplier" placeholder="Dostawca">
-                <button type="submit">Dodaj do listy</button>
-            </form>
-            <h3>Pozycje do zamówienia (Supabase i Firebase)</h3>
-            <div id="admin-order-list-active"></div>
-            <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
-            <div id="admin-order-list-completed"></div>
-        </div>
-         <div id="admin-recurring-tasks" class="content">
-            <h2>Zadania cykliczne</h2>
-            <form id="recurring-task-form">
-                <h3>Dodaj zadanie cykliczne</h3>
-                <input type="text" id="recurring-task-content" placeholder="Treść zadania" required>
-                <input type="text" id="recurring-task-assignees" placeholder="Przypisane osoby (średnik ;)">
-                <div class="days-of-week">
-                    <label><input type="checkbox" name="day" value="1"> Pn</label>
-                    <label><input type="checkbox" name="day" value="2"> Wt</label>
-                    <label><input type="checkbox" name="day" value="3"> Śr</label>
-                    <label><input type="checkbox" name="day" value="4"> Cz</label>
-                    <label><input type="checkbox" name="day" value="5"> Pt</label>
-                    <label><input type="checkbox" name="day" value="6"> So</label>
-                    <label><input type="checkbox" name="day" value="7"> Nd</label>
-                </div>
-                <button type="submit">Dodaj</button>
-            </form>
-            <h3>Istniejące zadania cykliczne</h3>
-            <div id="recurring-task-list"></div>
-        </div>
-        <div id="admin-schedule" class="content">
-            <div class="page-header">
-                <h2>Grafik</h2>
-                <a href="https://docs.google.com/spreadsheets/d/1nKe6cmb0Tz60gZykzb1Rw06pq1tG0c2FTdktCS2OYV0/edit?usp=sharing" target="_blank">Edytuj</a>
+            <div class="vacation-form-row">
+                <label for="admin-end-date">Data do:</label>
+                <input type="date" id="admin-end-date" required>
             </div>
-            <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?widget=true&headers=false&rm=minimal"></iframe>
-        </div>
-        <div id="admin-notes" class="content">
-            <h2>Notatnik</h2>
-            <div class="notebook-container">
-                <div class="note-list-column">
-                    <button id="new-note-btn">+ Nowa notatka</button>
-                    <div id="note-title-list">Ładowanie...</div>
-                </div>
-                <div class="note-editor-column">
-                    <div class="editor-header">
-                        <input type="text" id="note-title-input" placeholder="Tytuł notatki...">
-                        <input type="color" id="note-color-input" title="Wybierz kolor tytułu">
-                    </div>
-                    <div class="note-editor-content-wrapper">
-                        <div id="note-content-input" class="note-content-input" contenteditable="true"></div>
-                        <textarea id="note-content-raw" class="raw-editor" style="display: none;"></textarea>
-                    </div>
-                    <div id="note-timestamps"></div>
-                    <div class="note-editor-buttons">
-                        <button id="admin-toggle-raw-btn">Edytuj Kod</button>
-                        <button id="delete-note-btn">Usuń</button>
-                        <button id="save-note-btn">Zapisz</button>
-                    </div>
-                </div>
+            <div class="vacation-form-row">
+                <label for="admin-vacation-notes">Notatka:</label>
+                <textarea id="admin-vacation-notes"></textarea>
             </div>
+            <button type="submit">Wyślij wniosek</button>
+        </form>
+        <h2>Zarządzaj wnioskami (Supabase i Firebase)</h2>
+        <div class="filter-container" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+            <label for="admin-filter-start">Filtruj od:</label>
+            <input type="date" id="admin-filter-start">
+            <label for="admin-filter-end">do:</label>
+            <input type="date" id="admin-filter-end">
+            <button id="admin-filter-btn">Filtruj</button>
+            <button id="admin-clear-filter-btn">Wyczyść</button>
         </div>
-        <div id="admin-schedule-requests" class="content">
-            <h2>Złóż wniosek do grafiku (tylko Firebase)</h2>
-            <form id="admin-schedule-request-form" class="vacation-request-form">
-                <div class="vacation-form-row">
-                    <label for="admin-employee-name">Imię i nazwisko:</label>
-                    <input type="text" id="admin-employee-name" required>
-                </div>
-                <div class="vacation-form-row">
-                    <label for="admin-start-date">Data od:</label>
-                    <input type="date" id="admin-start-date" required>
-                </div>
-                <div class="vacation-form-row">
-                    <label for="admin-end-date">Data do:</label>
-                    <input type="date" id="admin-end-date" required>
-                </div>
-                <div class="vacation-form-row">
-                    <label for="admin-vacation-notes">Notatka:</label>
-                    <textarea id="admin-vacation-notes"></textarea>
-                </div>
-                <button type="submit">Wyślij wniosek</button>
-            </form>
-            <h2>Zarządzaj wnioskami (Supabase i Firebase)</h2>
-            <div class="filter-container" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-                <label for="admin-filter-start">Filtruj od:</label>
-                <input type="date" id="admin-filter-start">
-                <label for="admin-filter-end">do:</label>
-                <input type="date" id="admin-filter-end">
-                <button id="admin-filter-btn">Filtruj</button>
-                <button id="admin-clear-filter-btn">Wyczyść</button>
-            </div>
-            <h3>Widoczne wnioski</h3>
-            <div id="admin-schedule-request-list-visible">Ładowanie...</div>
-            <h3>Ukryte wnioski</h3>
-            <div id="admin-schedule-request-list-hidden">Ładowanie...</div>
-        </div>
+        <h3>Widoczne wnioski</h3>
+        <div id="admin-schedule-request-list-visible">Ładowanie...</div>
+        <h3>Ukryte wnioski</h3>
+        <div id="admin-schedule-request-list-hidden">Ładowanie...</div>
     </div>
+</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -776,37 +776,37 @@
         if (!isAdminInitialized) { initAdminView(); isAdminInitialized = true; }
         refreshAllData();
     }
-    
+
     const passwordActions = {
         'admin_1': async () => {
             const password = prompt("Potwierdź hasłem administratora:");
             if (password === null) return;
             if (await checkAdminPassword(password)) {
-                 localStorage.setItem('defaultView', 'admin'); 
-                 showModal('Sukces', 'Panel administratora został ustawiony jako domyślny.'); 
-                 showAdminView();
+                localStorage.setItem('defaultView', 'admin');
+                showModal('Sukces', 'Panel administratora został ustawiony jako domyślny.');
+                showAdminView();
             } else {
-                 showModal('Błąd', 'Niepoprawne hasło!');
+                showModal('Błąd', 'Niepoprawne hasło!');
             }
         },
         'admin_0': async () => {
             const password = prompt("Potwierdź hasłem administratora:");
             if (password === null) return;
             if (await checkAdminPassword(password)) {
-                localStorage.setItem('defaultView', 'user'); 
-                showModal('Sukces', 'Panel użytkownika został ustawiony jako domyślny.'); 
+                localStorage.setItem('defaultView', 'user');
+                showModal('Sukces', 'Panel użytkownika został ustawiony jako domyślny.');
                 switchToUser();
             } else {
                 showModal('Błąd', 'Niepoprawne hasło!');
             }
         },
         'passwd': async () => {
-             const newPass1 = prompt("Wpisz nowe hasło:");
-             if (newPass1 === null) return;
-             const newPass2 = prompt("Powtórz nowe hasło:");
-             if (newPass2 === null) return;
+            const newPass1 = prompt("Wpisz nowe hasło:");
+            if (newPass1 === null) return;
+            const newPass2 = prompt("Powtórz nowe hasło:");
+            if (newPass2 === null) return;
 
-             if (newPass1 && newPass1 === newPass2) {
+            if (newPass1 && newPass1 === newPass2) {
                 try {
                     const docRef = doc(db, `artifacts/${appId}/config/admin`);
                     await setDoc(docRef, { password: newPass1 });
@@ -814,9 +814,9 @@
                 } catch (e) {
                     showModal('Błąd', 'Nie udało się zmienić hasła.');
                 }
-             } else {
+            } else {
                 showModal('Błąd', 'Hasła nie są takie same lub pole jest puste.');
-             }
+            }
         },
         'sql': () => { showSourceTagsAdmin = !showSourceTagsAdmin; showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`); refreshAllData(); },
         'dev': () => window.open('https://coffynerd.github.io/publicnotebook/', '_blank'),
@@ -831,7 +831,7 @@
             showModal('Dostępne komendy', '- ' + commands.join('\n- '));
         }
     };
-    
+
     async function checkAdminPassword(password) {
         const docRef = doc(db, `artifacts/${appId}/config/admin`);
         try {
@@ -856,11 +856,11 @@
         if (passwordActions.hasOwnProperty(userInput)) {
             passwordActions[userInput]();
         } else {
-             if (await checkAdminPassword(userInput)) {
+            if (await checkAdminPassword(userInput)) {
                 showAdminView();
-             } else {
+            } else {
                 showModal("Błąd", "Niepoprawne hasło lub komenda!");
-             }
+            }
         }
     }
 
@@ -884,7 +884,7 @@
         const output = [];
 
         for (const line of lines) {
-             if (line.trim().startsWith('(html){') && !inHtmlBlock) {
+            if (line.trim().startsWith('(html){') && !inHtmlBlock) {
                 inHtmlBlock = true;
                 htmlContent = line.substring(line.indexOf('{') + 1);
                 if (line.trim().endsWith('}(html)')) {
@@ -907,7 +907,7 @@
                 }
                 continue;
             }
-            
+
             if (line.trim() === '') {
                 output.push('<div><br></div>');
                 continue;
@@ -935,75 +935,97 @@
                 const escapedMatch = match.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
                 return `<span class="ean-barcode" data-ean-source="${escapedMatch}">${displayCode}</span>`;
             });
-            
+
             renderedContent = renderedContent.replace(/\[(.*?)\]\{(.*?)\}/g, (match, buttonText, link) => {
                 let href = link.trim();
                 if (!href.startsWith('http://') && !href.startsWith('https://')) href = 'https://' + href;
                 const unescapedButtonText = buttonText.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
                 return `<a href="${href}" target="_blank"><button>${unescapedButtonText}</button></a>`;
             });
-            
+
             if (hasCheckbox) {
                 output.push(`<div><input type="checkbox" ${isChecked ? 'checked' : ''}>${renderedContent}</div>`);
             } else {
                 output.push(`<div>${renderedContent}</div>`);
             }
         }
-        
-         if (inHtmlBlock) { // Just in case it's not closed
+
+        if (inHtmlBlock) { // Just in case it's not closed
             output.push(`<div class="raw-html-block">${htmlContent}</div>`);
         }
 
         return output.join('');
     }
 
+    // Helper function to extract text content from a node, handling custom elements like EAN barcodes and buttons
+    function getNodeTextContent(node) {
+        let text = '';
+        node.childNodes.forEach(child => {
+            if (child.nodeType === Node.TEXT_NODE) {
+                text += child.textContent;
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                if (child.tagName === 'BR') {
+                    text += '\n';
+                } else if (child.classList.contains('ean-barcode')) {
+                    text += child.dataset.eanSource.replace(/&apos;/g, "'").replace(/&quot;/g, '"');
+                } else if (child.tagName === 'A' && child.querySelector('button')) {
+                    const button = child.querySelector('button');
+                    let href = child.getAttribute('href');
+                    if (href.startsWith('https://')) href = href.substring(8);
+                    else if (href.startsWith('http://')) href = href.substring(7);
+                    text += `[${button.textContent}]{${href}}`;
+                } else {
+                    text += getNodeTextContent(child); // Recurse for nested elements
+                }
+            }
+        });
+        return text;
+    }
 
     function convertRenderedToSource(element) {
         const lines = [];
         element.childNodes.forEach(node => {
-            if (node.nodeType !== 1) return; 
-
-            if (node.innerHTML === '<br>') {
-                lines.push('');
-                return;
-            }
-            
-            if (node.classList.contains('raw-html-block')) {
-                lines.push(`(html){${node.innerHTML}}(html)`);
-                return;
-            }
-            
             let line = '';
-            const checkbox = node.querySelector('input[type="checkbox"]');
-            if (checkbox) {
-                line += checkbox.checked ? '& ' : '# ';
+
+            if (node.nodeType === Node.TEXT_NODE) { // Handle direct text nodes
+                line = node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                // If it's an empty line div, handle it
+                if (node.innerHTML === '<br>') {
+                    lines.push('');
+                    return;
+                }
+
+                if (node.classList.contains('raw-html-block')) {
+                    lines.push(`(html){${node.innerHTML}}(html)`);
+                    return;
+                }
+
+                // Check for checkbox at the beginning of the line
+                const checkbox = node.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    line += checkbox.checked ? '& ' : '# ';
+                    // Clone the node and remove the checkbox to get its remaining text content
+                    const tempNode = node.cloneNode(true);
+                    const tempCheckbox = tempNode.querySelector('input[type="checkbox"]');
+                    if (tempCheckbox) tempCheckbox.remove();
+
+                    line += getNodeTextContent(tempNode);
+
+                } else {
+                    // If no checkbox, just get the text content of the div
+                    line += getNodeTextContent(node);
+                }
             }
-
-            const processNode = (currentNode) => {
-                 currentNode.childNodes.forEach(child => {
-                    if (child.nodeType === 3) { // Text Node
-                        line += child.textContent;
-                    } else if (child.nodeType === 1) { // Element Node
-                        if (child.tagName === 'INPUT' && child.type === 'checkbox') return;
-
-                        if (child.classList.contains('ean-barcode')) {
-                             line += child.dataset.eanSource.replace(/&apos;/g, "'").replace(/&quot;/g, '"');
-                        } else if (child.tagName === 'A' && child.querySelector('button')) {
-                            const button = child.querySelector('button');
-                            let href = child.getAttribute('href');
-                            if (href.startsWith('https://')) href = href.substring(8);
-                            else if (href.startsWith('http://')) href = href.substring(7);
-                            line += `[${button.textContent}]{${href}}`;
-                        } else {
-                           processNode(child); // Recurse
-                        }
-                    }
-                });
-            };
-            
-            processNode(node);
             lines.push(line);
         });
+
+        // Ensure that a completely empty editor (which might just have a single empty line in array)
+        // results in an empty string, not just a single newline.
+        if (lines.length === 1 && lines[0].trim() === '') {
+            return '';
+        }
+
         return lines.join('\n');
     }
 
@@ -1014,15 +1036,15 @@
             const isChecked = sign === '&';
             return `<span class="subtask"><input type="checkbox" class="subtask-checkbox" data-index="${index++}" ${isChecked ? 'checked' : ''}><span class="subtask-text ${isChecked ? 'done' : ''}">${text}</span></span>`;
         });
-        
+
         processedContent = processedContent.replace(/{([^}]+?)}/g, (match, link) => {
-             let href = link.trim();
-             if (!href.startsWith('http://') && !href.startsWith('https://')) {
+            let href = link.trim();
+            if (!href.startsWith('http://') && !href.startsWith('https://')) {
                 href = 'https://' + href;
-             }
-             return `<a href="${href}" target="_blank" style="margin-left: 10px;"><button>załącznik</button></a>`;
+            }
+            return `<a href="${href}" target="_blank" style="margin-left: 10px;"><button>załącznik</button></a>`;
         });
-        
+
         return processedContent;
     }
 
@@ -1102,7 +1124,7 @@
                 if (task.dueDate) {
                     const dueDateSpan = document.createElement('span');
                     dueDateSpan.classList.add('due-date-text');
-                    
+
                     const dateParts = task.dueDate.split('-');
                     const dueDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
 
@@ -1114,7 +1136,7 @@
                     dueDateSpan.textContent = `Wykonać do: ${day}.${month}`;
 
                     if (dueDate <= today && !task.done) {
-                         itemDiv.classList.add('due-date-warning');
+                        itemDiv.classList.add('due-date-warning');
                     }
                     contentWrapper.appendChild(dueDateSpan);
                 }
@@ -1130,7 +1152,7 @@
                 rightSideInfo.className = 'right-aligned-info';
                 const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
                 rightSideInfo.innerHTML = `<div class="assignees">Osoby: ${assigneesList.length > 0 ? assigneesList.join(', ') : 'brak'}</div>
-                                           ${task.createdAt ? `<div class="date-info">${new Date(task.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
+                                        ${task.createdAt ? `<div class="date-info">${new Date(task.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
                 itemDiv.append(contentWrapper, rightSideInfo);
 
                 if (isAdmin) {
@@ -1170,7 +1192,7 @@
                             if (newContent === null) return;
                             const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', Array.isArray(task.assignees) ? task.assignees.join(';') : task.assignees || '');
                             if (newAssignees === null) return;
-                             const newDueDate = prompt('Nowy termin wykonania (YYYY-MM-DD):', task.dueDate || '');
+                            const newDueDate = prompt('Nowy termin wykonania (YYYY-MM-DD):', task.dueDate || '');
                             const updateData = { content: newContent, assignees: newAssignees.split(';').map(s => s.trim()), dueDate: newDueDate || null };
                             await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
                             refreshAllData();
@@ -1226,7 +1248,7 @@
             ordersToRender.forEach(order => {
                 const isPriority = order.name.startsWith('!!!');
                 const displayName = isPriority ? order.name.substring(3).trim() : order.name;
-                
+
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `item-row order-item ${order.done ? 'done' : ''} ${isPriority ? 'priority' : ''}`;
                 itemDiv.dataset.orderId = order.id;
@@ -1234,12 +1256,12 @@
 
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'item-content-wrapper';
-                
+
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = displayName;
-                
+
                 contentWrapper.append(nameSpan);
-                
+
                 const supplierInfo = document.createElement('span');
                 supplierInfo.classList.add('supplier-info');
                 supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
@@ -1255,20 +1277,20 @@
                 const rightSideInfo = document.createElement('div');
                 rightSideInfo.className = 'right-aligned-info';
                 rightSideInfo.innerHTML = `${order.createdAt ? `<div class="date-info">${new Date(order.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
-                
+
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'order-buttons';
-                
+
                 const doneBtn = document.createElement('button');
                 doneBtn.textContent = 'Zamówione';
                 doneBtn.onclick = async () => {
                     if (isPriority) new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-770340.wav').play();
-                    
+
                     try {
                         if (order.source === 'supabase') {
-                             await supabase.from('orders').update({ is_completed: true }).eq('id', order.id.replace('supabase-',''));
+                            await supabase.from('orders').update({ is_completed: true }).eq('id', order.id.replace('supabase-',''));
                         } else {
-                             await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), { done: true });
+                            await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), { done: true });
                         }
                         refreshAllData();
                     } catch (error) {
@@ -1313,7 +1335,7 @@
                         }
                     }
                 };
-                
+
                 if (!isAdmin) {
                     if (!order.done) {
                         buttonsDiv.appendChild(doneBtn);
@@ -1328,15 +1350,15 @@
                     }
                     buttonsDiv.appendChild(deleteBtn);
                 }
-                
+
                 itemDiv.append(contentWrapper, rightSideInfo, buttonsDiv);
                 targetElement.appendChild(itemDiv);
             });
         };
-        
+
         const activeOrders = allOrders.filter(o => o.done !== true);
         const completedOrders = allOrders.filter(o => o.done === true);
-        
+
         if (isAdmin) {
             renderList(activeOrders, activeListElement);
             renderList(completedOrders, completedListElement);
@@ -1344,10 +1366,10 @@
             renderList(activeOrders, activeListElement);
         }
     }
-    
+
     async function renderNotes(isAdmin) {
         if (!isAuthReady) return;
-        
+
         const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
         listEl.innerHTML = 'Ładowanie...';
 
@@ -1357,7 +1379,7 @@
         const fbPath = `artifacts/${appId}/public/data/notes`;
         const fbSnapshot = await getDocs(collection(db, fbPath));
         const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
-        
+
         const allNotes = [...formattedSupabaseNotes, ...firebaseNotes]
             .filter(note => isAdmin || note.public || note.is_public)
             .sort((a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)));
@@ -1370,22 +1392,22 @@
             item.dataset.source = note.source;
             item.dataset.authorId = note.submittedByUserId;
             if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
-            
+
             const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title}</span>
                                <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>
                                ${((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) ? `<span class="source-tag ${note.source}">${note.source}</span>` : ''}`;
-            
+
             item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'note-actions';
-            
+
             const pinBtn = document.createElement('span');
             pinBtn.className = 'note-pin-btn';
             pinBtn.innerHTML = '&#128204;';
             pinBtn.title = note.pinned ? 'Odepnij' : 'Przypnij';
             pinBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('pin', note, isAdmin); };
-            
+
             const publishBtn = document.createElement('span');
             publishBtn.className = 'note-publish-btn';
             publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
@@ -1410,17 +1432,17 @@
                     showModal('Błąd', 'Brak identyfikatora do udostępnienia tej notatki.');
                 }
             };
-            
-            actionsDiv.appendChild(pinBtn); 
+
+            actionsDiv.appendChild(pinBtn);
 
             if (isAdmin) {
-                 actionsDiv.appendChild(publishBtn);
+                actionsDiv.appendChild(publishBtn);
             }
             if(note.uuid || note.source === 'firebase') actionsDiv.appendChild(shareBtn);
 
             item.appendChild(actionsDiv);
             item.onclick = () => {
-                if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); } 
+                if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
                 else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
                 document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
                 item.classList.add('selected');
@@ -1430,9 +1452,9 @@
     }
 
     async function renderVacationRequests(isAdmin) {
-       const userListElement = document.getElementById('user-schedule-request-list');
-       const adminVisibleListElement = document.getElementById('admin-schedule-request-list-visible');
-       const adminHiddenListElement = document.getElementById('admin-schedule-request-list-hidden');
+        const userListElement = document.getElementById('user-schedule-request-list');
+        const adminVisibleListElement = document.getElementById('admin-schedule-request-list-visible');
+        const adminHiddenListElement = document.getElementById('admin-schedule-request-list-hidden');
 
         if (!isAuthReady) {
             if (userListElement) userListElement.innerHTML = 'Ładowanie...';
@@ -1456,7 +1478,7 @@
             requestsToRender.forEach(req => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `item-row vacation-request`;
-                 let statusText = 'Oczekujący';
+                let statusText = 'Oczekujący';
                 let statusColor = 'orange';
 
                 if (req.is_accepted === true) {
@@ -1487,15 +1509,15 @@
                 `;
 
                 if ((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) {
-                     const sourceTag = document.createElement('span');
-                     sourceTag.className = `source-tag ${req.source}`;
-                     sourceTag.textContent = req.source;
-                     contentWrapper.appendChild(sourceTag);
+                    const sourceTag = document.createElement('span');
+                    sourceTag.className = `source-tag ${req.source}`;
+                    sourceTag.textContent = req.source;
+                    contentWrapper.appendChild(sourceTag);
                 }
 
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'right-aligned-info';
-                
+
                 if (isAdmin) {
                     const date = new Date(req.createdAt || req.created_at);
                     const dateInfo = !isNaN(date) ? `<div class="date-info">${date.toLocaleString('pl-PL')}</div>` : '';
@@ -1513,9 +1535,9 @@
                             <button class="delete-vacation-btn">Usuń</button>
                         </div>`;
                 } else {
-                     buttonsDiv.innerHTML = `<div><button class="edit-vacation-btn">Edytuj</button></div>`;
+                    buttonsDiv.innerHTML = `<div><button class="edit-vacation-btn">Edytuj</button></div>`;
                 }
-                
+
                 itemDiv.append(contentWrapper, buttonsDiv);
                 targetElement.appendChild(itemDiv);
             });
@@ -1527,7 +1549,7 @@
             let filteredData = allRequests;
             if (filterStart) filteredData = filteredData.filter(req => new Date(req.end_date) >= new Date(filterStart));
             if (filterEnd) filteredData = filteredData.filter(req => new Date(req.start_date) <= new Date(filterEnd));
-            
+
             const visibleRequests = filteredData.filter(req => req.is_visible !== false);
             const hiddenRequests = filteredData.filter(req => req.is_visible === false);
 
@@ -1546,8 +1568,8 @@
         const promises = [
             renderTasks(inAdminView),
             renderOrders(inAdminView),
-            renderNotes(true), 
-            renderNotes(false), 
+            renderNotes(true),
+            renderNotes(false),
             renderVacationRequests(inAdminView)
         ];
 
@@ -1556,10 +1578,10 @@
         }
 
         await Promise.all(promises);
-        
+
         console.log("Dane odświeżone.");
     }
-    
+
     async function handleNoteAction(action, note, isAdmin) {
         const source = note.source;
         const noteId = source === 'supabase' ? note.id.replace('supabase-', '') : note.id;
@@ -1615,10 +1637,10 @@
     function loadUserNoteIntoEditor(note) {
         currentUserNoteId = note.id;
         const saveButton = document.getElementById('user-save-note-btn');
-        
+
         saveButton.disabled = false;
         saveButton.title = "";
-        
+
         document.getElementById('user-note-title-input').value = note.title || '';
         document.getElementById('user-note-color-input').value = note.titleColor || note.title_color ||'#000000';
         document.getElementById('user-note-content-input').innerHTML = convertTextToHtml(note.content);
@@ -1639,7 +1661,7 @@
 
         if (currentUserNoteId) {
             const source = document.querySelector(`#user-note-title-list .note-list-item[data-id="${currentUserNoteId}"]`).dataset.source;
-             if (source === 'supabase') {
+            if (source === 'supabase') {
                 const { error } = await supabase.from('notes').update({ title: noteData.title, content: noteData.content, title_color: noteData.titleColor, updated_at: new Date().toISOString() }).eq('id', currentUserNoteId.replace('supabase-',''));
                 if (error) throw new Error('Supabase update failed');
             } else {
@@ -1654,17 +1676,17 @@
     }
 
     function initUserView() {
-        document.getElementById('user-order-form').onsubmit = async (e) => { 
-            e.preventDefault(); 
+        document.getElementById('user-order-form').onsubmit = async (e) => {
+            e.preventDefault();
             const nameInput = document.getElementById('user-order-name');
             const supplierInput = document.getElementById('user-order-supplier');
             try {
-                await addDoc(collection(db, `artifacts/${appId}/public/data/orders`), { 
-                    name: nameInput.value, 
-                    supplier: supplierInput.value, 
-                    done: false, 
-                    createdAt: new Date(), 
-                    submittedByUserId: userId 
+                await addDoc(collection(db, `artifacts/${appId}/public/data/orders`), {
+                    name: nameInput.value,
+                    supplier: supplierInput.value,
+                    done: false,
+                    createdAt: new Date(),
+                    submittedByUserId: userId
                 });
                 nameInput.value = '';
                 supplierInput.value = '';
@@ -1676,7 +1698,7 @@
         };
         document.getElementById('user-new-note-btn').onclick = clearUserEditor;
         document.getElementById('user-save-note-btn').onclick = saveUserNote;
-        document.getElementById('user-toggle-raw-btn').onclick = (e) => { 
+        document.getElementById('user-toggle-raw-btn').onclick = (e) => {
             const contentInput = document.getElementById('user-note-content-input');
             const rawInput = document.getElementById('user-note-content-raw');
             if (editorMode.user === 'render') {
@@ -1693,8 +1715,8 @@
                 e.target.textContent = 'Edytuj Kod';
             }
         };
-        document.getElementById('user-schedule-request-form').onsubmit = async (e) => { 
-            e.preventDefault(); 
+        document.getElementById('user-schedule-request-form').onsubmit = async (e) => {
+            e.preventDefault();
             const form = e.target;
             const employee_name = form.querySelector('#user-employee-name').value;
             const start_date = form.querySelector('#user-start-date').value;
@@ -1718,13 +1740,13 @@
                 console.error("Firebase addDoc error:", error);
             }
         };
-        document.getElementById('user-task-form').onsubmit = async (e) => { 
+        document.getElementById('user-task-form').onsubmit = async (e) => {
             e.preventDefault();
             const form = e.target;
             const content = form.querySelector('#user-task-input').value.trim();
             if (!content) return;
             const assignees = form.querySelector('#user-assignee-input').value.trim();
-             const dueDate = form.querySelector('#user-due-date-input').value;
+            const dueDate = form.querySelector('#user-due-date-input').value;
             const taskData = {
                 content,
                 assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
@@ -1747,7 +1769,7 @@
             }
         };
     }
-    
+
     // --- ADMIN VIEW ---
     function clearAdminEditor() {
         currentAdminNoteId = null;
@@ -1783,7 +1805,7 @@
         const content = editorMode.admin === 'raw' ? document.getElementById('note-content-raw').value : convertRenderedToSource(document.getElementById('note-content-input'));
         const noteData = { title, content, title_color: document.getElementById('note-color-input').value, updated_at: new Date().toISOString() };
         const firebaseNoteData = { title, content, titleColor: document.getElementById('note-color-input').value, updatedAt: new Date() };
-        
+
         try {
             if (currentAdminNoteId) {
                 if (currentAdminNoteId.startsWith('supabase')) {
@@ -1791,7 +1813,7 @@
                 } else {
                     await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), firebaseNoteData);
                 }
-            } else { 
+            } else {
                 await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...firebaseNoteData, createdAt: new Date(), pinned: false, public: false, uuid: crypto.randomUUID() });
                 clearAdminEditor();
             }
@@ -1800,7 +1822,7 @@
             showModal('Błąd zapisu', 'Nie udało się zapisać notatki: ' + error.message);
         }
     }
-    
+
     async function deleteAdminNote() {
         if (!currentAdminNoteId || !confirm('Czy na pewno chcesz usunąć tę notatkę?')) return;
         try {
@@ -1815,9 +1837,9 @@
             showModal('Błąd', 'Nie udało się usunąć notatki: ' + error.message);
         }
     }
-    
+
     function initAdminView() {
-        document.getElementById('admin-task-form').onsubmit = async (e) => { 
+        document.getElementById('admin-task-form').onsubmit = async (e) => {
             e.preventDefault();
             const form = e.target;
             const content = form.querySelector('#admin-task-input').value.trim();
@@ -1843,8 +1865,8 @@
                 showModal('Błąd zapisu', 'Nie udało się dodać zadania: ' + error.message);
             }
         };
-        document.getElementById('admin-order-form').onsubmit = async (e) => { 
-            e.preventDefault(); 
+        document.getElementById('admin-order-form').onsubmit = async (e) => {
+            e.preventDefault();
             const nameInput = document.getElementById('admin-order-name');
             const supplierInput = document.getElementById('admin-order-supplier');
             try {
@@ -1876,7 +1898,7 @@
                 e.target.textContent = 'Edytuj Kod';
             }
         };
-        document.getElementById('admin-schedule-request-form').onsubmit = async (e) => { 
+        document.getElementById('admin-schedule-request-form').onsubmit = async (e) => {
             e.preventDefault();
             const form = e.target;
             const employee_name = form.querySelector('#admin-employee-name').value;
@@ -1912,14 +1934,14 @@
             if (!content) return;
             const assignees = form.querySelector('#recurring-task-assignees').value.trim();
             const days = Array.from(form.querySelectorAll('input[name="day"]:checked')).map(cb => parseInt(cb.value));
-            
+
             if(days.length === 0){
                 showModal('Błąd', 'Musisz wybrać co najmniej jeden dzień.');
                 return;
             }
 
             try {
-                 await addDoc(collection(db, `artifacts/${appId}/public/data/recurring_tasks`), {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/recurring_tasks`), {
                     content,
                     assignees: assignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
                     days,
@@ -1928,7 +1950,7 @@
                 form.reset();
                 renderRecurringTasks();
             } catch (error) {
-                 showModal('Błąd zapisu', 'Nie udało się dodać zadania cyklicznego: ' + error.message);
+                showModal('Błąd zapisu', 'Nie udało się dodać zadania cyklicznego: ' + error.message);
             }
         };
     }
@@ -1959,7 +1981,7 @@
                     <button class="delete-recurring-btn">Usuń</button>
                 </div>
             `;
-             itemDiv.querySelector('.edit-recurring-btn').onclick = async () => {
+            itemDiv.querySelector('.edit-recurring-btn').onclick = async () => {
                 const newContent = prompt('Nowa treść zadania:', task.content);
                 if (newContent === null) return;
 
@@ -1974,13 +1996,13 @@
                     showModal('Błąd', 'Musisz podać przynajmniej jeden poprawny dzień (1-7).');
                     return;
                 }
-                
+
                 const updateData = {
                     content: newContent,
                     assignees: newAssignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
                     days: newDays
                 };
-                
+
                 try {
                     await updateDoc(doc(db, `artifacts/${appId}/public/data/recurring_tasks`, task.id), updateData);
                     renderRecurringTasks();
@@ -2003,11 +2025,11 @@
         console.log("Checking recurring tasks...");
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
-        let dayOfWeek = today.getDay(); 
-        if (dayOfWeek === 0) dayOfWeek = 7; 
+        let dayOfWeek = today.getDay();
+        if (dayOfWeek === 0) dayOfWeek = 7;
 
         const recurringTasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/recurring_tasks`));
-        
+
         const promises = [];
         let createdAny = false;
 
@@ -2026,13 +2048,13 @@
                 promises.push(updateDoc(doc.ref, { lastCreated: todayStr }));
             }
         });
-        
+
         await Promise.all(promises);
         if (createdAny) {
-             console.log("Finished creating recurring tasks, refreshing list.");
+            console.log("Finished creating recurring tasks, refreshing list.");
             refreshAllData();
         } else {
-             console.log("No new recurring tasks to create today.");
+            console.log("No new recurring tasks to create today.");
         }
     }
 
@@ -2072,7 +2094,7 @@
             const vacationList = e.target.closest('#user-schedule-request-list, #admin-schedule-request-list-visible, #admin-schedule-request-list-hidden');
             if(vacationList) handleVacationListClick(e, vacationList.id.includes('admin'));
         });
-        
+
         function handleNoteClick(e) {
             const link = e.target.closest('a');
             if (link && link.href) {
@@ -2086,7 +2108,7 @@
         async function handleCheckboxAutoSave(e) {
             if (e.target.tagName === 'INPUT' && e.target.type === 'checkbox') {
                 const isAdmin = e.currentTarget.id === 'note-content-input';
-                
+
                 setTimeout(() => {
                     if (isAdmin) {
                         saveAdminNote();
@@ -2104,8 +2126,8 @@
     });
 
     function setupTaskListeners() {
-       document.body.addEventListener('change', async (e) => {
-           if(e.target.classList.contains('subtask-checkbox')) {
+        document.body.addEventListener('change', async (e) => {
+            if(e.target.classList.contains('subtask-checkbox')) {
                 const checkbox = e.target;
                 const taskRow = checkbox.closest('.item-row');
                 const taskId = taskRow.dataset.taskId;
@@ -2121,14 +2143,14 @@
                     if (currentIndex++ === clickedIndex) return `(${isChecked ? '&' : '#'}${text})`;
                     return match;
                 });
-                
+
                 try {
                     const updateData = { content: newContent };
                     if (source === 'supabase') {
-                       const { error } = await supabase.from('tasks').update(updateData).eq('id', taskId.replace('supabase-',''));
-                       if(error) throw error;
+                        const { error } = await supabase.from('tasks').update(updateData).eq('id', taskId.replace('supabase-',''));
+                        if(error) throw error;
                     } else {
-                       await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, taskId), updateData);
+                        await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, taskId), updateData);
                     }
                     taskRow.dataset.fullContent = newContent;
                 } catch (error) {
@@ -2137,8 +2159,8 @@
                     checkbox.nextElementSibling.classList.toggle('done', !isChecked);
                     taskRow.dataset.fullContent = fullContent; // Revert dataset
                 }
-           }
-       });
+            }
+        });
     }
 
     async function handleVacationListClick(e, isAdmin) {
@@ -2176,7 +2198,7 @@
             if (source === 'supabase') { const { data } = await supabase.from('vacation_requests').select('*').eq('id', dbId).single(); currentData = data; }
             else { const docSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId)); currentData = docSnap.data(); }
             if (!currentData) return showModal('Błąd', 'Nie znaleziono wniosku.');
-            
+
             const new_start_date = prompt('Nowa data rozpoczęcia:', currentData.start_date);
             if (new_start_date === null) return;
             const new_end_date = prompt('Nowa data zakończenia:', currentData.end_date);
@@ -2203,7 +2225,7 @@
                 }
             }
         } else if (target.matches('.reject-vacation-btn')) {
-             if (source !== 'firebase') {
+            if (source !== 'firebase') {
                 showModal('Błąd', 'Odrzucać można tylko wnioski zapisane w nowej bazie danych.');
                 return;
             }
@@ -2226,4 +2248,3 @@
 </script>
 </body>
 </html>
-
