@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista Zadań</title>
+    <title>System Zarządzania</title>
     <link rel="icon" href="favicon.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+EAN13+Text&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+EAN13+Text&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --background-light: #f0f2f5;
@@ -18,13 +18,15 @@
             --surface-dark: #1e1e1e;
             --border-light: #ddd;
             --border-dark: #333;
-            --priority-color: #B8860B; /* Ciemny złoty dla trybu jasnego */
+            --priority-color: #B8860B;
             --supabase-source-color: #56a761;
             --firebase-source-color: #ffca28;
             --user-task-color: #007bff;
+            --accept-color: #28a745;
+            --reject-color: #dc3545;
         }
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', Arial, sans-serif;
             margin: 0;
             background-color: var(--background-light);
             color: var(--text-light);
@@ -38,10 +40,9 @@
             align-items: center;
             justify-content: space-between;
             position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .nav-links {
-            flex-grow: 1;
-        }
+        .nav-links { flex-grow: 1; display: flex; overflow-x: auto; }
         .blue-nav { background-color: #004896; }
         .gray-nav { background-color: #6c757d; }
         .nav-bar a {
@@ -53,194 +54,131 @@
             text-decoration: none;
             cursor: pointer;
             transition: background-color 0.3s;
+            white-space: nowrap;
         }
-        .blue-nav a:hover {
-            background-color: #ffc101;
-            color: black;
-        }
-        .gray-nav a:hover {
-            background-color: #5a6268;
-        }
-        .nav-actions {
-            display: flex;
-            align-items: center;
-        }
+        .blue-nav a:hover { background-color: #ffc101; color: black; }
+        .gray-nav a:hover { background-color: #5a6268; }
+        .nav-actions { display: flex; align-items: center; }
         .theme-toggle-btn, .refresh-btn {
-            font-size: 1.5em;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0 10px;
-            color: white;
+            font-size: 1.5em; background: none; border: none; cursor: pointer; padding: 0 10px; color: white;
         }
         .hamburger-btn {
-            display: none;
-            font-size: 1.8em;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: white;
+            display: none; font-size: 1.8em; background: none; border: none; cursor: pointer; color: white;
         }
-        .content {
-            padding: 20px 30px;
-            display: none;
-        }
-        .content.active {
-            display: block;
-        }
+        .content { padding: 20px 30px; display: none; }
+        .content.active { display: block; }
+
+        /* --- ITEM ROWS --- */
         .item-row {
-            border-bottom: 1px solid var(--border-light);
-            padding: 10px 5px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 10px;
+            border-bottom: 1px solid var(--border-light); padding: 10px 5px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
         }
         .item-row.done {
-            color: red;
+            color: red !important;
             text-decoration: line-through;
             background-color: #f9f9f9;
         }
-        .item-row.priority {
-            color: var(--priority-color);
-            font-weight: bold;
-        }
-        .item-row.user-submitted {
-            color: var(--user-task-color);
-        }
-        .dark-mode .item-row.priority {
-            color: #ffc101;
-        }
-        .dark-mode .item-row.user-submitted {
-            color: #3399ff;
-        }
-        .item-row.user-submitted.done, .item-row.priority.done {
-            color: red;
-        }
-        .order-item.done {
-            text-decoration: none;
-        }
-        .item-row.due-date-warning:not(.done) .task-text-container,
-        .item-row.due-date-warning:not(.done) .due-date-text {
-            color: purple;
-            font-weight: bold;
-        }
-        .dark-mode .item-row.due-date-warning:not(.done) .task-text-container,
-        .dark-mode .item-row.due-date-warning:not(.done) .due-date-text {
-            color: #c58af9;
-        }
+        .item-row.priority { color: var(--priority-color); font-weight: bold; }
+        .item-row.user-submitted { color: var(--user-task-color); }
 
-        .item-content-wrapper {
-            display: flex;
-            align-items: center;
-            flex-grow: 1;
+        .item-row.user-submitted.done, .item-row.priority.done { color: red !important; }
+
+        .item-row.due-date-warning:not(.done) .task-text-container,
+        .item-row.due-date-warning:not(.done) .due-date-text { color: purple; font-weight: bold; }
+        .dark-mode .item-row.due-date-warning:not(.done) .task-text-container,
+        .dark-mode .item-row.due-date-warning:not(.done) .due-date-text { color: #c58af9; }
+        .item-content-wrapper { display: flex; align-items: center; flex-grow: 1; }
+        .assignees, .supplier-info { color: #555; font-size: 0.9em; margin-left: 15px; }
+        .date-info { font-size: 0.8em; color: #888; margin-left: auto; padding-left: 20px; text-align: right; white-space: nowrap; }
+        .due-date-text { margin-left: 15px; font-size: 1em; font-weight: normal; }
+        .right-aligned-info { text-align: right; }
+
+        /* --- INVENTORY STYLES --- */
+        .inventory-controls {
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+            background: var(--surface-light); padding: 15px; border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); align-items: flex-end;
         }
-        .assignees, .supplier-info {
-            color: #555;
-            font-size: 0.9em;
-            margin-left: 15px;
+        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 150px; }
+        .filter-group label { font-size: 0.8em; margin-bottom: 5px; color: #666; }
+        .inventory-table {
+            width: 100%; border-collapse: collapse; background: var(--surface-light);
+            border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        .date-info {
-            font-size: 0.8em;
-            color: #888;
-            margin-left: auto;
-            padding-left: 20px;
-            text-align: right;
-            white-space: nowrap;
+        .inventory-table th, .inventory-table td {
+            padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-light);
         }
-        .due-date-text {
-            margin-left: 15px;
-            font-size: 1em;
-            font-weight: normal;
+        .inventory-table th { background-color: #f8f9fa; font-weight: bold; color: #555; cursor: pointer; }
+        .inventory-table tr:hover { background-color: rgba(0,0,0,0.02); }
+        .price-tag { font-weight: bold; color: #28a745; }
+
+        .quantity-badge {
+            background: #fff; border: 1px solid #ddd; color: #000;
+            padding: 4px 8px; border-radius: 12px; font-size: 0.9em; font-weight: bold;
         }
-        .right-aligned-info {
-            text-align: right;
-        }
+        .quantity-badge.out { background: #dc3545; color: #fff; border-color: #dc3545; }
+
+        .load-more-container { text-align: center; margin-top: 15px; padding-bottom: 20px; }
+        .load-more-btn { background-color: #6c757d; width: 100%; max-width: 300px; }
+
         h2, h3 { color: var(--text-light); }
         form {
-            margin-top: 20px;
-            margin-bottom: 20px;
-            background-color: var(--surface-light);
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-top: 20px; margin-bottom: 20px; background-color: var(--surface-light);
+            padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        form input, form textarea { padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; resize: none; }
-
-        .vacation-request-form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: flex-end;
+        form input, form textarea, .inventory-controls input, .inventory-controls select {
+            padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; resize: none;
         }
-        .vacation-request-form .vacation-form-row {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            flex: 1 1 200px;
-        }
-        .vacation-request-form textarea {
-            min-height: 36px;
-        }
-
-        .vacation-request-form button {
-            margin-left: 0;
-        }
-
+        .vacation-request-form { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
+        .vacation-request-form .vacation-form-row { display: flex; flex-direction: column; gap: 5px; flex: 1 1 200px; }
+        .vacation-request-form textarea { min-height: 36px; }
+        .vacation-request-form button { margin-left: 0; }
         button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; transition: background-color 0.3s; }
         button:disabled { background-color: #aaa; cursor: not-allowed; }
         .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
-        .google-sheet-iframe {
-            width: 100%;
-            height: 75vh;
-            border: 1px solid var(--border-light);
-            border-radius: 5px;
-        }
-        .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .page-header a {
-            display: inline-block;
-            padding: 8px 16px;
-            background-color: #28a745;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 0.9em;
-            transition: background-color 0.3s;
-        }
-        .page-header a:hover {
-            background-color: #218838;
-        }
+        .google-sheet-iframe { width: 100%; height: 75vh; border: 1px solid var(--border-light); border-radius: 5px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .page-header a { display: inline-block; padding: 8px 16px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9em; transition: background-color 0.3s; }
+        .page-header a:hover { background-color: #218838; }
 
-        /* --- DARK MODE STYLES --- */
-        body.dark-mode {
-            background-color: var(--background-dark);
-            color: var(--text-dark);
-        }
+        /* --- VACATION REQUESTS --- */
+        .vacation-request.accepted { background-color: #d4edda; }
+        .vacation-request.rejected { background-color: #f8d7da; }
+        .request-notes { color: #666; font-style: italic; }
+        .request-status { margin-left: 15px; font-weight: bold; flex-shrink: 0; }
+        .request-status.accepted { color: #155724; }
+        .request-status.rejected { color: #721c24; }
+        .request-status.pending { color: #856404; }
+
+        /* --- DARK MODE --- */
+        body.dark-mode { background-color: var(--background-dark); color: var(--text-dark); }
         .dark-mode h2, .dark-mode h3 { color: var(--text-dark); }
-        .dark-mode form {
-            background-color: var(--surface-dark);
-            border: 1px solid var(--border-dark);
-        }
-        .dark-mode form input, .dark-mode form textarea, .dark-mode .note-content-input, .dark-mode .raw-editor, .dark-mode .modal-input {
-            background-color: #2a2a2a;
-            color: var(--text-dark);
-            border-color: #444;
-        }
+        .dark-mode form, .dark-mode .inventory-controls, .dark-mode .inventory-table { background-color: var(--surface-dark); border: 1px solid var(--border-dark); }
+        .dark-mode form input, .dark-mode form textarea, .dark-mode .note-content-input, .dark-mode .raw-editor, .dark-mode .modal-input, .dark-mode .inventory-controls input, .dark-mode .inventory-controls select { background-color: #2a2a2a; color: var(--text-dark); border-color: #444; }
         .dark-mode .item-row { border-bottom-color: var(--border-dark); }
         .dark-mode .item-row.done { background-color: #2c1d1d; }
         .dark-mode .assignees, .dark-mode .supplier-info, .dark-mode .date-info { color: #999; }
-        .dark-mode .google-sheet-iframe {
-            border-color: var(--border-dark);
-            filter: invert(90%) hue-rotate(180deg);
-        }
+        .dark-mode .google-sheet-iframe { border-color: var(--border-dark); filter: invert(90%) hue-rotate(180deg); }
+        .dark-mode .item-row.priority { color: #ffc101; }
+        .dark-mode .item-row.user-submitted { color: #3399ff; }
+        .dark-mode .item-row.due-date-warning:not(.done) .task-text-container,
+        .dark-mode .item-row.due-date-warning:not(.done) .due-date-text { color: #c58af9; }
+        .dark-mode .inventory-table th { background-color: #2c2c2c; color: #ccc; border-bottom-color: #444; }
+        .dark-mode .inventory-table td { border-bottom-color: #444; }
+        .dark-mode .barcode-display { color: #eee; filter: invert(1); }
+        .dark-mode .quantity-badge { background: #333; color: #fff; border-color: #555; }
+        .dark-mode .quantity-badge.out { background: #5c181f; color: #ff6b6b; border-color: #5c181f; }
+        .dark-mode .source-tag.firebase { color: black; }
 
-        /* --- STYLE DLA NOTATNIKA --- */
+        /* DARK MODE VACATION FIX */
+        .dark-mode .vacation-request.accepted { background-color: #051b0b; }
+        .dark-mode .vacation-request.rejected { background-color: #2c0b0e; }
+        .dark-mode .request-notes { color: #aaa; }
+        .dark-mode .request-status.accepted { color: #4ade80; }
+        .dark-mode .request-status.rejected { color: #f87171; }
+        .dark-mode .request-status.pending { color: #facc15; }
+
+        /* --- NOTEBOOK --- */
         .notebook-container { display: flex; gap: 20px; height: 80vh; }
         .note-list-column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-light); padding-right: 20px; }
         .dark-mode .note-list-column { border-right-color: var(--border-dark); }
@@ -251,13 +189,7 @@
         .note-list-item { padding: 10px; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .note-title-wrapper { display: flex; align-items: baseline; flex-grow: 1; overflow: hidden; }
         .note-title { font-weight: bold; font-size: 1.1em; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-        .note-list-date {
-            font-size: 0.8em;
-            font-weight: normal;
-            color: #888;
-            margin-left: 8px;
-            white-space: nowrap;
-        }
+        .note-list-date { font-size: 0.8em; font-weight: normal; color: #888; margin-left: 8px; white-space: nowrap; }
         .dark-mode .note-list-date { color: #aaa; }
         .note-list-item:hover { background-color: rgba(0, 0, 0, 0.05); }
         .note-list-item.selected { background-color: #cccccc; color: #1c1c1c; }
@@ -271,12 +203,9 @@
         .editor-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         #note-title-input, #user-note-title-input { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         #note-color-input, #user-note-color-input { height: 35px; padding: 2px; border: 1px solid #ccc; border-radius: 4px; background-color: white; }
-        .note-content-input, .raw-editor {
-            flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: none;
-        }
+        .note-content-input, .raw-editor { flex-grow: 1; width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; resize: none; }
         .note-content-input { overflow-y: auto; }
-        .note-content-input div { min-height: 1.2em; }
-        .note-content-input div { display: flex; align-items: center; }
+        .note-content-input div { min-height: 1.2em; display: flex; align-items: center; }
         .note-content-input input[type="checkbox"] { margin-right: 8px; flex-shrink: 0; }
         .note-content-input img, .note-content-input video { max-width: 100%; height: auto; }
         #note-timestamps, #user-note-timestamps { font-size: 0.8em; color: #888; text-align: right; margin-top: 10px; padding-right: 10px; }
@@ -293,148 +222,42 @@
         .modal-content {
             background: var(--surface-light); color: var(--text-light); padding: 20px; border-radius: 8px; text-align: center; max-width: 90%; width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        .dark-mode .modal-content { background: var(--surface-dark); color: var(--text-dark); }
         .modal-content h4 { margin-top: 0; }
         .modal-content p { white-space: pre-wrap; }
-        .modal-input {
-            width: calc(100% - 20px);
-            padding: 8px;
-            margin-top: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .ean-barcode {
-            font-family: 'Libre Barcode EAN13 Text', system-ui;
-            font-size: 110px;
-            line-height: 1;
-        }
+        .modal-input { width: calc(100% - 20px); padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .ean-barcode { font-family: 'Libre Barcode EAN13 Text', system-ui; font-size: 110px; line-height: 1; }
+        .subtask { display: inline-flex; align-items: center; margin: 0 5px; }
+        .subtask-text.done { text-decoration: line-through; }
+        .task-text-container { display: inline; }
+        .source-tag { font-size: 0.7em; padding: 2px 5px; border-radius: 3px; margin-left: 5px; font-weight: normal; color: white; }
+        .source-tag.supabase { background-color: var(--supabase-source-color); }
+        .source-tag.firebase { background-color: var(--firebase-source-color); color: var(--text-light); }
+        .days-of-week { display: flex; gap: 10px; margin: 10px 0; }
+        .days-of-week label { cursor: pointer; }
 
-        /* --- SUBTASK STYLES --- */
-        .subtask {
-            display: inline-flex;
-            align-items: center;
-            margin: 0 5px;
-        }
-        .subtask-text.done {
-            text-decoration: line-through;
-        }
-        .task-text-container {
-            display: inline;
-        }
-        .vacation-request.accepted {
-            background-color: #d4edda;
-        }
-        .vacation-request.rejected {
-            background-color: #f8d7da;
-        }
-        .dark-mode .vacation-request.accepted {
-            background-color: #1c3d23;
-        }
-        .dark-mode .vacation-request.rejected {
-            background-color: #4d1f23;
-        }
-        .source-tag {
-            font-size: 0.7em;
-            padding: 2px 5px;
-            border-radius: 3px;
-            margin-left: 5px;
-            font-weight: normal;
-            color: white;
-        }
-        .source-tag.supabase {
-            background-color: var(--supabase-source-color);
-        }
-        .source-tag.firebase {
-            background-color: var(--firebase-source-color);
-            color: var(--text-light); /* Make text readable on light yellow */
-        }
-        .dark-mode .source-tag.firebase {
-            color: black;
-        }
-        .days-of-week {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-        }
-        .days-of-week label {
-            cursor: pointer;
-        }
-
-        /* --- MOBILE STYLES --- */
         @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-                flex-direction: column;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                width: 100%;
-                background-color: inherit;
-                z-index: 1000;
-                box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-            }
-            .nav-links.open {
-                display: flex;
-            }
-            .nav-bar a {
-                float: none;
-                text-align: left;
-            }
-            .nav-bar .nav-links {
-                flex-grow: 0;
-            }
-            .hamburger-btn {
-                display: block;
-            }
-            .nav-bar .nav-actions {
-                order: 2;
-            }
-            .nav-bar .nav-links {
-                order: 3;
-                width: 100%;
-            }
-            .nav-bar::before {
-                content: "Lista Zadań";
-                order: 1;
-                flex-grow: 1;
-                text-align: left;
-            }
-            .notebook-container {
-                flex-direction: column;
-                height: 75vh;
-            }
-            .note-list-column {
-                border-right: none;
-                padding-right: 0;
-                border-bottom: 1px solid var(--border-light);
-                padding-bottom: 20px;
-                margin-bottom: 20px;
-                flex-shrink: 0;
-                max-height: 30%;
-            }
-            .dark-mode .note-list-column {
-                border-bottom-color: var(--border-dark);
-            }
-            .content {
-                padding: 15px;
-            }
-            .order-item .order-buttons {
-                width: 100%;
-                text-align: left;
-                padding-top: 5px;
-            }
-            .order-item .order-buttons button {
-                margin-left: 0;
-                margin-right: 10px;
-            }
-            .vacation-request-form {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-            .vacation-request-form .vacation-form-row {
-                flex: initial;
-            }
+            .nav-links { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; width: 100%; background-color: inherit; z-index: 1000; box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+            .nav-links.open { display: flex; }
+            .nav-bar a { float: none; text-align: left; }
+            .nav-bar .nav-links { flex-grow: 0; }
+            .hamburger-btn { display: block; }
+            .nav-bar .nav-actions { order: 2; }
+            .nav-bar .nav-links { order: 3; width: 100%; }
+            .nav-bar::before { content: "Lista Zadań"; order: 1; flex-grow: 1; text-align: left; }
+            .notebook-container { flex-direction: column; height: 75vh; }
+            .note-list-column { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border-light); padding-bottom: 20px; margin-bottom: 20px; flex-shrink: 0; max-height: 30%; }
+            .dark-mode .note-list-column { border-bottom-color: var(--border-dark); }
+            .content { padding: 15px; }
+            .order-item .order-buttons { width: 100%; text-align: left; padding-top: 5px; }
+            .order-item .order-buttons button { margin-left: 0; margin-right: 10px; }
+            .vacation-request-form { flex-direction: column; align-items: stretch; gap: 10px; }
+            .vacation-request-form .vacation-form-row { flex: initial; }
+
+            /* Inventory Mobile */
+            .inventory-table thead { display: none; }
+            .inventory-table tr { display: block; border-bottom: 2px solid #444; margin-bottom: 10px; }
+            .inventory-table td { display: flex; justify-content: space-between; align-items: center; text-align: right; padding: 10px; }
+            .inventory-table td::before { content: attr(data-label); font-weight: bold; float: left; }
         }
     </style>
 </head>
@@ -451,16 +274,17 @@
 <div id="user-view">
     <div class="nav-bar blue-nav">
         <div class="nav-links" id="user-nav-links">
-            <a data-page="user-tasks">Lista zadań</a>
-            <a data-page="user-order">Do zamówienia</a>
-            <a data-page="user-schedule">Grafik</a>
-            <a data-page="user-schedule-requests">Wnioski do grafiku</a>
-            <a data-page="user-notes">Notatnik</a>
-            <a id="switch-to-admin-btn">Panel Administratora</a>
+            <a data-page="user-tasks">📋 Lista zadań</a>
+            <a data-page="user-order">🛒 Do zamówienia</a>
+            <a data-page="user-schedule">📅 Grafik</a>
+            <a data-page="user-schedule-requests">📝 Wnioski do grafiku</a>
+            <a data-page="user-inventory">📦 Magazyn</a>
+            <a data-page="user-notes">📒 Notatnik</a>
+            <a id="switch-to-admin-btn">🔐 Panel Administratora</a>
         </div>
         <div class="nav-actions">
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
-            <button class="theme-toggle-btn"></button>
+            <button class="theme-toggle-btn">🌓</button>
             <button class="hamburger-btn" id="user-hamburger-btn">&#9776;</button>
         </div>
     </div>
@@ -488,6 +312,61 @@
         <h2>Grafik</h2>
         <iframe class="google-sheet-iframe" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vTDEEc4cmeNHgLhQwp6zAXiUwhzwJSw0DYH-MV0XLEQBs9-2LvsklLOeSHbat4DZexTXeSad5MqzY_e/pubhtml?gid=0&single=true&widget=true&headers=false"></iframe>
     </div>
+    <div id="user-schedule-requests" class="content">
+        <h2>Złóż wniosek do grafiku</h2>
+        <form id="user-schedule-request-form" class="vacation-request-form">
+            <div class="vacation-form-row"><label for="user-employee-name">Imię i nazwisko:</label><input type="text" id="user-employee-name" required></div>
+            <div class="vacation-form-row"><label for="user-start-date">Data od:</label><input type="date" id="user-start-date" required></div>
+            <div class="vacation-form-row"><label for="user-end-date">Data do:</label><input type="date" id="user-end-date" required></div>
+            <div class="vacation-form-row"><label for="user-vacation-notes">Notatka:</label><textarea id="user-vacation-notes"></textarea></div>
+            <button type="submit">Wyślij wniosek</button>
+        </form>
+        <h3>Zgłoszone wnioski</h3>
+        <div id="user-schedule-request-list"></div>
+    </div>
+    <!-- NEW USER INVENTORY TAB -->
+    <div id="user-inventory" class="content">
+        <h2>Magazyn / Cennik</h2>
+        <div class="inventory-controls">
+            <div class="filter-group">
+                <label>Nazwa produktu:</label>
+                <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
+            </div>
+            <div class="filter-group">
+                <label>Kod kreskowy (lub @skan):</label>
+                <input type="text" id="user-inv-search-code" placeholder="Skanuj kod...">
+            </div>
+            <div class="filter-group">
+                <label>Sortuj według:</label>
+                <select id="user-inv-sort">
+                    <option value="name_asc">Nazwa (A-Z)</option>
+                    <option value="name_desc">Nazwa (Z-A)</option>
+                    <option value="price_asc">Cena (rosnąco)</option>
+                    <option value="price_desc">Cena (malejąco)</option>
+                    <option value="qty_asc">Ilość (rosnąco)</option>
+                    <option value="qty_desc">Ilość (malejąco)</option>
+                </select>
+            </div>
+            <div class="filter-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                <button id="user-toggle-zeros-btn" style="margin:0">Ukryj stany 0</button>
+            </div>
+        </div>
+        <div id="user-inventory-count" style="margin-bottom: 10px; font-size: 0.9em; color: #888;"></div>
+        <table class="inventory-table">
+            <thead>
+            <tr>
+                <th>Produkt</th>
+                <th>Kod</th>
+                <th>Ilość</th>
+                <th>Cena (Brutto)</th>
+            </tr>
+            </thead>
+            <tbody id="user-inventory-list"></tbody>
+        </table>
+        <div class="load-more-container">
+            <button id="user-load-more-btn" class="load-more-btn" style="display: none;">Pokaż więcej</button>
+        </div>
+    </div>
     <div id="user-notes" class="content">
         <h2>Notatnik</h2>
         <div class="notebook-container">
@@ -512,48 +391,24 @@
             </div>
         </div>
     </div>
-    <div id="user-schedule-requests" class="content">
-        <h2>Złóż wniosek do grafiku</h2>
-        <form id="user-schedule-request-form" class="vacation-request-form">
-            <div class="vacation-form-row">
-                <label for="user-employee-name">Imię i nazwisko:</label>
-                <input type="text" id="user-employee-name" required>
-            </div>
-            <div class="vacation-form-row">
-                <label for="user-start-date">Data od:</label>
-                <input type="date" id="user-start-date" required>
-            </div>
-            <div class="vacation-form-row">
-                <label for="user-end-date">Data do:</label>
-                <input type="date" id="user-end-date" required>
-            </div>
-            <div class="vacation-form-row">
-                <label for="user-vacation-notes">Notatka:</label>
-                <textarea id="user-vacation-notes"></textarea>
-            </div>
-            <button type="submit">Wyślij wniosek</button>
-        </form>
-
-        <h3>Zgłoszone wnioski</h3>
-        <div id="user-schedule-request-list"></div>
-    </div>
 </div>
 
 <div id="admin-view" style="display: none;">
     <div class="nav-bar gray-nav">
         <div class="nav-links" id="admin-nav-links">
-            <a data-page="admin-tasks">Lista zadań</a>
-            <a data-page="admin-recurring-tasks">Zadania cykliczne</a>
-            <a data-page="admin-order">Do zamówienia</a>
-            <a data-page="admin-schedule">Grafik</a>
-            <a data-page="admin-schedule-requests">Wnioski do grafiku</a>
-            <a data-page="admin-notes">Notatnik</a>
-            <a id="switch-to-user-btn">Panel użytkownika</a>
-            <a id="admin-commands-btn">Komendy</a>
+            <a data-page="admin-tasks">📋 Zadania</a>
+            <a data-page="admin-recurring-tasks">🔄 Cykliczne</a>
+            <a data-page="admin-order">🛒 Zamówienia</a>
+            <a data-page="admin-inventory">📦 Magazyn</a>
+            <a data-page="admin-schedule">📅 Grafik</a>
+            <a data-page="admin-schedule-requests">📝 Wnioski</a>
+            <a data-page="admin-notes">📒 Notatnik</a>
+            <a id="switch-to-user-btn">👤 Panel użytkownika</a>
+            <a id="admin-commands-btn">💻 Komendy</a>
         </div>
         <div class="nav-actions">
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
-            <button class="theme-toggle-btn"></button>
+            <button class="theme-toggle-btn">🌓</button>
             <button class="hamburger-btn" id="admin-hamburger-btn">&#9776;</button>
         </div>
     </div>
@@ -582,6 +437,55 @@
         <div id="admin-order-list-active"></div>
         <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
         <div id="admin-order-list-completed"></div>
+    </div>
+    <!-- NEW ADMIN INVENTORY TAB -->
+    <div id="admin-inventory" class="content">
+        <div class="page-header">
+            <div>
+                <h2>Zarządzanie Magazynem</h2>
+                <div id="admin-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px;"></div>
+            </div>
+            <a href="https://drive.google.com/file/d/1rleT0kRGo11zloRZge6lY9qKpGcpueE0/view?usp=drive_link" target="_blank">📱 App</a>
+        </div>
+        <div class="inventory-controls">
+            <div class="filter-group">
+                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
+                <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
+            </div>
+            <div class="filter-group">
+                <label>Kod kreskowy (lub @skan):</label>
+                <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod...">
+            </div>
+            <div class="filter-group">
+                <label>Sortuj według:</label>
+                <select id="admin-inv-sort">
+                    <option value="name_asc">Nazwa (A-Z)</option>
+                    <option value="name_desc">Nazwa (Z-A)</option>
+                    <option value="price_asc">Cena (rosnąco)</option>
+                    <option value="price_desc">Cena (malejąco)</option>
+                    <option value="qty_asc">Ilość (rosnąco)</option>
+                    <option value="qty_desc">Ilość (malejąco)</option>
+                </select>
+            </div>
+            <div class="filter-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                <button id="admin-toggle-zeros-btn" style="margin:0">Ukryj stany 0</button>
+            </div>
+        </div>
+        <div id="admin-inventory-count" style="margin-bottom: 10px; font-size: 0.9em; color: #888;"></div>
+        <table class="inventory-table">
+            <thead>
+            <tr>
+                <th>Produkt</th>
+                <th>Kod</th>
+                <th>Ilość</th>
+                <th>Cena</th>
+            </tr>
+            </thead>
+            <tbody id="admin-inventory-list"></tbody>
+        </table>
+        <div class="load-more-container">
+            <button id="admin-load-more-btn" class="load-more-btn" style="display: none;">Pokaż więcej</button>
+        </div>
     </div>
     <div id="admin-recurring-tasks" class="content">
         <h2>Zadania cykliczne</h2>
@@ -638,30 +542,16 @@
     <div id="admin-schedule-requests" class="content">
         <h2>Złóż wniosek do grafiku (tylko Firebase)</h2>
         <form id="admin-schedule-request-form" class="vacation-request-form">
-            <div class="vacation-form-row">
-                <label for="admin-employee-name">Imię i nazwisko:</label>
-                <input type="text" id="admin-employee-name" required>
-            </div>
-            <div class="vacation-form-row">
-                <label for="admin-start-date">Data od:</label>
-                <input type="date" id="admin-start-date" required>
-            </div>
-            <div class="vacation-form-row">
-                <label for="admin-end-date">Data do:</label>
-                <input type="date" id="admin-end-date" required>
-            </div>
-            <div class="vacation-form-row">
-                <label for="admin-vacation-notes">Notatka:</label>
-                <textarea id="admin-vacation-notes"></textarea>
-            </div>
+            <div class="vacation-form-row"><label for="admin-employee-name">Imię i nazwisko:</label><input type="text" id="admin-employee-name" required></div>
+            <div class="vacation-form-row"><label for="admin-start-date">Data od:</label><input type="date" id="admin-start-date" required></div>
+            <div class="vacation-form-row"><label for="admin-end-date">Data do:</label><input type="date" id="admin-end-date" required></div>
+            <div class="vacation-form-row"><label for="admin-vacation-notes">Notatka:</label><textarea id="admin-vacation-notes"></textarea></div>
             <button type="submit">Wyślij wniosek</button>
         </form>
         <h2>Zarządzaj wnioskami (Supabase i Firebase)</h2>
         <div class="filter-container" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-            <label for="admin-filter-start">Filtruj od:</label>
-            <input type="date" id="admin-filter-start">
-            <label for="admin-filter-end">do:</label>
-            <input type="date" id="admin-filter-end">
+            <label for="admin-filter-start">Filtruj od:</label><input type="date" id="admin-filter-start">
+            <label for="admin-filter-end">do:</label><input type="date" id="admin-filter-end">
             <button id="admin-filter-btn">Filtruj</button>
             <button id="admin-clear-filter-btn">Wyczyść</button>
         </div>
@@ -689,10 +579,10 @@
         messagingSenderId: "100516614463",
         appId: "1:100516614463:web:36fe37ee48cee575b8838a"
     };
+
     const supabaseUrl = 'https://ugznhwthaztruazsjbhu.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnem5od3RoYXp0cnVhenNqYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NjU4NjAsImV4cCI6MjA2NDA0MTg2MH0.MlBkk-oKSRW7CaUiFf3Edo0KXamVlLaZfLuxGcWL4yU';
     const supabase = createClient(supabaseUrl, supabaseKey);
-
 
     // --- GLOBAL STATE AND VIEW MANAGEMENT ---
     let isAdminInitialized = false;
@@ -701,6 +591,10 @@
     let editorMode = { user: 'render', admin: 'render' };
     let currentUserNoteId = null;
     let currentAdminNoteId = null;
+    let inventoryData = []; // Store inventory locally for filtering
+    let themeToggleButtons; // Variable to hold theme buttons
+    let showZeros = true; // Inventory state
+    let displayLimit = 100; // Pagination
 
     // --- Firebase Setup ---
     let app, db, auth, userId;
@@ -758,7 +652,6 @@
         document.getElementById('admin-nav-links').classList.remove('open');
     }
 
-    let themeToggleButtons;
     function updateThemeIcon() {
         const isDarkMode = document.body.classList.contains('dark-mode');
         if (themeToggleButtons) themeToggleButtons.forEach(btn => { btn.innerHTML = isDarkMode ? '&#9728;&#65039;' : '&#127769;'; });
@@ -874,6 +767,164 @@
         }
         refreshAllData();
     }
+
+    // --- INVENTORY LOGIC (BATCHED) ---
+    async function loadInventory() {
+        if (!isAuthReady) return;
+        try {
+            const q = collection(db, `artifacts/${appId}/public/data/inventory_batches`);
+            const snapshot = await getDocs(q);
+
+            let allItems = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.products && Array.isArray(data.products)) {
+                    allItems = allItems.concat(data.products);
+                }
+            });
+
+            inventoryData = allItems;
+
+            // Load Metadata for Admin
+            try {
+                const metaSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/inventory_batches`, 'metadata'));
+                if(metaSnap.exists()) {
+                    const meta = metaSnap.data();
+                    if(meta.lastUpdate) {
+                        const date = new Date(meta.lastUpdate.seconds * 1000);
+                        document.getElementById('admin-db-info').textContent = `Ostatni import: ${date.toLocaleString()}`;
+                    }
+                }
+            } catch(e) { console.log("No metadata"); }
+
+            renderInventory(false); // render user
+            renderInventory(true);  // render admin
+        } catch (e) { console.error("Inventory load error:", e); }
+    }
+
+    function renderInventory(isAdmin) {
+        const prefix = isAdmin ? 'admin' : 'user';
+        const listEl = document.getElementById(`${prefix}-inventory-list`);
+        const countEl = document.getElementById(`${prefix}-inventory-count`);
+        const loadMoreBtn = document.getElementById(`${prefix}-load-more-btn`);
+        if(!listEl) return;
+
+        // 1. Get Filter Values
+        const nameSearchRaw = document.getElementById(`${prefix}-inv-search-name`).value.toLowerCase();
+        const codeSearch = document.getElementById(`${prefix}-inv-search-code`).value.toLowerCase();
+        const sortValue = document.getElementById(`${prefix}-inv-sort`).value;
+
+        // Prepare name search parts
+        const nameParts = nameSearchRaw.split('%').filter(part => part.trim() !== "");
+
+        // 2. Filter
+        let filtered = inventoryData.filter(item => {
+            // Zero Check
+            if(!showZeros && item.quantity <= 0) return false;
+
+            const n = item.name ? item.name.toLowerCase() : "";
+            const c = item.barcode ? item.barcode.toLowerCase() : "";
+
+            // Name Match Logic with % separator
+            const matchName = nameParts.length === 0 || nameParts.every(part => n.includes(part));
+
+            const matchCode = !codeSearch || c.includes(codeSearch);
+            return matchName && matchCode;
+        });
+
+        // 3. Sort
+        filtered.sort((a, b) => {
+            const [key, dir] = sortValue.split('_');
+            let valA = key === 'name' ? a.name : (key === 'price' ? a.price : a.quantity);
+            let valB = key === 'name' ? b.name : (key === 'price' ? b.price : b.quantity);
+
+            if (typeof valA === 'string') {
+                return dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            } else {
+                return dir === 'asc' ? valA - valB : valB - valA;
+            }
+        });
+
+        // 4. Render Limit
+        const itemsToShow = filtered.slice(0, displayLimit);
+
+        if(countEl) countEl.textContent = `Wyświetlanie ${itemsToShow.length} z ${filtered.length} (całość: ${inventoryData.length})`;
+
+        // Load More Button Visibility
+        if(loadMoreBtn) {
+            if(itemsToShow.length < filtered.length) {
+                loadMoreBtn.style.display = 'inline-block';
+                loadMoreBtn.onclick = () => {
+                    displayLimit += 100;
+                    renderInventory(isAdmin);
+                };
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
+        }
+
+        if (itemsToShow.length === 0) {
+            listEl.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Brak wyników</td></tr>';
+            return;
+        }
+
+        listEl.innerHTML = itemsToShow.map(item => {
+            const qtyClass = item.quantity <= 0 ? 'out' : '';
+            const barcodeHtml = item.barcode ? `${item.barcode}` : '-';
+            return `
+                <tr>
+                    <td data-label="Produkt"><strong>${item.name}</strong></td>
+                    <td data-label="Kod">${barcodeHtml}</td>
+                    <td data-label="Ilość"><span class="quantity-badge ${qtyClass}">${item.quantity} szt</span></td>
+                    <td data-label="Cena"><span class="price-tag">${parseFloat(item.price).toFixed(2)} zł</span></td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // --- GLOBAL SCANNER LISTENER (@ detection) ---
+    let scannerBuffer = "";
+    let lastKeyTime = 0;
+
+    document.addEventListener('keydown', (e) => {
+        // Reset buffer if typing is too slow (manual entry vs scanner)
+        const now = Date.now();
+        if (now - lastKeyTime > 100) scannerBuffer = "";
+        lastKeyTime = now;
+
+        if (e.key.length === 1) scannerBuffer += e.key;
+
+        // Check if buffer matches format: @ followed by digits
+        if (scannerBuffer.startsWith('@') && /@\d+/.test(scannerBuffer)) {
+            // It looks like our special scanner code!
+            const code = scannerBuffer.substring(1); // remove @
+
+            // Determine visible view
+            const isAdmin = document.getElementById('admin-view').style.display === 'block';
+            const prefix = isAdmin ? 'admin' : 'user';
+
+            // Focus on Warehouse tab input
+            const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+            const nameInput = document.getElementById(`${prefix}-inv-search-name`);
+
+            // Ensure we are on the correct tab to see results?
+            // The user requested auto-fill.
+            if(codeInput) {
+                if(nameInput) nameInput.value = ""; // Clear name search
+                codeInput.value = code;
+                codeInput.focus();
+
+                // Trigger filter update
+                renderInventory(isAdmin);
+
+                // Clear buffer so we don't keep appending
+                scannerBuffer = "";
+
+                // Prevent the characters from appearing in the previously focused field
+                e.preventDefault();
+            }
+        }
+    });
 
     // --- NOTEBOOK HELPERS ---
     function convertTextToHtml(text) {
@@ -1152,7 +1203,7 @@
                 rightSideInfo.className = 'right-aligned-info';
                 const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
                 rightSideInfo.innerHTML = `<div class="assignees">Osoby: ${assigneesList.length > 0 ? assigneesList.join(', ') : 'brak'}</div>
-                                        ${task.createdAt ? `<div class="date-info">${new Date(task.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
+                                            ${task.createdAt ? `<div class="date-info">${new Date(task.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
                 itemDiv.append(contentWrapper, rightSideInfo);
 
                 if (isAdmin) {
@@ -1479,15 +1530,18 @@
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `item-row vacation-request`;
                 let statusText = 'Oczekujący';
-                let statusColor = 'orange';
+                let statusColor = 'request-status pending';
+                let acceptedClass = '';
 
                 if (req.is_accepted === true) {
                     statusText = 'Zaakceptowany';
-                    statusColor = 'green';
+                    statusColor = 'request-status accepted';
+                    acceptedClass = 'accepted';
                     itemDiv.classList.add('accepted');
                 } else if (req.rejection_reason) {
                     statusText = 'Odrzucony';
-                    statusColor = 'red';
+                    statusColor = 'request-status rejected';
+                    acceptedClass = 'rejected';
                     itemDiv.classList.add('rejected');
                 }
 
@@ -1504,8 +1558,8 @@
                 contentWrapper.innerHTML = `
                     <span style="font-weight: bold; flex-shrink: 0; min-width: 150px;">${req.employee_name}</span>
                     <span style="margin-left: 15px; flex-shrink: 0;">${req.start_date} do ${req.end_date}</span>
-                    <span style="margin-left: 15px; font-weight: bold; flex-shrink: 0; color: ${statusColor};">(${statusText})</span>
-                    <span style="flex-grow: 1; text-align: right; color: #666; padding: 0 20px;">${notesText}</span>
+                    <span class="${statusColor}" style="margin-left: 15px;">(${statusText})</span>
+                    <span class="request-notes" style="flex-grow: 1; text-align: right; padding: 0 20px;">${notesText}</span>
                 `;
 
                 if ((isAdmin || showSourceTagsAdmin) && showSourceTagsAdmin) {
@@ -1518,24 +1572,114 @@
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'right-aligned-info';
 
+                // --- USER DELETE BUTTON ---
+                const userDeleteBtn = document.createElement('button');
+                userDeleteBtn.textContent = 'Usuń';
+                userDeleteBtn.className = 'delete-vacation-btn';
+                // Only allow users to delete PENDING requests
+                if (!req.is_accepted && !req.rejection_reason) {
+                    userDeleteBtn.onclick = async () => {
+                        if (confirm('Czy na pewno chcesz usunąć ten wniosek?')) {
+                            try {
+                                if (req.source === 'supabase') await supabase.from('vacation_requests').delete().eq('id', req.id.replace('supabase-',''));
+                                else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id));
+                                renderVacationRequests(isAdmin);
+                            } catch(error) {
+                                showModal('Błąd', 'Nie udało się usunąć wniosku: ' + error.message);
+                            }
+                        }
+                    };
+                } else {
+                    userDeleteBtn.style.display = 'none'; // Hide if finalized
+                }
+
                 if (isAdmin) {
                     const date = new Date(req.createdAt || req.created_at);
                     const dateInfo = !isNaN(date) ? `<div class="date-info">${date.toLocaleString('pl-PL')}</div>` : '';
-                    let rejectButton = '';
-                    if (req.source === 'firebase') {
-                        rejectButton = `<button class="reject-vacation-btn">Odrzuć</button>`;
-                    }
-                    buttonsDiv.innerHTML = `
+
+                    // Admin Buttons Container
+                    const adminBtnsContainer = document.createElement('div');
+                    adminBtnsContainer.innerHTML = `
                         ${dateInfo}
-                        <div>
-                            <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-vacation-checkbox" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
-                            <button class="toggle-visibility-btn">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
-                            <button class="edit-vacation-btn">Edytuj</button>
-                            ${rejectButton}
-                            <button class="delete-vacation-btn">Usuń</button>
+                        <div style="margin-top: 5px;">
+                            <label style="cursor:pointer; margin-right: 10px;">
+                                <input type="checkbox" class="accept-chk" ${req.is_accepted ? 'checked' : ''}> Akceptuj
+                            </label>
+                            <button class="toggle-vis">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
+                            <button class="edit-btn">Edytuj</button>
+                            ${req.source === 'firebase' ? '<button class="reject-btn" style="background-color: var(--reject-color);">Odrzuć</button>' : ''}
+                            <button class="del-btn">Usuń</button>
                         </div>`;
+
+                    // Attach Admin Listeners
+                    const acceptChk = adminBtnsContainer.querySelector('.accept-chk');
+                    acceptChk.onchange = async (e) => {
+                        const u={is_accepted:e.target.checked, rejection_reason:""};
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+
+                    adminBtnsContainer.querySelector('.toggle-vis').onclick = async () => {
+                        const u={is_visible:!(req.is_visible!==false)};
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+
+                    adminBtnsContainer.querySelector('.edit-btn').onclick = async () => {
+                        const new_start = prompt('Nowa data od:', req.start_date); if(!new_start) return;
+                        const new_end = prompt('Nowa data do:', req.end_date); if(!new_end) return;
+                        const new_notes = prompt('Notatka:', req.notes); if(new_notes===null) return;
+                        const u = {start_date: new_start, end_date: new_end, notes: new_notes};
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+
+                    const rejectBtn = adminBtnsContainer.querySelector('.reject-btn');
+                    if(rejectBtn) {
+                        rejectBtn.onclick = async () => {
+                            const reason = prompt("Podaj powód odrzucenia:");
+                            if(reason) {
+                                await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), {is_accepted: false, rejection_reason: reason});
+                                renderVacationRequests(isAdmin);
+                            }
+                        };
+                    }
+
+                    adminBtnsContainer.querySelector('.del-btn').onclick = async () => {
+                        if(confirm('Usunąć?')) {
+                            if(req.source==='supabase') await supabase.from('vacation_requests').delete().eq('id', req.id.replace('supabase-',''));
+                            else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id));
+                            renderVacationRequests(isAdmin);
+                        }
+                    };
+
+                    buttonsDiv.appendChild(adminBtnsContainer);
                 } else {
-                    buttonsDiv.innerHTML = `<div><button class="edit-vacation-btn">Edytuj</button></div>`;
+                    // User View: Show Edit/Delete for pending requests
+                    const userBtnsDiv = document.createElement('div');
+
+                    const userEditBtn = document.createElement('button');
+                    userEditBtn.textContent = 'Edytuj';
+                    userEditBtn.onclick = async () => {
+                        const new_start = prompt('Nowa data od:', req.start_date); if(!new_start) return;
+                        const new_end = prompt('Nowa data do:', req.end_date); if(!new_end) return;
+                        const new_notes = prompt('Notatka:', req.notes); if(new_notes===null) return;
+                        const u = {start_date: new_start, end_date: new_end, notes: new_notes};
+                        // User typically edits firebase docs they created, or supabase if user auth matches (but here anon auth)
+                        // Assuming user created firebase docs mostly.
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+
+                    if (!req.is_accepted && !req.rejection_reason) {
+                        userBtnsDiv.appendChild(userEditBtn);
+                        userBtnsDiv.appendChild(userDeleteBtn);
+                    }
+                    buttonsDiv.appendChild(userBtnsDiv);
                 }
 
                 itemDiv.append(contentWrapper, buttonsDiv);
@@ -1565,6 +1709,10 @@
         if (!isAuthReady) return;
         console.log("Odświeżanie danych...");
         const inAdminView = document.getElementById('admin-view').style.display === 'block';
+
+        // Load Inventory First (Batched)
+        await loadInventory();
+
         const promises = [
             renderTasks(inAdminView),
             renderOrders(inAdminView),
@@ -1617,7 +1765,7 @@
         }
     }
 
-    // --- USER VIEW ---
+    // --- NOTEBOOK LOGIC (User) ---
     function clearUserEditor() {
         currentUserNoteId = null;
         document.getElementById('user-note-title-input').value = '';
@@ -1630,19 +1778,19 @@
         document.getElementById('user-note-content-input').style.display = 'block';
         document.getElementById('user-note-content-raw').style.display = 'none';
         document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod';
-        document.getElementById('user-save-note-btn').disabled = false;
-        document.getElementById('user-save-note-btn').title = "";
+        const saveBtn = document.getElementById('user-save-note-btn');
+        saveBtn.disabled = false;
+        saveBtn.title = "";
     }
 
     function loadUserNoteIntoEditor(note) {
         currentUserNoteId = note.id;
         const saveButton = document.getElementById('user-save-note-btn');
-
         saveButton.disabled = false;
         saveButton.title = "";
 
         document.getElementById('user-note-title-input').value = note.title || '';
-        document.getElementById('user-note-color-input').value = note.titleColor || note.title_color ||'#000000';
+        document.getElementById('user-note-color-input').value = note.titleColor || note.title_color || '#000000';
         document.getElementById('user-note-content-input').innerHTML = convertTextToHtml(note.content);
         const date = note.updatedAt ? new Date(note.updatedAt.seconds * 1000) : new Date(note.updated_at || note.created_at);
         const timestamps = `Ostatnia edycja: ${date.toLocaleString()}`;
@@ -1668,11 +1816,182 @@
                 await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentUserNoteId), noteData);
             }
         } else {
-            const newDocRef = await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...noteData, createdAt: new Date(), pinned: false, public: true, submittedByUserId: userId, uuid: crypto.randomUUID() });
-            currentUserNoteId = newDocRef.id;
+            await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...noteData, createdAt: new Date(), pinned: false, public: true, submittedByUserId: userId, uuid: crypto.randomUUID() });
+            currentUserNoteId = null;
         }
         renderNotes(false);
         renderNotes(true);
+    }
+
+    // --- NOTEBOOK LOGIC (Admin) ---
+    function clearAdminEditor() {
+        currentAdminNoteId = null;
+        document.getElementById('note-title-input').value = '';
+        document.getElementById('note-color-input').value = '#000000';
+        document.getElementById('note-content-input').innerHTML = '';
+        document.getElementById('note-content-raw').value = '';
+        document.getElementById('note-timestamps').textContent = '';
+        document.querySelectorAll('#note-title-list .selected').forEach(item => item.classList.remove('selected'));
+        editorMode.admin = 'render';
+        document.getElementById('note-content-input').style.display = 'block';
+        document.getElementById('note-content-raw').style.display = 'none';
+        document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
+    }
+
+    function loadAdminNoteIntoEditor(note) {
+        currentAdminNoteId = note.id;
+        document.getElementById('note-title-input').value = note.title || '';
+        document.getElementById('note-color-input').value = note.titleColor || note.title_color || '#000000';
+        document.getElementById('note-content-input').innerHTML = convertTextToHtml(note.content);
+        const ts = note.updatedAt || note.updated_at || note.createdAt;
+        const date = ts ? (ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts)) : new Date(ts);
+        document.getElementById('note-timestamps').textContent = date ? `Ostatnia edycja: ${date.toLocaleString()}`: '';
+        editorMode.admin = 'render';
+        document.getElementById('note-content-input').style.display = 'block';
+        document.getElementById('note-content-raw').style.display = 'none';
+        document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
+    }
+
+    async function saveAdminNote() {
+        const title = document.getElementById('note-title-input').value.trim();
+        if (!title) { showModal('Błąd', 'Tytuł jest wymagany'); return; }
+        const content = editorMode.admin === 'raw' ? document.getElementById('note-content-raw').value : convertRenderedToSource(document.getElementById('note-content-input'));
+        const noteData = { title, content, title_color: document.getElementById('note-color-input').value, updated_at: new Date().toISOString() };
+        const firebaseNoteData = { title, content, titleColor: document.getElementById('note-color-input').value, updatedAt: new Date() };
+
+        try {
+            if (currentAdminNoteId) {
+                if (currentAdminNoteId.startsWith('supabase')) {
+                    await supabase.from('notes').update(noteData).eq('id', currentAdminNoteId.replace('supabase-',''));
+                } else {
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), firebaseNoteData);
+                }
+            } else {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...firebaseNoteData, createdAt: new Date(), pinned: false, public: false, uuid: crypto.randomUUID() });
+                clearAdminEditor();
+            }
+            renderNotes(true);
+        } catch(error) {
+            showModal('Błąd zapisu', 'Nie udało się zapisać notatki: ' + error.message);
+        }
+    }
+
+    async function deleteAdminNote() {
+        if (!currentAdminNoteId || !confirm('Czy na pewno chcesz usunąć tę notatkę?')) return;
+        try {
+            if (currentAdminNoteId.startsWith('supabase')) {
+                await supabase.from('notes').delete().eq('id', currentAdminNoteId.replace('supabase-', ''));
+            } else {
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId));
+            }
+            clearAdminEditor();
+            renderNotes(true);
+        } catch (error) {
+            showModal('Błąd', 'Nie udało się usunąć notatki: ' + error.message);
+        }
+    }
+
+    // --- RECURRING TASKS ---
+    async function renderRecurringTasks() {
+        const listEl = document.getElementById('recurring-task-list');
+        if(!listEl) return;
+        listEl.innerHTML = 'Ładowanie...';
+        const recurringTasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/recurring_tasks`));
+        const recurringTasks = recurringTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        listEl.innerHTML = recurringTasks.length === 0 ? '<p>Brak zadań cyklicznych.</p>' : '';
+        const dayNames = ['N/A', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
+
+        recurringTasks.forEach(task => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'item-row';
+            const days = task.days.map(d => dayNames[d]).join(', ');
+            itemDiv.innerHTML = `
+                <div class="item-content-wrapper">
+                    <span>${task.content}</span>
+                    <span class="assignees">Osoby: ${task.assignees.join(', ') || 'brak'}</span>
+                      <span class="assignees">Dni: ${days}</span>
+                </div>
+                 <div>
+                    <button class="edit-recurring-btn">Edytuj</button>
+                    <button class="delete-recurring-btn">Usuń</button>
+                </div>
+            `;
+            itemDiv.querySelector('.edit-recurring-btn').onclick = async () => {
+                const newContent = prompt('Nowa treść zadania:', task.content);
+                if (newContent === null) return;
+
+                const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', (task.assignees || []).join(';'));
+                if (newAssignees === null) return;
+
+                const newDaysStr = prompt('Nowe dni (cyfry 1-7 oddzielone przecinkami, 1=Pn, 7=Nd):', task.days.join(','));
+                if (newDaysStr === null) return;
+
+                const newDays = newDaysStr.split(',').map(d => parseInt(d.trim())).filter(d => d >= 1 && d <= 7);
+                if (newDays.length === 0) {
+                    showModal('Błąd', 'Musisz podać przynajmniej jeden poprawny dzień (1-7).');
+                    return;
+                }
+
+                const updateData = {
+                    content: newContent,
+                    assignees: newAssignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
+                    days: newDays
+                };
+
+                try {
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/recurring_tasks`, task.id), updateData);
+                    renderRecurringTasks();
+                } catch (error) {
+                    showModal('Błąd', 'Nie udało się zaktualizować zadania cyklicznego.');
+                }
+            };
+            itemDiv.querySelector('.delete-recurring-btn').onclick = async () => {
+                if (confirm('Czy na pewno chcesz usunąć to zadanie cykliczne?')) {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/recurring_tasks`, task.id));
+                    renderRecurringTasks();
+                }
+            };
+            listEl.appendChild(itemDiv);
+        });
+    }
+
+    async function checkAndCreateRecurringTasks() {
+        if (!isAuthReady) return;
+        console.log("Checking recurring tasks...");
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        let dayOfWeek = today.getDay();
+        if (dayOfWeek === 0) dayOfWeek = 7;
+
+        const recurringTasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/recurring_tasks`));
+
+        const promises = [];
+        let createdAny = false;
+
+        recurringTasksSnapshot.forEach(doc => {
+            const recurringTask = { id: doc.id, ...doc.data() };
+            if (recurringTask.days.includes(dayOfWeek) && recurringTask.lastCreated !== todayStr) {
+                console.log(`Creating recurring task: ${recurringTask.content}`);
+                createdAny = true;
+                promises.push(addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), {
+                    content: recurringTask.content,
+                    assignees: recurringTask.assignees,
+                    createdAt: new Date(),
+                    done: false,
+                    visible: true
+                }));
+                promises.push(updateDoc(doc.ref, { lastCreated: todayStr }));
+            }
+        });
+
+        await Promise.all(promises);
+        if (createdAny) {
+            console.log("Finished creating recurring tasks, refreshing list.");
+            refreshAllData();
+        } else {
+            console.log("No new recurring tasks to create today.");
+        }
     }
 
     function initUserView() {
@@ -1768,74 +2087,13 @@
                 showModal('Błąd zapisu', 'Nie udało się dodać zadania: ' + error.message);
             }
         };
-    }
 
-    // --- ADMIN VIEW ---
-    function clearAdminEditor() {
-        currentAdminNoteId = null;
-        document.getElementById('note-title-input').value = '';
-        document.getElementById('note-color-input').value = '#000000';
-        document.getElementById('note-content-input').innerHTML = '';
-        document.getElementById('note-content-raw').value = '';
-        document.getElementById('note-timestamps').textContent = '';
-        document.querySelectorAll('#note-title-list .selected').forEach(item => item.classList.remove('selected'));
-        editorMode.admin = 'render';
-        document.getElementById('note-content-input').style.display = 'block';
-        document.getElementById('note-content-raw').style.display = 'none';
-        document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
-    }
-
-    function loadAdminNoteIntoEditor(note) {
-        currentAdminNoteId = note.id;
-        document.getElementById('note-title-input').value = note.title || '';
-        document.getElementById('note-color-input').value = note.titleColor || note.title_color || '#000000';
-        document.getElementById('note-content-input').innerHTML = convertTextToHtml(note.content);
-        const ts = note.updatedAt || note.updated_at || note.createdAt;
-        const date = ts ? (ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts)) : new Date(ts);
-        document.getElementById('note-timestamps').textContent = date ? `Ostatnia edycja: ${date.toLocaleString()}`: '';
-        editorMode.admin = 'render';
-        document.getElementById('note-content-input').style.display = 'block';
-        document.getElementById('note-content-raw').style.display = 'none';
-        document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
-    }
-
-    async function saveAdminNote() {
-        const title = document.getElementById('note-title-input').value.trim();
-        if (!title) { showModal('Błąd', 'Tytuł jest wymagany'); return; }
-        const content = editorMode.admin === 'raw' ? document.getElementById('note-content-raw').value : convertRenderedToSource(document.getElementById('note-content-input'));
-        const noteData = { title, content, title_color: document.getElementById('note-color-input').value, updated_at: new Date().toISOString() };
-        const firebaseNoteData = { title, content, titleColor: document.getElementById('note-color-input').value, updatedAt: new Date() };
-
-        try {
-            if (currentAdminNoteId) {
-                if (currentAdminNoteId.startsWith('supabase')) {
-                    await supabase.from('notes').update(noteData).eq('id', currentAdminNoteId.replace('supabase-',''));
-                } else {
-                    await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), firebaseNoteData);
-                }
-            } else {
-                await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...firebaseNoteData, createdAt: new Date(), pinned: false, public: false, uuid: crypto.randomUUID() });
-                clearAdminEditor();
-            }
-            renderNotes(true);
-        } catch(error) {
-            showModal('Błąd zapisu', 'Nie udało się zapisać notatki: ' + error.message);
-        }
-    }
-
-    async function deleteAdminNote() {
-        if (!currentAdminNoteId || !confirm('Czy na pewno chcesz usunąć tę notatkę?')) return;
-        try {
-            if (currentAdminNoteId.startsWith('supabase')) {
-                await supabase.from('notes').delete().eq('id', currentAdminNoteId.replace('supabase-', ''));
-            } else {
-                await deleteDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId));
-            }
-            clearAdminEditor();
-            renderNotes(true);
-        } catch (error) {
-            showModal('Błąd', 'Nie udało się usunąć notatki: ' + error.message);
-        }
+        // USER Inventory Listeners
+        document.getElementById('user-toggle-zeros-btn').onclick = () => {
+            showZeros = !showZeros;
+            document.getElementById('user-toggle-zeros-btn').textContent = showZeros ? "Ukryj stany 0" : "Pokaż stany 0";
+            renderInventory(false);
+        };
     }
 
     function initAdminView() {
@@ -1953,111 +2211,14 @@
                 showModal('Błąd zapisu', 'Nie udało się dodać zadania cyklicznego: ' + error.message);
             }
         };
+
+        // ADMIN Inventory Listeners
+        document.getElementById('admin-toggle-zeros-btn').onclick = () => {
+            showZeros = !showZeros;
+            document.getElementById('admin-toggle-zeros-btn').textContent = showZeros ? "Ukryj stany 0" : "Pokaż stany 0";
+            renderInventory(true);
+        };
     }
-
-    // --- RECURRING TASKS ---
-    async function renderRecurringTasks() {
-        const listEl = document.getElementById('recurring-task-list');
-        if(!listEl) return;
-        listEl.innerHTML = 'Ładowanie...';
-        const recurringTasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/recurring_tasks`));
-        const recurringTasks = recurringTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        listEl.innerHTML = recurringTasks.length === 0 ? '<p>Brak zadań cyklicznych.</p>' : '';
-        const dayNames = ['N/A', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
-
-        recurringTasks.forEach(task => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'item-row';
-            const days = task.days.map(d => dayNames[d]).join(', ');
-            itemDiv.innerHTML = `
-                <div class="item-content-wrapper">
-                    <span>${task.content}</span>
-                    <span class="assignees">Osoby: ${task.assignees.join(', ') || 'brak'}</span>
-                     <span class="assignees">Dni: ${days}</span>
-                </div>
-                 <div>
-                    <button class="edit-recurring-btn">Edytuj</button>
-                    <button class="delete-recurring-btn">Usuń</button>
-                </div>
-            `;
-            itemDiv.querySelector('.edit-recurring-btn').onclick = async () => {
-                const newContent = prompt('Nowa treść zadania:', task.content);
-                if (newContent === null) return;
-
-                const newAssignees = prompt('Nowi przypisani (oddzieleni średnikiem):', (task.assignees || []).join(';'));
-                if (newAssignees === null) return;
-
-                const newDaysStr = prompt('Nowe dni (cyfry 1-7 oddzielone przecinkami, 1=Pn, 7=Nd):', task.days.join(','));
-                if (newDaysStr === null) return;
-
-                const newDays = newDaysStr.split(',').map(d => parseInt(d.trim())).filter(d => d >= 1 && d <= 7);
-                if (newDays.length === 0) {
-                    showModal('Błąd', 'Musisz podać przynajmniej jeden poprawny dzień (1-7).');
-                    return;
-                }
-
-                const updateData = {
-                    content: newContent,
-                    assignees: newAssignees.split(/[,;]/).map(s => s.trim()).filter(s => s),
-                    days: newDays
-                };
-
-                try {
-                    await updateDoc(doc(db, `artifacts/${appId}/public/data/recurring_tasks`, task.id), updateData);
-                    renderRecurringTasks();
-                } catch (error) {
-                    showModal('Błąd', 'Nie udało się zaktualizować zadania cyklicznego.');
-                }
-            };
-            itemDiv.querySelector('.delete-recurring-btn').onclick = async () => {
-                if (confirm('Czy na pewno chcesz usunąć to zadanie cykliczne?')) {
-                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/recurring_tasks`, task.id));
-                    renderRecurringTasks();
-                }
-            };
-            listEl.appendChild(itemDiv);
-        });
-    }
-
-    async function checkAndCreateRecurringTasks() {
-        if (!isAuthReady) return;
-        console.log("Checking recurring tasks...");
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
-        let dayOfWeek = today.getDay();
-        if (dayOfWeek === 0) dayOfWeek = 7;
-
-        const recurringTasksSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/recurring_tasks`));
-
-        const promises = [];
-        let createdAny = false;
-
-        recurringTasksSnapshot.forEach(doc => {
-            const recurringTask = { id: doc.id, ...doc.data() };
-            if (recurringTask.days.includes(dayOfWeek) && recurringTask.lastCreated !== todayStr) {
-                console.log(`Creating recurring task: ${recurringTask.content}`);
-                createdAny = true;
-                promises.push(addDoc(collection(db, `artifacts/${appId}/public/data/tasks`), {
-                    content: recurringTask.content,
-                    assignees: recurringTask.assignees,
-                    createdAt: new Date(),
-                    done: false,
-                    visible: true
-                }));
-                promises.push(updateDoc(doc.ref, { lastCreated: todayStr }));
-            }
-        });
-
-        await Promise.all(promises);
-        if (createdAny) {
-            console.log("Finished creating recurring tasks, refreshing list.");
-            refreshAllData();
-        } else {
-            console.log("No new recurring tasks to create today.");
-        }
-    }
-
 
     // --- EVENT LISTENERS & INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', () => {
@@ -2065,6 +2226,7 @@
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
 
+        // Functions initUserView and initAdminView are now defined and called here
         initUserView();
         initAdminView();
 
@@ -2072,7 +2234,7 @@
             showAdminView();
         } else {
             document.getElementById('user-view').style.display = 'block';
-            isUserInitialized = true; // Set this flag
+            isUserInitialized = true;
             refreshAllData();
         }
 
@@ -2091,8 +2253,8 @@
             if (e.target.closest('#switch-to-admin-btn') || e.target.closest('#admin-commands-btn')) handleCommandPrompt();
             if (e.target.closest('#switch-to-user-btn')) switchToUser();
 
-            const vacationList = e.target.closest('#user-schedule-request-list, #admin-schedule-request-list-visible, #admin-schedule-request-list-hidden');
-            if(vacationList) handleVacationListClick(e, vacationList.id.includes('admin'));
+            // Global delegation not needed for vacation as inline render attaches listeners,
+            // but we keep the click handler for general nav etc.
         });
 
         function handleNoteClick(e) {
@@ -2108,21 +2270,23 @@
         async function handleCheckboxAutoSave(e) {
             if (e.target.tagName === 'INPUT' && e.target.type === 'checkbox') {
                 const isAdmin = e.currentTarget.id === 'note-content-input';
-
                 setTimeout(() => {
-                    if (isAdmin) {
-                        saveAdminNote();
-                    } else {
-                        saveUserNote();
-                    }
+                    if (isAdmin) { saveAdminNote(); } else { saveUserNote(); }
                 }, 100);
             }
         }
         document.getElementById('user-note-content-input').addEventListener('change', handleCheckboxAutoSave);
         document.getElementById('note-content-input').addEventListener('change', handleCheckboxAutoSave);
 
-
         setupTaskListeners();
+
+        // Inventory Listeners (Search & Sort)
+        ['user', 'admin'].forEach(prefix => {
+            const render = () => renderInventory(prefix === 'admin');
+            document.getElementById(`${prefix}-inv-search-name`)?.addEventListener('input', render);
+            document.getElementById(`${prefix}-inv-search-code`)?.addEventListener('input', render);
+            document.getElementById(`${prefix}-inv-sort`)?.addEventListener('change', render);
+        });
     });
 
     function setupTaskListeners() {
@@ -2161,89 +2325,6 @@
                 }
             }
         });
-    }
-
-    async function handleVacationListClick(e, isAdmin) {
-        const target = e.target;
-        const reqDiv = target.closest('.vacation-request');
-        if (!reqDiv) return;
-
-        const reqId = reqDiv.dataset.id;
-        const source = reqDiv.dataset.source;
-        const dbId = reqId.replace('supabase-','');
-
-        if (target.matches('.accept-vacation-checkbox')) {
-            const updateData = { is_accepted: target.checked, rejection_reason: "" };
-            try {
-                if (source === 'supabase') await supabase.from('vacation_requests').update(updateData).eq('id', dbId);
-                else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
-                renderVacationRequests(isAdmin);
-            } catch(error) {
-                showModal('Błąd', 'Nie udało się zaktualizować statusu: ' + error.message);
-                target.checked = !target.checked;
-            }
-        } else if (target.matches('.toggle-visibility-btn')) {
-            const isCurrentlyVisible = reqDiv.dataset.visible !== 'false';
-            const newVisibility = !isCurrentlyVisible;
-            const updateData = { is_visible: newVisibility };
-            try {
-                if (source === 'supabase') await supabase.from('vacation_requests').update(updateData).eq('id', dbId);
-                else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
-                renderVacationRequests(true);
-            } catch(error) {
-                showModal('Błąd', 'Nie udało się zmienić widoczności: ' + error.message);
-            }
-        } else if (target.matches('.edit-vacation-btn')) {
-            let currentData;
-            if (source === 'supabase') { const { data } = await supabase.from('vacation_requests').select('*').eq('id', dbId).single(); currentData = data; }
-            else { const docSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId)); currentData = docSnap.data(); }
-            if (!currentData) return showModal('Błąd', 'Nie znaleziono wniosku.');
-
-            const new_start_date = prompt('Nowa data rozpoczęcia:', currentData.start_date);
-            if (new_start_date === null) return;
-            const new_end_date = prompt('Nowa data zakończenia:', currentData.end_date);
-            if (new_end_date === null) return;
-            const new_notes = prompt('Nowa notatka:', currentData.notes);
-            if (new_notes === null) return;
-            const updateData = { start_date: new_start_date, end_date: new_end_date, notes: new_notes };
-
-            try {
-                if (source === 'supabase') await supabase.from('vacation_requests').update(updateData).eq('id', dbId);
-                else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
-                renderVacationRequests(isAdmin);
-            } catch (error) {
-                showModal('Błąd', 'Nie udało się zedytować wniosku: ' + error.message);
-            }
-        } else if (target.matches('.delete-vacation-btn')) {
-            if (confirm('Czy na pewno chcesz usunąć ten wniosek?')) {
-                try {
-                    if (source === 'supabase') await supabase.from('vacation_requests').delete().eq('id', dbId);
-                    else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId));
-                    renderVacationRequests(isAdmin);
-                } catch(error) {
-                    showModal('Błąd', 'Nie udało się usunąć wniosku: ' + error.message);
-                }
-            }
-        } else if (target.matches('.reject-vacation-btn')) {
-            if (source !== 'firebase') {
-                showModal('Błąd', 'Odrzucać można tylko wnioski zapisane w nowej bazie danych.');
-                return;
-            }
-            const reason = prompt("Podaj powód odrzucenia:");
-            if (reason !== null) {
-                if (reason.trim() === "") {
-                    showModal("Błąd", "Powód odrzucenia nie może być pusty.");
-                    return;
-                }
-                const updateData = { is_accepted: false, rejection_reason: reason };
-                try {
-                    await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, dbId), updateData);
-                    renderVacationRequests(isAdmin);
-                } catch(error) {
-                    showModal('Błąd', 'Nie udało się odrzucić wniosku: ' + error.message);
-                }
-            }
-        }
     }
 </script>
 </body>
