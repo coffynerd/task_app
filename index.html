@@ -415,15 +415,15 @@
     <div id="admin-tasks" class="content">
         <h2>Panel Administratora</h2>
         <form id="admin-task-form">
-            <h3>Dodaj zadanie (tylko Firebase)</h3>
+            <h3>Dodaj zadanie</h3>
             <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
             <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
             <input type="date" id="admin-due-date-input" title="Termin wykonania">
             <button type="submit">Dodaj</button>
         </form>
-        <h3>Lista zadań (Supabase i Firebase)</h3>
+        <h3>Lista zadań</h3>
         <div id="admin-task-list-visible">Ładowanie...</div>
-        <h3>Zadania ukryte (Supabase i Firebase)</h3>
+        <h3>Zadania ukryte</h3>
         <div id="admin-task-list-hidden"></div>
     </div>
     <div id="admin-order" class="content">
@@ -433,9 +433,9 @@
             <input type="text" id="admin-order-supplier" placeholder="Dostawca">
             <button type="submit">Dodaj do listy</button>
         </form>
-        <h3>Pozycje do zamówienia (Supabase i Firebase)</h3>
+        <h3>Pozycje do zamówienia</h3>
         <div id="admin-order-list-active"></div>
-        <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
+        <h3>Zamówienia zrealizowane</h3>
         <div id="admin-order-list-completed"></div>
     </div>
     <!-- NEW ADMIN INVENTORY TAB -->
@@ -449,7 +449,7 @@
         </div>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
+                <label>Nazwa produktu</label>
                 <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
@@ -540,7 +540,7 @@
         </div>
     </div>
     <div id="admin-schedule-requests" class="content">
-        <h2>Złóż wniosek do grafiku (tylko Firebase)</h2>
+        <h2>Złóż wniosek do grafiku</h2>
         <form id="admin-schedule-request-form" class="vacation-request-form">
             <div class="vacation-form-row"><label for="admin-employee-name">Imię i nazwisko:</label><input type="text" id="admin-employee-name" required></div>
             <div class="vacation-form-row"><label for="admin-start-date">Data od:</label><input type="date" id="admin-start-date" required></div>
