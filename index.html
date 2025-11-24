@@ -22,8 +22,6 @@
             --supabase-source-color: #56a761;
             --firebase-source-color: #ffca28;
             --user-task-color: #007bff;
-            --accept-color: #28a745;
-            --reject-color: #dc3545;
         }
         body {
             font-family: 'Roboto', Arial, sans-serif;
@@ -80,9 +78,7 @@
         }
         .item-row.priority { color: var(--priority-color); font-weight: bold; }
         .item-row.user-submitted { color: var(--user-task-color); }
-
         .item-row.user-submitted.done, .item-row.priority.done { color: red !important; }
-
         .item-row.due-date-warning:not(.done) .task-text-container,
         .item-row.due-date-warning:not(.done) .due-date-text { color: purple; font-weight: bold; }
         .dark-mode .item-row.due-date-warning:not(.done) .task-text-container,
@@ -112,6 +108,7 @@
         .inventory-table tr:hover { background-color: rgba(0,0,0,0.02); }
         .price-tag { font-weight: bold; color: #28a745; }
 
+        /* Updated Quantity Badges */
         .quantity-badge {
             background: #fff; border: 1px solid #ddd; color: #000;
             padding: 4px 8px; border-radius: 12px; font-size: 0.9em; font-weight: bold;
@@ -120,6 +117,13 @@
 
         .load-more-container { text-align: center; margin-top: 15px; padding-bottom: 20px; }
         .load-more-btn { background-color: #6c757d; width: 100%; max-width: 300px; }
+
+        /* --- PRICE HIDING LOGIC (User View Only) --- */
+        /* Hides the 4th column (Price) when the class is present */
+        #user-inventory.price-hidden .inventory-table th:nth-child(4),
+        #user-inventory.price-hidden .inventory-table td:nth-child(4) {
+            display: none;
+        }
 
         h2, h3 { color: var(--text-light); }
         form {
@@ -329,7 +333,7 @@
         <h2>Magazyn / Cennik</h2>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu:</label>
+                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
                 <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
@@ -415,15 +419,15 @@
     <div id="admin-tasks" class="content">
         <h2>Panel Administratora</h2>
         <form id="admin-task-form">
-            <h3>Dodaj zadanie</h3>
+            <h3>Dodaj zadanie (tylko Firebase)</h3>
             <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
             <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
             <input type="date" id="admin-due-date-input" title="Termin wykonania">
             <button type="submit">Dodaj</button>
         </form>
-        <h3>Lista zadań</h3>
+        <h3>Lista zadań (Supabase i Firebase)</h3>
         <div id="admin-task-list-visible">Ładowanie...</div>
-        <h3>Zadania ukryte</h3>
+        <h3>Zadania ukryte (Supabase i Firebase)</h3>
         <div id="admin-task-list-hidden"></div>
     </div>
     <div id="admin-order" class="content">
@@ -433,9 +437,9 @@
             <input type="text" id="admin-order-supplier" placeholder="Dostawca">
             <button type="submit">Dodaj do listy</button>
         </form>
-        <h3>Pozycje do zamówienia</h3>
+        <h3>Pozycje do zamówienia (Supabase i Firebase)</h3>
         <div id="admin-order-list-active"></div>
-        <h3>Zamówienia zrealizowane</h3>
+        <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
         <div id="admin-order-list-completed"></div>
     </div>
     <!-- NEW ADMIN INVENTORY TAB -->
@@ -449,7 +453,7 @@
         </div>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu</label>
+                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
                 <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
@@ -540,7 +544,7 @@
         </div>
     </div>
     <div id="admin-schedule-requests" class="content">
-        <h2>Złóż wniosek do grafiku</h2>
+        <h2>Złóż wniosek do grafiku (tylko Firebase)</h2>
         <form id="admin-schedule-request-form" class="vacation-request-form">
             <div class="vacation-form-row"><label for="admin-employee-name">Imię i nazwisko:</label><input type="text" id="admin-employee-name" required></div>
             <div class="vacation-form-row"><label for="admin-start-date">Data od:</label><input type="date" id="admin-start-date" required></div>
@@ -595,6 +599,7 @@
     let themeToggleButtons; // Variable to hold theme buttons
     let showZeros = true; // Inventory state
     let displayLimit = 100; // Pagination
+    let showUserPrices = localStorage.getItem('showUserPrices') === '1'; // Default false (undefined !== '1')
 
     // --- Firebase Setup ---
     let app, db, auth, userId;
@@ -670,6 +675,14 @@
         refreshAllData();
     }
 
+    function updatePriceVisibility() {
+        const container = document.getElementById('user-inventory');
+        if(container) {
+            if (showUserPrices) container.classList.remove('price-hidden');
+            else container.classList.add('price-hidden');
+        }
+    }
+
     const passwordActions = {
         'admin_1': async () => {
             const password = prompt("Potwierdź hasłem administratora:");
@@ -711,6 +724,30 @@
                 showModal('Błąd', 'Hasła nie są takie same lub pole jest puste.');
             }
         },
+        'value_1': async () => {
+            const password = prompt("Potwierdź hasłem administratora:");
+            if (password === null) return;
+            if (await checkAdminPassword(password)) {
+                showUserPrices = true;
+                localStorage.setItem('showUserPrices', '1');
+                updatePriceVisibility();
+                showModal('Sukces', 'Ceny w panelu użytkownika zostały WŁĄCZONE.');
+            } else {
+                showModal('Błąd', 'Niepoprawne hasło!');
+            }
+        },
+        'value_0': async () => {
+            const password = prompt("Potwierdź hasłem administratora:");
+            if (password === null) return;
+            if (await checkAdminPassword(password)) {
+                showUserPrices = false;
+                localStorage.setItem('showUserPrices', '0');
+                updatePriceVisibility();
+                showModal('Sukces', 'Ceny w panelu użytkownika zostały WYŁĄCZONE.');
+            } else {
+                showModal('Błąd', 'Niepoprawne hasło!');
+            }
+        },
         'sql': () => { showSourceTagsAdmin = !showSourceTagsAdmin; showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`); refreshAllData(); },
         'dev': () => window.open('https://coffynerd.github.io/publicnotebook/', '_blank'),
         'iddqd': () => window.open('https://www.youtube.com/watch?v=dXji8ycMolI', '_blank'),
@@ -719,7 +756,7 @@
             const isAdminView = document.getElementById('admin-view').style.display === 'block';
             let commands = ['sql', 'dev', 'iddqd', 'minecraft', 'help', 'admin_1', 'admin_0'];
             if (isAdminView) {
-                commands.push('passwd');
+                commands.push('passwd', 'value_1', 'value_0');
             }
             showModal('Dostępne komendy', '- ' + commands.join('\n- '));
         }
@@ -1572,114 +1609,24 @@
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'right-aligned-info';
 
-                // --- USER DELETE BUTTON ---
-                const userDeleteBtn = document.createElement('button');
-                userDeleteBtn.textContent = 'Usuń';
-                userDeleteBtn.className = 'delete-vacation-btn';
-                // Only allow users to delete PENDING requests
-                if (!req.is_accepted && !req.rejection_reason) {
-                    userDeleteBtn.onclick = async () => {
-                        if (confirm('Czy na pewno chcesz usunąć ten wniosek?')) {
-                            try {
-                                if (req.source === 'supabase') await supabase.from('vacation_requests').delete().eq('id', req.id.replace('supabase-',''));
-                                else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id));
-                                renderVacationRequests(isAdmin);
-                            } catch(error) {
-                                showModal('Błąd', 'Nie udało się usunąć wniosku: ' + error.message);
-                            }
-                        }
-                    };
-                } else {
-                    userDeleteBtn.style.display = 'none'; // Hide if finalized
-                }
-
                 if (isAdmin) {
                     const date = new Date(req.createdAt || req.created_at);
                     const dateInfo = !isNaN(date) ? `<div class="date-info">${date.toLocaleString('pl-PL')}</div>` : '';
-
-                    // Admin Buttons Container
-                    const adminBtnsContainer = document.createElement('div');
-                    adminBtnsContainer.innerHTML = `
+                    let rejectButton = '';
+                    if (req.source === 'firebase') {
+                        rejectButton = `<button class="reject-vacation-btn">Odrzuć</button>`;
+                    }
+                    buttonsDiv.innerHTML = `
                         ${dateInfo}
-                        <div style="margin-top: 5px;">
-                            <label style="cursor:pointer; margin-right: 10px;">
-                                <input type="checkbox" class="accept-chk" ${req.is_accepted ? 'checked' : ''}> Akceptuj
-                            </label>
-                            <button class="toggle-vis">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
-                            <button class="edit-btn">Edytuj</button>
-                            ${req.source === 'firebase' ? '<button class="reject-btn" style="background-color: var(--reject-color);">Odrzuć</button>' : ''}
-                            <button class="del-btn">Usuń</button>
+                        <div>
+                            <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-vacation-checkbox" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
+                            <button class="toggle-visibility-btn">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
+                            <button class="edit-vacation-btn">Edytuj</button>
+                            ${rejectButton}
+                            <button class="delete-vacation-btn">Usuń</button>
                         </div>`;
-
-                    // Attach Admin Listeners
-                    const acceptChk = adminBtnsContainer.querySelector('.accept-chk');
-                    acceptChk.onchange = async (e) => {
-                        const u={is_accepted:e.target.checked, rejection_reason:""};
-                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
-                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
-                        renderVacationRequests(isAdmin);
-                    };
-
-                    adminBtnsContainer.querySelector('.toggle-vis').onclick = async () => {
-                        const u={is_visible:!(req.is_visible!==false)};
-                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
-                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
-                        renderVacationRequests(isAdmin);
-                    };
-
-                    adminBtnsContainer.querySelector('.edit-btn').onclick = async () => {
-                        const new_start = prompt('Nowa data od:', req.start_date); if(!new_start) return;
-                        const new_end = prompt('Nowa data do:', req.end_date); if(!new_end) return;
-                        const new_notes = prompt('Notatka:', req.notes); if(new_notes===null) return;
-                        const u = {start_date: new_start, end_date: new_end, notes: new_notes};
-                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
-                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
-                        renderVacationRequests(isAdmin);
-                    };
-
-                    const rejectBtn = adminBtnsContainer.querySelector('.reject-btn');
-                    if(rejectBtn) {
-                        rejectBtn.onclick = async () => {
-                            const reason = prompt("Podaj powód odrzucenia:");
-                            if(reason) {
-                                await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), {is_accepted: false, rejection_reason: reason});
-                                renderVacationRequests(isAdmin);
-                            }
-                        };
-                    }
-
-                    adminBtnsContainer.querySelector('.del-btn').onclick = async () => {
-                        if(confirm('Usunąć?')) {
-                            if(req.source==='supabase') await supabase.from('vacation_requests').delete().eq('id', req.id.replace('supabase-',''));
-                            else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id));
-                            renderVacationRequests(isAdmin);
-                        }
-                    };
-
-                    buttonsDiv.appendChild(adminBtnsContainer);
                 } else {
-                    // User View: Show Edit/Delete for pending requests
-                    const userBtnsDiv = document.createElement('div');
-
-                    const userEditBtn = document.createElement('button');
-                    userEditBtn.textContent = 'Edytuj';
-                    userEditBtn.onclick = async () => {
-                        const new_start = prompt('Nowa data od:', req.start_date); if(!new_start) return;
-                        const new_end = prompt('Nowa data do:', req.end_date); if(!new_end) return;
-                        const new_notes = prompt('Notatka:', req.notes); if(new_notes===null) return;
-                        const u = {start_date: new_start, end_date: new_end, notes: new_notes};
-                        // User typically edits firebase docs they created, or supabase if user auth matches (but here anon auth)
-                        // Assuming user created firebase docs mostly.
-                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
-                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
-                        renderVacationRequests(isAdmin);
-                    };
-
-                    if (!req.is_accepted && !req.rejection_reason) {
-                        userBtnsDiv.appendChild(userEditBtn);
-                        userBtnsDiv.appendChild(userDeleteBtn);
-                    }
-                    buttonsDiv.appendChild(userBtnsDiv);
+                    buttonsDiv.innerHTML = `<div><button class="edit-vacation-btn">Edytuj</button></div>`;
                 }
 
                 itemDiv.append(contentWrapper, buttonsDiv);
@@ -2238,6 +2185,9 @@
             refreshAllData();
         }
 
+        // Initialize price visibility from localStorage
+        updatePriceVisibility();
+
         document.querySelectorAll('.refresh-btn').forEach(btn => btn.onclick = refreshAllData);
         themeToggleButtons.forEach(btn => btn.onclick = toggleTheme);
         document.querySelectorAll('.hamburger-btn').forEach(btn => {
@@ -2253,8 +2203,7 @@
             if (e.target.closest('#switch-to-admin-btn') || e.target.closest('#admin-commands-btn')) handleCommandPrompt();
             if (e.target.closest('#switch-to-user-btn')) switchToUser();
 
-            // Global delegation not needed for vacation as inline render attaches listeners,
-            // but we keep the click handler for general nav etc.
+            // Global delegation removed for vacation requests as inline render attaches listeners directly
         });
 
         function handleNoteClick(e) {
