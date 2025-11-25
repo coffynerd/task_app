@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>System Zarządzania</title>
     <link rel="icon" href="favicon.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -108,7 +108,6 @@
         .inventory-table tr:hover { background-color: rgba(0,0,0,0.02); }
         .price-tag { font-weight: bold; color: #28a745; }
 
-        /* Updated Quantity Badges */
         .quantity-badge {
             background: #fff; border: 1px solid #ddd; color: #000;
             padding: 4px 8px; border-radius: 12px; font-size: 0.9em; font-weight: bold;
@@ -118,10 +117,11 @@
         .load-more-container { text-align: center; margin-top: 15px; padding-bottom: 20px; }
         .load-more-btn { background-color: #6c757d; width: 100%; max-width: 300px; }
 
-        /* --- PRICE HIDING LOGIC (User View Only) --- */
-        /* Hides the 4th column (Price) when the class is present */
+        /* --- PRICE HIDING LOGIC --- */
         #user-inventory.price-hidden .inventory-table th:nth-child(4),
-        #user-inventory.price-hidden .inventory-table td:nth-child(4) {
+        #user-inventory.price-hidden .inventory-table td:nth-child(4),
+        #admin-inventory.price-hidden .inventory-table th:nth-child(4),
+        #admin-inventory.price-hidden .inventory-table td:nth-child(4) {
             display: none;
         }
 
@@ -144,15 +144,6 @@
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .page-header a { display: inline-block; padding: 8px 16px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9em; transition: background-color 0.3s; }
         .page-header a:hover { background-color: #218838; }
-
-        /* --- VACATION REQUESTS --- */
-        .vacation-request.accepted { background-color: #d4edda; }
-        .vacation-request.rejected { background-color: #f8d7da; }
-        .request-notes { color: #666; font-style: italic; }
-        .request-status { margin-left: 15px; font-weight: bold; flex-shrink: 0; }
-        .request-status.accepted { color: #155724; }
-        .request-status.rejected { color: #721c24; }
-        .request-status.pending { color: #856404; }
 
         /* --- DARK MODE --- */
         body.dark-mode { background-color: var(--background-dark); color: var(--text-dark); }
@@ -330,15 +321,15 @@
     </div>
     <!-- NEW USER INVENTORY TAB -->
     <div id="user-inventory" class="content">
-        <h2>Magazyn / Cennik</h2>
+        <h2>Magazyn</h2>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
+                <label>Nazwa produktu:</label>
                 <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
-                <label>Kod kreskowy (lub @skan):</label>
-                <input type="text" id="user-inv-search-code" placeholder="Skanuj kod...">
+                <label>Kod kreskowy:</label>
+                <input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
             </div>
             <div class="filter-group">
                 <label>Sortuj według:</label>
@@ -419,15 +410,15 @@
     <div id="admin-tasks" class="content">
         <h2>Panel Administratora</h2>
         <form id="admin-task-form">
-            <h3>Dodaj zadanie (tylko Firebase)</h3>
+            <h3>Dodaj zadanie</h3>
             <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
             <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
             <input type="date" id="admin-due-date-input" title="Termin wykonania">
             <button type="submit">Dodaj</button>
         </form>
-        <h3>Lista zadań (Supabase i Firebase)</h3>
+        <h3>Lista zadań</h3>
         <div id="admin-task-list-visible">Ładowanie...</div>
-        <h3>Zadania ukryte (Supabase i Firebase)</h3>
+        <h3>Zadania ukryte</h3>
         <div id="admin-task-list-hidden"></div>
     </div>
     <div id="admin-order" class="content">
@@ -437,9 +428,9 @@
             <input type="text" id="admin-order-supplier" placeholder="Dostawca">
             <button type="submit">Dodaj do listy</button>
         </form>
-        <h3>Pozycje do zamówienia (Supabase i Firebase)</h3>
+        <h3>Pozycje do zamówienia</h3>
         <div id="admin-order-list-active"></div>
-        <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
+        <h3>Zamówienia zrealizowane</h3>
         <div id="admin-order-list-completed"></div>
     </div>
     <!-- NEW ADMIN INVENTORY TAB -->
@@ -453,12 +444,12 @@
         </div>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
+                <label>Nazwa produktu:</label>
                 <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
-                <label>Kod kreskowy (lub @skan):</label>
-                <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod...">
+                <label>Kod kreskowy:</label>
+                <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
             </div>
             <div class="filter-group">
                 <label>Sortuj według:</label>
@@ -552,7 +543,7 @@
             <div class="vacation-form-row"><label for="admin-vacation-notes">Notatka:</label><textarea id="admin-vacation-notes"></textarea></div>
             <button type="submit">Wyślij wniosek</button>
         </form>
-        <h2>Zarządzaj wnioskami (Supabase i Firebase)</h2>
+        <h2>Zarządzaj wnioskami</h2>
         <div class="filter-container" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
             <label for="admin-filter-start">Filtruj od:</label><input type="date" id="admin-filter-start">
             <label for="admin-filter-end">do:</label><input type="date" id="admin-filter-end">
@@ -676,10 +667,15 @@
     }
 
     function updatePriceVisibility() {
-        const container = document.getElementById('user-inventory');
-        if(container) {
-            if (showUserPrices) container.classList.remove('price-hidden');
-            else container.classList.add('price-hidden');
+        const userContainer = document.getElementById('user-inventory');
+        const adminContainer = document.getElementById('admin-inventory');
+
+        if (showUserPrices) {
+            if(userContainer) userContainer.classList.remove('price-hidden');
+            if(adminContainer) adminContainer.classList.remove('price-hidden');
+        } else {
+            if(userContainer) userContainer.classList.add('price-hidden');
+            if(adminContainer) adminContainer.classList.add('price-hidden');
         }
     }
 
@@ -754,9 +750,9 @@
         'minecraft': () => window.open('https://classic.minecraft.net', '_blank'),
         'help': () => {
             const isAdminView = document.getElementById('admin-view').style.display === 'block';
-            let commands = ['sql', 'dev', 'iddqd', 'minecraft', 'help', 'admin_1', 'admin_0'];
+            let commands = ['sql', 'dev', 'iddqd', 'minecraft', 'help'];
             if (isAdminView) {
-                commands.push('passwd', 'value_1', 'value_0');
+                commands.push('admin_1', 'admin_0', 'passwd', 'value_1', 'value_0');
             }
             showModal('Dostępne komendy', '- ' + commands.join('\n- '));
         }
@@ -1609,24 +1605,114 @@
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'right-aligned-info';
 
+                // --- USER DELETE BUTTON ---
+                const userDeleteBtn = document.createElement('button');
+                userDeleteBtn.textContent = 'Usuń';
+                userDeleteBtn.className = 'delete-vacation-btn';
+                // Only allow users to delete PENDING requests
+                if (!req.is_accepted && !req.rejection_reason) {
+                    userDeleteBtn.onclick = async () => {
+                        if (confirm('Czy na pewno chcesz usunąć ten wniosek?')) {
+                            try {
+                                if (req.source === 'supabase') await supabase.from('vacation_requests').delete().eq('id', req.id.replace('supabase-',''));
+                                else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id));
+                                renderVacationRequests(isAdmin);
+                            } catch(error) {
+                                showModal('Błąd', 'Nie udało się usunąć wniosku: ' + error.message);
+                            }
+                        }
+                    };
+                } else {
+                    userDeleteBtn.style.display = 'none'; // Hide if finalized
+                }
+
                 if (isAdmin) {
                     const date = new Date(req.createdAt || req.created_at);
                     const dateInfo = !isNaN(date) ? `<div class="date-info">${date.toLocaleString('pl-PL')}</div>` : '';
-                    let rejectButton = '';
-                    if (req.source === 'firebase') {
-                        rejectButton = `<button class="reject-vacation-btn">Odrzuć</button>`;
-                    }
-                    buttonsDiv.innerHTML = `
+
+                    // Admin Buttons Container
+                    const adminBtnsContainer = document.createElement('div');
+                    adminBtnsContainer.innerHTML = `
                         ${dateInfo}
-                        <div>
-                            <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-vacation-checkbox" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
-                            <button class="toggle-visibility-btn">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
-                            <button class="edit-vacation-btn">Edytuj</button>
-                            ${rejectButton}
-                            <button class="delete-vacation-btn">Usuń</button>
+                        <div style="margin-top: 5px;">
+                            <label style="cursor:pointer; margin-right: 10px;">
+                                <input type="checkbox" class="accept-chk" ${req.is_accepted ? 'checked' : ''}> Akceptuj
+                            </label>
+                            <button class="toggle-vis">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
+                            <button class="edit-btn">Edytuj</button>
+                            ${req.source === 'firebase' ? '<button class="reject-btn" style="background-color: var(--reject-color);">Odrzuć</button>' : ''}
+                            <button class="del-btn">Usuń</button>
                         </div>`;
+
+                    // Attach Admin Listeners
+                    const acceptChk = adminBtnsContainer.querySelector('.accept-chk');
+                    acceptChk.onchange = async (e) => {
+                        const u={is_accepted:e.target.checked, rejection_reason:""};
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+
+                    adminBtnsContainer.querySelector('.toggle-vis').onclick = async () => {
+                        const u={is_visible:!(req.is_visible!==false)};
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+
+                    adminBtnsContainer.querySelector('.edit-btn').onclick = async () => {
+                        const new_start = prompt('Nowa data od:', req.start_date); if(!new_start) return;
+                        const new_end = prompt('Nowa data do:', req.end_date); if(!new_end) return;
+                        const new_notes = prompt('Notatka:', req.notes); if(new_notes===null) return;
+                        const u = {start_date: new_start, end_date: new_end, notes: new_notes};
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+
+                    const rejectBtn = adminBtnsContainer.querySelector('.reject-btn');
+                    if(rejectBtn) {
+                        rejectBtn.onclick = async () => {
+                            const reason = prompt("Podaj powód odrzucenia:");
+                            if(reason) {
+                                await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), {is_accepted: false, rejection_reason: reason});
+                                renderVacationRequests(isAdmin);
+                            }
+                        };
+                    }
+
+                    adminBtnsContainer.querySelector('.del-btn').onclick = async () => {
+                        if(confirm('Usunąć?')) {
+                            if(req.source==='supabase') await supabase.from('vacation_requests').delete().eq('id', req.id.replace('supabase-',''));
+                            else await deleteDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id));
+                            renderVacationRequests(isAdmin);
+                        }
+                    };
+
+                    buttonsDiv.appendChild(adminBtnsContainer);
                 } else {
-                    buttonsDiv.innerHTML = `<div><button class="edit-vacation-btn">Edytuj</button></div>`;
+                    // User View: Show Edit/Delete for pending requests
+                    const userBtnsDiv = document.createElement('div');
+
+                    const userEditBtn = document.createElement('button');
+                    userEditBtn.textContent = 'Edytuj';
+                    userEditBtn.onclick = async () => {
+                        const new_start = prompt('Nowa data od:', req.start_date); if(!new_start) return;
+                        const new_end = prompt('Nowa data do:', req.end_date); if(!new_end) return;
+                        const new_notes = prompt('Notatka:', req.notes); if(new_notes===null) return;
+                        const u = {start_date: new_start, end_date: new_end, notes: new_notes};
+                        // User typically edits firebase docs they created, or supabase if user auth matches (but here anon auth)
+                        // Assuming user created firebase docs mostly.
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+
+                    if (!req.is_accepted && !req.rejection_reason) {
+                        userBtnsDiv.appendChild(userEditBtn);
+                        userBtnsDiv.appendChild(userDeleteBtn);
+                    }
+                    buttonsDiv.appendChild(userBtnsDiv);
                 }
 
                 itemDiv.append(contentWrapper, buttonsDiv);
@@ -2203,7 +2289,8 @@
             if (e.target.closest('#switch-to-admin-btn') || e.target.closest('#admin-commands-btn')) handleCommandPrompt();
             if (e.target.closest('#switch-to-user-btn')) switchToUser();
 
-            // Global delegation removed for vacation requests as inline render attaches listeners directly
+            const vacationList = e.target.closest('#user-schedule-request-list, #admin-schedule-request-list-visible, #admin-schedule-request-list-hidden');
+            if(vacationList) handleVacationListClick(e, vacationList.id.includes('admin'));
         });
 
         function handleNoteClick(e) {
