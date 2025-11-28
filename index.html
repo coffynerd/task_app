@@ -824,7 +824,7 @@
             }
         },
         'sql': () => { showSourceTagsAdmin = !showSourceTagsAdmin; showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`); refreshAllData(); },
-        'dev': () => window.open('https://coffynerd.github.io/publicnotebook/', '_blank'),
+        'dev': () => window.open('https://psb-app-58090.web.app/', '_blank'),
         'iddqd': () => window.open('https://www.youtube.com/watch?v=dXji8ycMolI', '_blank'),
         'minecraft': () => window.open('https://classic.minecraft.net', '_blank'),
         'help': () => {
@@ -1587,7 +1587,7 @@
                 e.stopPropagation();
                 const identifier = note.uuid || note.id;
                 if(identifier) {
-                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${identifier}`;
+                    const shareLink = `https://publicnotebook.web.app/?uuid=${identifier}`;
                     navigator.clipboard.writeText(shareLink).then(() => {
                         showModal('Sukces', 'Link do notatki skopiowany do schowka.');
                     }, () => {
