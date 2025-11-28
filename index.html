@@ -22,6 +22,7 @@
             --supabase-source-color: #56a761;
             --firebase-source-color: #ffca28;
             --user-task-color: #007bff;
+            --reject-color: #dc3545;
         }
         body {
             font-family: 'Roboto', Arial, sans-serif;
@@ -140,10 +141,22 @@
         button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; transition: background-color 0.3s; }
         button:disabled { background-color: #aaa; cursor: not-allowed; }
         .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
+        /* Specjalny styl dla przycisku Odrzuć */
+        .item-row button.reject-btn { background-color: var(--reject-color) !important; color: white; }
+
         .google-sheet-iframe { width: 100%; height: 75vh; border: 1px solid var(--border-light); border-radius: 5px; }
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .page-header a { display: inline-block; padding: 8px 16px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9em; transition: background-color 0.3s; }
         .page-header a:hover { background-color: #218838; }
+
+        /* --- VACATION REQUESTS --- */
+        .vacation-request.accepted { background-color: #d4edda; }
+        .vacation-request.rejected { background-color: #f8d7da; }
+        .request-notes { color: #666; font-style: italic; }
+        .request-status { margin-left: 15px; font-weight: bold; flex-shrink: 0; }
+        .request-status.accepted { color: #155724; }
+        .request-status.rejected { color: #721c24; }
+        .request-status.pending { color: #856404; }
 
         /* --- DARK MODE --- */
         body.dark-mode { background-color: var(--background-dark); color: var(--text-dark); }
@@ -217,6 +230,7 @@
         .modal-content {
             background: var(--surface-light); color: var(--text-light); padding: 20px; border-radius: 8px; text-align: center; max-width: 90%; width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
+        .dark-mode .modal-content { background: var(--surface-dark); color: var(--text-dark); }
         .modal-content h4 { margin-top: 0; }
         .modal-content p { white-space: pre-wrap; }
         .modal-input { width: calc(100% - 20px); padding: 8px; margin-top: 10px; border: 1px solid #ccc; border-radius: 4px; }
@@ -263,6 +277,19 @@
         <h4 id="modal-title"></h4>
         <p id="modal-text"></p>
         <button id="modal-close-btn">Zamknij</button>
+    </div>
+</div>
+
+<!-- CONFIRMATION MODAL FOR UNSAVED CHANGES -->
+<div id="confirm-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h4>Niezapisane zmiany</h4>
+        <p>Masz niezapisane zmiany w notatce. Czy chcesz je zapisać?</p>
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+            <button id="confirm-yes-btn" style="background-color: #28a745;">Tak</button>
+            <button id="confirm-no-btn" style="background-color: #dc3545;">Nie</button>
+            <button id="confirm-cancel-btn" style="background-color: #6c757d;">Wróć</button>
+        </div>
     </div>
 </div>
 
@@ -321,14 +348,14 @@
     </div>
     <!-- NEW USER INVENTORY TAB -->
     <div id="user-inventory" class="content">
-        <h2>Magazyn</h2>
+        <h2>Magazyn / Cennik</h2>
         <div class="inventory-controls">
             <div class="filter-group">
                 <label>Nazwa produktu:</label>
                 <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
-                <label>Kod kreskowy:</label>
+                <label>Kod kreskowy (lub @skan):</label>
                 <input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
             </div>
             <div class="filter-group">
@@ -410,15 +437,15 @@
     <div id="admin-tasks" class="content">
         <h2>Panel Administratora</h2>
         <form id="admin-task-form">
-            <h3>Dodaj zadanie</h3>
+            <h3>Dodaj zadanie (tylko Firebase)</h3>
             <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
             <input type="text" id="admin-assignee-input" placeholder="Pracownicy (oddzieleni średnikiem)">
             <input type="date" id="admin-due-date-input" title="Termin wykonania">
             <button type="submit">Dodaj</button>
         </form>
-        <h3>Lista zadań</h3>
+        <h3>Lista zadań (Supabase i Firebase)</h3>
         <div id="admin-task-list-visible">Ładowanie...</div>
-        <h3>Zadania ukryte</h3>
+        <h3>Zadania ukryte (Supabase i Firebase)</h3>
         <div id="admin-task-list-hidden"></div>
     </div>
     <div id="admin-order" class="content">
@@ -428,9 +455,9 @@
             <input type="text" id="admin-order-supplier" placeholder="Dostawca">
             <button type="submit">Dodaj do listy</button>
         </form>
-        <h3>Pozycje do zamówienia</h3>
+        <h3>Pozycje do zamówienia (Supabase i Firebase)</h3>
         <div id="admin-order-list-active"></div>
-        <h3>Zamówienia zrealizowane</h3>
+        <h3>Zamówienia zrealizowane (Supabase i Firebase)</h3>
         <div id="admin-order-list-completed"></div>
     </div>
     <!-- NEW ADMIN INVENTORY TAB -->
@@ -444,11 +471,11 @@
         </div>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu:</label>
+                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
                 <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
-                <label>Kod kreskowy:</label>
+                <label>Kod kreskowy (lub @skan):</label>
                 <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
             </div>
             <div class="filter-group">
@@ -543,7 +570,7 @@
             <div class="vacation-form-row"><label for="admin-vacation-notes">Notatka:</label><textarea id="admin-vacation-notes"></textarea></div>
             <button type="submit">Wyślij wniosek</button>
         </form>
-        <h2>Zarządzaj wnioskami</h2>
+        <h2>Zarządzaj wnioskami (Supabase i Firebase)</h2>
         <div class="filter-container" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
             <label for="admin-filter-start">Filtruj od:</label><input type="date" id="admin-filter-start">
             <label for="admin-filter-end">do:</label><input type="date" id="admin-filter-end">
@@ -591,6 +618,9 @@
     let showZeros = true; // Inventory state
     let displayLimit = 100; // Pagination
     let showUserPrices = localStorage.getItem('showUserPrices') === '1'; // Default false (undefined !== '1')
+
+    // --- DIRTY STATE TRACKING ---
+    let lastSavedState = { title: '', content: '' };
 
     // --- Firebase Setup ---
     let app, db, auth, userId;
@@ -640,12 +670,61 @@
         modal.style.display = 'flex';
     }
 
+    // --- DIRTY STATE CHECKER ---
+    function checkUnsavedChanges(nextAction) {
+        const isAdmin = document.getElementById('admin-view').style.display === 'block';
+        const prefix = isAdmin ? '' : 'user-';
+        const currentTitle = document.getElementById(prefix + 'note-title-input').value;
+        const currentContentRaw = document.getElementById(prefix + 'note-content-raw').value;
+        const currentContentRender = document.getElementById(prefix + 'note-content-input');
+        const currentContent = editorMode[isAdmin?'admin':'user'] === 'raw' ? currentContentRaw : convertRenderedToSource(currentContentRender);
+
+        const hasChanges = (currentTitle !== lastSavedState.title || currentContent !== lastSavedState.content) && (currentTitle || currentContent);
+
+        if(hasChanges) {
+            const confirmModal = document.getElementById('confirm-modal');
+            confirmModal.style.display = 'flex';
+
+            // Detach old listeners to prevent multiple firings
+            const yesBtn = document.getElementById('confirm-yes-btn');
+            const noBtn = document.getElementById('confirm-no-btn');
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+            // Clone to remove event listeners
+            const newYes = yesBtn.cloneNode(true); yesBtn.parentNode.replaceChild(newYes, yesBtn);
+            const newNo = noBtn.cloneNode(true); noBtn.parentNode.replaceChild(newNo, noBtn);
+            const newCancel = cancelBtn.cloneNode(true); cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+
+            document.getElementById('confirm-yes-btn').onclick = async () => {
+                confirmModal.style.display = 'none';
+                if(isAdmin) await saveAdminNote(); else await saveUserNote();
+                nextAction();
+            };
+
+            document.getElementById('confirm-no-btn').onclick = () => {
+                confirmModal.style.display = 'none';
+                // Update last state to current to pretend it was saved/synced so we don't ask again immediately
+                lastSavedState = { title: '', content: '' }; // Reset or sync? Resetting effectively discards.
+                nextAction();
+            };
+
+            document.getElementById('confirm-cancel-btn').onclick = () => {
+                confirmModal.style.display = 'none';
+            };
+
+        } else {
+            nextAction();
+        }
+    }
+
     function showPage(pageId) {
-        document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
-        const page = document.getElementById(pageId);
-        if (page) page.classList.add('active');
-        document.getElementById('user-nav-links').classList.remove('open');
-        document.getElementById('admin-nav-links').classList.remove('open');
+        checkUnsavedChanges(() => {
+            document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
+            const page = document.getElementById(pageId);
+            if (page) page.classList.add('active');
+            document.getElementById('user-nav-links').classList.remove('open');
+            document.getElementById('admin-nav-links').classList.remove('open');
+        });
     }
 
     function updateThemeIcon() {
@@ -791,14 +870,16 @@
     }
 
     function switchToUser() {
-        document.getElementById('admin-view').style.display = 'none';
-        document.getElementById('user-view').style.display = 'block';
-        showPage('user-tasks');
-        if (!isUserInitialized) {
-            initUserView();
-            isUserInitialized = true;
-        }
-        refreshAllData();
+        checkUnsavedChanges(() => {
+            document.getElementById('admin-view').style.display = 'none';
+            document.getElementById('user-view').style.display = 'block';
+            showPage('user-tasks');
+            if (!isUserInitialized) {
+                initUserView();
+                isUserInitialized = true;
+            }
+            refreshAllData();
+        });
     }
 
     // --- INVENTORY LOGIC (BATCHED) ---
@@ -1526,10 +1607,13 @@
 
             item.appendChild(actionsDiv);
             item.onclick = () => {
-                if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
-                else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
-                document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
-                item.classList.add('selected');
+                // Check dirty state before switching note
+                checkUnsavedChanges(() => {
+                    if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
+                    else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
+                    document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                });
             };
             listEl.appendChild(item);
         });
@@ -1640,7 +1724,7 @@
                             </label>
                             <button class="toggle-vis">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
                             <button class="edit-btn">Edytuj</button>
-                            ${req.source === 'firebase' ? '<button class="reject-btn" style="background-color: var(--reject-color);">Odrzuć</button>' : ''}
+                            ${req.source === 'firebase' ? '<button class="reject-btn">Odrzuć</button>' : ''}
                             <button class="del-btn">Usuń</button>
                         </div>`;
 
@@ -1701,8 +1785,6 @@
                         const new_end = prompt('Nowa data do:', req.end_date); if(!new_end) return;
                         const new_notes = prompt('Notatka:', req.notes); if(new_notes===null) return;
                         const u = {start_date: new_start, end_date: new_end, notes: new_notes};
-                        // User typically edits firebase docs they created, or supabase if user auth matches (but here anon auth)
-                        // Assuming user created firebase docs mostly.
                         if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
                         else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
                         renderVacationRequests(isAdmin);
@@ -1800,20 +1882,23 @@
 
     // --- NOTEBOOK LOGIC (User) ---
     function clearUserEditor() {
-        currentUserNoteId = null;
-        document.getElementById('user-note-title-input').value = '';
-        document.getElementById('user-note-color-input').value = '#000000';
-        document.getElementById('user-note-content-input').innerHTML = '';
-        document.getElementById('user-note-content-raw').value = '';
-        document.getElementById('user-note-timestamps').textContent = '';
-        document.querySelectorAll('#user-note-title-list .selected').forEach(item => item.classList.remove('selected'));
-        editorMode.user = 'render';
-        document.getElementById('user-note-content-input').style.display = 'block';
-        document.getElementById('user-note-content-raw').style.display = 'none';
-        document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod';
-        const saveBtn = document.getElementById('user-save-note-btn');
-        saveBtn.disabled = false;
-        saveBtn.title = "";
+        checkUnsavedChanges(() => {
+            currentUserNoteId = null;
+            document.getElementById('user-note-title-input').value = '';
+            document.getElementById('user-note-color-input').value = '#000000';
+            document.getElementById('user-note-content-input').innerHTML = '';
+            document.getElementById('user-note-content-raw').value = '';
+            document.getElementById('user-note-timestamps').textContent = '';
+            document.querySelectorAll('#user-note-title-list .selected').forEach(item => item.classList.remove('selected'));
+            editorMode.user = 'render';
+            document.getElementById('user-note-content-input').style.display = 'block';
+            document.getElementById('user-note-content-raw').style.display = 'none';
+            document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod';
+            const saveBtn = document.getElementById('user-save-note-btn');
+            saveBtn.disabled = false;
+            saveBtn.title = "";
+            lastSavedState = { title: '', content: '' };
+        });
     }
 
     function loadUserNoteIntoEditor(note) {
@@ -1825,6 +1910,7 @@
         document.getElementById('user-note-title-input').value = note.title || '';
         document.getElementById('user-note-color-input').value = note.titleColor || note.title_color || '#000000';
         document.getElementById('user-note-content-input').innerHTML = convertTextToHtml(note.content);
+        document.getElementById('user-note-content-raw').value = note.content || ''; // populate raw editor too
         const date = note.updatedAt ? new Date(note.updatedAt.seconds * 1000) : new Date(note.updated_at || note.created_at);
         const timestamps = `Ostatnia edycja: ${date.toLocaleString()}`;
         document.getElementById('user-note-timestamps').textContent = timestamps;
@@ -1832,6 +1918,8 @@
         document.getElementById('user-note-content-input').style.display = 'block';
         document.getElementById('user-note-content-raw').style.display = 'none';
         document.getElementById('user-toggle-raw-btn').textContent = 'Edytuj Kod';
+
+        lastSavedState = { title: note.title || '', content: note.content || '' };
     }
 
     async function saveUserNote() {
@@ -1849,26 +1937,30 @@
                 await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentUserNoteId), noteData);
             }
         } else {
-            await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...noteData, createdAt: new Date(), pinned: false, public: true, submittedByUserId: userId, uuid: crypto.randomUUID() });
-            currentUserNoteId = null;
+            const ref = await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...noteData, createdAt: new Date(), pinned: false, public: true, submittedByUserId: userId, uuid: crypto.randomUUID() });
+            currentUserNoteId = ref.id;
         }
+        lastSavedState = { title, content };
         renderNotes(false);
         renderNotes(true);
     }
 
     // --- NOTEBOOK LOGIC (Admin) ---
     function clearAdminEditor() {
-        currentAdminNoteId = null;
-        document.getElementById('note-title-input').value = '';
-        document.getElementById('note-color-input').value = '#000000';
-        document.getElementById('note-content-input').innerHTML = '';
-        document.getElementById('note-content-raw').value = '';
-        document.getElementById('note-timestamps').textContent = '';
-        document.querySelectorAll('#note-title-list .selected').forEach(item => item.classList.remove('selected'));
-        editorMode.admin = 'render';
-        document.getElementById('note-content-input').style.display = 'block';
-        document.getElementById('note-content-raw').style.display = 'none';
-        document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
+        checkUnsavedChanges(() => {
+            currentAdminNoteId = null;
+            document.getElementById('note-title-input').value = '';
+            document.getElementById('note-color-input').value = '#000000';
+            document.getElementById('note-content-input').innerHTML = '';
+            document.getElementById('note-content-raw').value = '';
+            document.getElementById('note-timestamps').textContent = '';
+            document.querySelectorAll('#note-title-list .selected').forEach(item => item.classList.remove('selected'));
+            editorMode.admin = 'render';
+            document.getElementById('note-content-input').style.display = 'block';
+            document.getElementById('note-content-raw').style.display = 'none';
+            document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
+            lastSavedState = { title: '', content: '' };
+        });
     }
 
     function loadAdminNoteIntoEditor(note) {
@@ -1876,6 +1968,7 @@
         document.getElementById('note-title-input').value = note.title || '';
         document.getElementById('note-color-input').value = note.titleColor || note.title_color || '#000000';
         document.getElementById('note-content-input').innerHTML = convertTextToHtml(note.content);
+        document.getElementById('note-content-raw').value = note.content || '';
         const ts = note.updatedAt || note.updated_at || note.createdAt;
         const date = ts ? (ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts)) : new Date(ts);
         document.getElementById('note-timestamps').textContent = date ? `Ostatnia edycja: ${date.toLocaleString()}`: '';
@@ -1883,6 +1976,8 @@
         document.getElementById('note-content-input').style.display = 'block';
         document.getElementById('note-content-raw').style.display = 'none';
         document.getElementById('admin-toggle-raw-btn').textContent = 'Edytuj Kod';
+
+        lastSavedState = { title: note.title || '', content: note.content || '' };
     }
 
     async function saveAdminNote() {
@@ -1900,9 +1995,10 @@
                     await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), firebaseNoteData);
                 }
             } else {
-                await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...firebaseNoteData, createdAt: new Date(), pinned: false, public: false, uuid: crypto.randomUUID() });
-                clearAdminEditor();
+                const ref = await addDoc(collection(db, `artifacts/${appId}/public/data/notes`), { ...firebaseNoteData, createdAt: new Date(), pinned: false, public: false, uuid: crypto.randomUUID() });
+                currentAdminNoteId = ref.id;
             }
+            lastSavedState = { title, content };
             renderNotes(true);
         } catch(error) {
             showModal('Błąd zapisu', 'Nie udało się zapisać notatki: ' + error.message);
@@ -1917,7 +2013,11 @@
             } else {
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId));
             }
-            clearAdminEditor();
+            // Manually clear without confirmation as delete is intentional
+            currentAdminNoteId = null;
+            document.getElementById('note-title-input').value = '';
+            document.getElementById('note-content-input').innerHTML = '';
+            lastSavedState = { title: '', content: '' };
             renderNotes(true);
         } catch (error) {
             showModal('Błąd', 'Nie udało się usunąć notatki: ' + error.message);
@@ -2289,8 +2389,7 @@
             if (e.target.closest('#switch-to-admin-btn') || e.target.closest('#admin-commands-btn')) handleCommandPrompt();
             if (e.target.closest('#switch-to-user-btn')) switchToUser();
 
-            const vacationList = e.target.closest('#user-schedule-request-list, #admin-schedule-request-list-visible, #admin-schedule-request-list-hidden');
-            if(vacationList) handleVacationListClick(e, vacationList.id.includes('admin'));
+            // Global delegation removed for vacation requests as inline render attaches listeners directly
         });
 
         function handleNoteClick(e) {
