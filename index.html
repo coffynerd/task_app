@@ -109,6 +109,7 @@
         .inventory-table tr:hover { background-color: rgba(0,0,0,0.02); }
         .price-tag { font-weight: bold; color: #28a745; }
 
+        /* Updated Quantity Badges */
         .quantity-badge {
             background: #fff; border: 1px solid #ddd; color: #000;
             padding: 4px 8px; border-radius: 12px; font-size: 0.9em; font-weight: bold;
@@ -141,8 +142,12 @@
         button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; transition: background-color 0.3s; }
         button:disabled { background-color: #aaa; cursor: not-allowed; }
         .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
-        /* Specjalny styl dla przycisku Odrzuć */
-        .item-row button.reject-btn { background-color: var(--reject-color) !important; color: white; }
+
+        .item-row button.reject-btn {
+            background-color: var(--reject-color) !important;
+            color: white;
+            border: 1px solid var(--reject-color);
+        }
 
         .google-sheet-iframe { width: 100%; height: 75vh; border: 1px solid var(--border-light); border-radius: 5px; }
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -268,6 +273,22 @@
             .inventory-table td { display: flex; justify-content: space-between; align-items: center; text-align: right; padding: 10px; }
             .inventory-table td::before { content: attr(data-label); font-weight: bold; float: left; }
         }
+
+        /* --- EASTER EGGS --- */
+        /* JEB_ (MINECRAFT SHEEP) */
+        @keyframes rainbow-cycle {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+        .jeb-mode {
+            animation: rainbow-cycle 2s linear infinite;
+        }
+
+        /* DINNERBONE / GRUMM */
+        .upside-down-mode {
+            transform: rotate(180deg);
+            min-height: 100vh;
+        }
     </style>
 </head>
 <body>
@@ -348,14 +369,14 @@
     </div>
     <!-- NEW USER INVENTORY TAB -->
     <div id="user-inventory" class="content">
-        <h2>Magazyn</h2>
+        <h2>Magazyn / Cennik</h2>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu:</label>
-                <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę...">
+                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
+                <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
-                <label>Kod kreskowy:</label>
+                <label>Kod kreskowy (lub @skan):</label>
                 <input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
             </div>
             <div class="filter-group">
@@ -471,11 +492,11 @@
         </div>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu:</label>
-                <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę...">
+                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
+                <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
-                <label>Kod kreskowy:</label>
+                <label>Kod kreskowy (lub @skan):</label>
                 <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
             </div>
             <div class="filter-group">
@@ -562,7 +583,7 @@
         </div>
     </div>
     <div id="admin-schedule-requests" class="content">
-        <h2>Złóż wniosek do grafiku</h2>
+        <h2>Złóż wniosek do grafiku (tylko Firebase)</h2>
         <form id="admin-schedule-request-form" class="vacation-request-form">
             <div class="vacation-form-row"><label for="admin-employee-name">Imię i nazwisko:</label><input type="text" id="admin-employee-name" required></div>
             <div class="vacation-form-row"><label for="admin-start-date">Data od:</label><input type="date" id="admin-start-date" required></div>
@@ -585,11 +606,11 @@
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/+esm';
 
     // --- CONFIGURATION ---
     const firebaseConfigFromEnv = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
@@ -674,7 +695,10 @@
     function checkUnsavedChanges(nextAction) {
         const isAdmin = document.getElementById('admin-view').style.display === 'block';
         const prefix = isAdmin ? '' : 'user-';
-        const currentTitle = document.getElementById(prefix + 'note-title-input').value;
+        const titleInput = document.getElementById(prefix + 'note-title-input');
+        if (!titleInput) { nextAction(); return; } // Safety check
+
+        const currentTitle = titleInput.value;
         const currentContentRaw = document.getElementById(prefix + 'note-content-raw').value;
         const currentContentRender = document.getElementById(prefix + 'note-content-input');
         const currentContent = editorMode[isAdmin?'admin':'user'] === 'raw' ? currentContentRaw : convertRenderedToSource(currentContentRender);
@@ -827,9 +851,24 @@
         'dev': () => window.open('https://psb-app-58090.web.app/', '_blank'),
         'iddqd': () => window.open('https://www.youtube.com/watch?v=dXji8ycMolI', '_blank'),
         'minecraft': () => window.open('https://classic.minecraft.net', '_blank'),
+        // --- JEB_ EASTER EGG ---
+        'jeb_': () => {
+            document.body.classList.toggle('jeb-mode');
+            const isActive = document.body.classList.contains('jeb-mode');
+            showModal('🐑 Beeee!', isActive ? 'Tęczowy motyw jeb_ aktywowany! 🌈' : 'Koniec tęczy.');
+        },
+        // --- DINNERBONE / GRUMM EASTER EGG ---
+        'Dinnerbone': () => {
+            document.body.classList.toggle('upside-down-mode');
+            showModal('🙃 Dinnerbone', document.body.classList.contains('upside-down-mode') ? 'Do góry nogami!' : 'Powrót do normy.');
+        },
+        'Grumm': () => {
+            document.body.classList.toggle('upside-down-mode');
+            showModal('🙃 Grumm', document.body.classList.contains('upside-down-mode') ? 'Do góry nogami!' : 'Powrót do normy.');
+        },
         'help': () => {
             const isAdminView = document.getElementById('admin-view').style.display === 'block';
-            let commands = ['sql', 'dev', 'iddqd', 'minecraft', 'help'];
+            let commands = ['sql', 'dev', 'iddqd', 'minecraft', 'jeb_', 'Dinnerbone', 'Grumm', 'help'];
             if (isAdminView) {
                 commands.push('admin_1', 'admin_0', 'passwd', 'value_1', 'value_0');
             }
@@ -1587,7 +1626,7 @@
                 e.stopPropagation();
                 const identifier = note.uuid || note.id;
                 if(identifier) {
-                    const shareLink = `https://publicnotebook.web.app/?uuid=${identifier}`;
+                    const shareLink = `https://coffynerd.github.io/publicnotebook/?uuid=${identifier}`;
                     navigator.clipboard.writeText(shareLink).then(() => {
                         showModal('Sukces', 'Link do notatki skopiowany do schowka.');
                     }, () => {
@@ -1724,7 +1763,7 @@
                             </label>
                             <button class="toggle-vis">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
                             <button class="edit-btn">Edytuj</button>
-                            ${req.source === 'firebase' ? '<button class="reject-btn">Odrzuć</button>' : ''}
+                            ${req.source === 'firebase' ? '<button class="reject-btn" style="background-color: var(--reject-color) !important; color: white; border: 1px solid var(--reject-color);">Odrzuć</button>' : ''}
                             <button class="del-btn">Usuń</button>
                         </div>`;
 
@@ -1785,6 +1824,8 @@
                         const new_end = prompt('Nowa data do:', req.end_date); if(!new_end) return;
                         const new_notes = prompt('Notatka:', req.notes); if(new_notes===null) return;
                         const u = {start_date: new_start, end_date: new_end, notes: new_notes};
+                        // User typically edits firebase docs they created, or supabase if user auth matches (but here anon auth)
+                        // Assuming user created firebase docs mostly.
                         if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
                         else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
                         renderVacationRequests(isAdmin);
@@ -2013,11 +2054,7 @@
             } else {
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId));
             }
-            // Manually clear without confirmation as delete is intentional
-            currentAdminNoteId = null;
-            document.getElementById('note-title-input').value = '';
-            document.getElementById('note-content-input').innerHTML = '';
-            lastSavedState = { title: '', content: '' };
+            clearAdminEditor();
             renderNotes(true);
         } catch (error) {
             showModal('Błąd', 'Nie udało się usunąć notatki: ' + error.message);
