@@ -667,15 +667,15 @@
         <div id="user-schedule-request-list"></div>
     </div>
     <div id="user-inventory" class="content">
-        <h2>Magazyn</h2>
+        <h2>Magazyn / Cennik</h2>
         <div id="user-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu</label>
-                <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę...">
+                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
+                <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
-                <label>Kod kreskowy</label>
+                <label>Kod kreskowy (lub @skan):</label>
                 <input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
             </div>
             <div class="filter-group">
@@ -800,11 +800,11 @@
         </div>
         <div class="inventory-controls">
             <div class="filter-group">
-                <label>Nazwa produktu</label>
-                <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę...">
+                <label>Nazwa produktu (można wpisać "%" jako dowolny ciąg):</label>
+                <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę (np. ziemia%20)...">
             </div>
             <div class="filter-group">
-                <label>Kod kreskowy</label>
+                <label>Kod kreskowy (lub @skan):</label>
                 <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
             </div>
             <div class="filter-group">
@@ -1231,31 +1231,73 @@
     // --- INVENTORY LOGIC (BATCHED) ---
     async function loadInventory() {
         if (!isAuthReady) return;
+
+        const localKey = `inventory_data_${appId}`;
+        const localMetaKey = `inventory_meta_${appId}`;
+
         try {
-            const q = collection(db, `artifacts/${appId}/public/data/inventory_batches`);
-            const snapshot = await getDocs(q);
-            let allItems = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                if (data.products && Array.isArray(data.products)) { allItems = allItems.concat(data.products); }
-            });
-            inventoryData = allItems;
-            try {
-                const metaSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/inventory_batches`, 'metadata'));
-                if(metaSnap.exists()) {
-                    const meta = metaSnap.data();
-                    if(meta.lastUpdate) {
-                        const date = new Date(meta.lastUpdate.seconds * 1000);
-                        const dateStr = `Ostatni import: ${date.toLocaleString()}`;
-                        document.getElementById('admin-db-info').textContent = dateStr;
-                        const userDbInfo = document.getElementById('user-db-info');
-                        if(userDbInfo) userDbInfo.textContent = dateStr;
+            // 1. Najpierw pobierz tylko metadane (KOSZT: 1 ODCZYT)
+            const metaRef = doc(db, `artifacts/${appId}/public/data/inventory_batches`, 'metadata');
+            const metaSnap = await getDoc(metaRef);
+
+            let needsUpdate = true;
+            let serverLastUpdate = null;
+
+            if (metaSnap.exists()) {
+                const meta = metaSnap.data();
+                if (meta.lastUpdate) {
+                    serverLastUpdate = meta.lastUpdate.seconds;
+                    const date = new Date(serverLastUpdate * 1000);
+                    const dateStr = `Ostatni import: ${date.toLocaleString()}`;
+
+                    const dbInfoEl = document.getElementById('admin-db-info');
+                    if(dbInfoEl) dbInfoEl.textContent = dateStr;
+
+                    const userDbInfoEl = document.getElementById('user-db-info');
+                    if(userDbInfoEl) userDbInfoEl.textContent = dateStr;
+
+                    // Sprawdź czy mamy dane w cache i czy są aktualne
+                    const localMeta = localStorage.getItem(localMetaKey);
+                    if (localMeta && parseInt(localMeta) === serverLastUpdate) {
+                        const cachedData = localStorage.getItem(localKey);
+                        if (cachedData) {
+                            console.log("Ładowanie z cache (oszczędność odczytów!)");
+                            inventoryData = JSON.parse(cachedData);
+                            needsUpdate = false;
+                        }
                     }
                 }
-            } catch(e) { console.log("No metadata"); }
+            }
+
+            // 2. Pobierz "duże" dane tylko jeśli są nieaktualne (KOSZT: N ODCZYTÓW)
+            if (needsUpdate) {
+                console.log("Pobieranie nowych danych z Firebase...");
+                const q = collection(db, `artifacts/${appId}/public/data/inventory_batches`);
+                const snapshot = await getDocs(q);
+                let allItems = [];
+                snapshot.forEach(doc => {
+                    // Pomijamy dokument metadata przy iteracji produktów
+                    if (doc.id === 'metadata') return;
+
+                    const data = doc.data();
+                    if (data.products && Array.isArray(data.products)) {
+                        allItems = allItems.concat(data.products);
+                    }
+                });
+                inventoryData = allItems;
+
+                // Zapisz do cache
+                localStorage.setItem(localKey, JSON.stringify(inventoryData));
+                if (serverLastUpdate) {
+                    localStorage.setItem(localMetaKey, serverLastUpdate.toString());
+                }
+            }
+
             renderInventory(false);
             renderInventory(true);
-        } catch (e) { console.error("Inventory load error:", e); }
+        } catch (e) {
+            console.error("Inventory load error:", e);
+        }
     }
 
     function renderInventory(isAdmin) {
@@ -2065,7 +2107,7 @@
     function populateEmployeeForms() {
         const activeEmployees = employeeData.filter(e => !e.isArchived);
 
-        // 1. Wypełnij Selecty w Wnioskach
+        // 1. Wypełnij Selecty w Wnioskach (bez zmian)
         ['user-employee-name', 'admin-employee-name'].forEach(id => {
             const select = document.getElementById(id);
             if (!select) return;
@@ -2080,9 +2122,7 @@
             if (currentVal) select.value = currentVal;
         });
 
-        // 2. Wypełnij Selecty Filtrów (Imię dla Zadań, Imię+Nazwisko dla Wniosków)
-
-        // Zadania (filruj po imieniu - bo tasks.assignees to lista imion)
+        // 2. Wypełnij Selecty Filtrów
         ['user-task-filter-person', 'admin-task-filter-person'].forEach(id => {
             const select = document.getElementById(id);
             if(!select) return;
@@ -2090,14 +2130,13 @@
             select.innerHTML = '<option value="">Wszyscy</option>';
             activeEmployees.forEach(emp => {
                 const opt = document.createElement('option');
-                opt.value = emp.firstName; // Tutaj ważne: wartość to IMIĘ
+                opt.value = emp.firstName;
                 opt.textContent = emp.firstName;
                 select.appendChild(opt);
             });
             if(currentVal) select.value = currentVal;
         });
 
-        // Wnioski (filtruj po Imię Nazwisko - bo request.employee_name to pełne dane)
         ['user-request-filter-person', 'admin-request-filter-person'].forEach(id => {
             const select = document.getElementById(id);
             if(!select) return;
@@ -2338,11 +2377,9 @@
         };
         document.getElementById('user-toggle-zeros-btn').onclick = () => { showZeros=!showZeros; renderInventory(false); };
 
-        // Event Listener dla filtra zadań (User)
         document.getElementById('user-task-filter-person').onchange = () => {
             renderTasks(false);
         };
-        // Event Listener dla filtra wniosków (User)
         document.getElementById('user-request-filter-person').onchange = () => {
             renderVacationRequests(false);
         };
@@ -2391,11 +2428,9 @@
         document.getElementById('admin-filter-btn').onclick = () => renderVacationRequests(true);
         document.getElementById('admin-clear-filter-btn').onclick = () => { document.getElementById('admin-filter-start').value=''; document.getElementById('admin-filter-end').value=''; renderVacationRequests(true); };
 
-        // Event Listener dla filtra zadań (Admin)
         document.getElementById('admin-task-filter-person').onchange = () => {
             renderTasks(true);
         };
-        // Event Listener dla filtra wniosków (Admin)
         document.getElementById('admin-request-filter-person').onchange = () => {
             renderVacationRequests(true);
         };
