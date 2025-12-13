@@ -945,7 +945,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, where, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/+esm';
 
@@ -964,34 +964,35 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnem5od3RoYXp0cnVhenNqYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NjU4NjAsImV4cCI6MjA2NDA0MTg2MH0.MlBkk-oKSRW7CaUiFf3Edo0KXamVlLaZfLuxGcWL4yU';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // --- GLOBAL STATE AND VIEW MANAGEMENT ---
+    // --- GLOBAL STATE ---
     let isAdminInitialized = false;
     let isUserInitialized = false;
-    let showSourceTagsAdmin = false;
+    let showSourceTagsAdmin = false; // Toggle for 'sql' command
     let editorMode = { user: 'render', admin: 'render' };
     let currentUserNoteId = null;
     let currentAdminNoteId = null;
-    let inventoryData = []; // Store inventory locally for filtering
-    let employeeData = []; // Store employees globally for forms
-    let themeToggleButtons; // Variable to hold theme buttons
-    let showZeros = true; // Inventory state
-    let displayLimit = 100; // Pagination
-    let showUserPrices = localStorage.getItem('showUserPrices') === '1'; // Default false (undefined !== '1')
+    let inventoryData = [];
+    let employeeData = [];
+    let themeToggleButtons;
+    let showZeros = true;
+    let displayLimit = 100;
+    let showUserPrices = localStorage.getItem('showUserPrices') === '1';
     let editingTask = null;
-
-    // --- DIRTY STATE TRACKING ---
     let lastSavedState = { title: '', content: '' };
+
+    // --- OPTIMIZATION STATE ---
+    const loadedViews = new Set();
+    let isAuthReady = false;
 
     // --- Firebase Setup ---
     let app, db, auth, userId;
-    let isAuthReady = false;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
     try {
         app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-        setLogLevel('debug');
+        setLogLevel('silent');
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
@@ -1002,21 +1003,40 @@
                         await signInAnonymously(auth);
                     }
                 } catch (error) {
-                    console.error("Authentication failed, signing in anonymously as fallback:", error);
+                    console.error("Auth failed:", error);
                     await signInAnonymously(auth);
                 }
             }
             userId = auth.currentUser?.uid || crypto.randomUUID();
             isAuthReady = true;
-            console.log("Firebase Auth Ready. User ID:", userId);
+
             await checkAndCreateRecurringTasks();
-            refreshAllData();
+            await loadEmployees();
+
+            const defaultView = document.getElementById('admin-view').style.display === 'block' ? 'admin-tasks' : 'user-tasks';
+            showPage(defaultView);
         });
     } catch (error) {
-        console.error("Firebase initialization failed:", error);
-        document.body.innerHTML = 'Błąd inicjalizacji Firebase. Sprawdź konfigurację w sekcji CONFIGURATION na początku skryptu.';
+        console.error("Firebase init failed:", error);
     }
 
+    // --- VIEW LOADERS ---
+    const viewLoaders = {
+        'user-tasks': () => renderTasks(false),
+        'user-order': () => renderOrders(false),
+        'user-schedule': () => { },
+        'user-schedule-requests': () => renderVacationRequests(false),
+        'user-inventory': () => loadInventory(),
+        'user-notes': () => renderNotes(false),
+        'admin-tasks': () => renderTasks(true),
+        'admin-recurring-tasks': () => renderRecurringTasks(),
+        'admin-order': () => renderOrders(true),
+        'admin-inventory': () => loadInventory(),
+        'admin-schedule': () => { },
+        'admin-schedule-requests': () => renderVacationRequests(true),
+        'admin-notes': () => renderNotes(true),
+        'admin-employees': () => loadEmployees(true)
+    };
 
     // --- UI UTILITIES ---
     const modal = document.getElementById('modal');
@@ -1030,12 +1050,11 @@
         modal.style.display = 'flex';
     }
 
-    // --- DIRTY STATE CHECKER ---
     function checkUnsavedChanges(nextAction) {
         const isAdmin = document.getElementById('admin-view').style.display === 'block';
         const prefix = isAdmin ? '' : 'user-';
         const titleInput = document.getElementById(prefix + 'note-title-input');
-        if (!titleInput) { nextAction(); return; } // Safety check
+        if (!titleInput) { nextAction(); return; }
 
         const currentTitle = titleInput.value;
         const currentContentRaw = document.getElementById(prefix + 'note-content-raw').value;
@@ -1047,51 +1066,56 @@
         if(hasChanges) {
             const confirmModal = document.getElementById('confirm-modal');
             confirmModal.style.display = 'flex';
-            const yesBtn = document.getElementById('confirm-yes-btn');
-            const noBtn = document.getElementById('confirm-no-btn');
-            const cancelBtn = document.getElementById('confirm-cancel-btn');
-            const newYes = yesBtn.cloneNode(true); yesBtn.parentNode.replaceChild(newYes, yesBtn);
-            const newNo = noBtn.cloneNode(true); noBtn.parentNode.replaceChild(newNo, noBtn);
-            const newCancel = cancelBtn.cloneNode(true); cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-
             document.getElementById('confirm-yes-btn').onclick = async () => {
                 confirmModal.style.display = 'none';
                 if(isAdmin) await saveAdminNote(); else await saveUserNote();
                 nextAction();
             };
-
             document.getElementById('confirm-no-btn').onclick = () => {
                 confirmModal.style.display = 'none';
                 lastSavedState = { title: '', content: '' };
                 nextAction();
             };
-
-            document.getElementById('confirm-cancel-btn').onclick = () => {
-                confirmModal.style.display = 'none';
-            };
+            document.getElementById('confirm-cancel-btn').onclick = () => confirmModal.style.display = 'none';
         } else {
             nextAction();
         }
     }
 
-    function showPage(pageId) {
-        checkUnsavedChanges(() => {
+    async function showPage(pageId) {
+        checkUnsavedChanges(async () => {
             document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
             const page = document.getElementById(pageId);
             if (page) page.classList.add('active');
             document.getElementById('user-nav-links').classList.remove('open');
             document.getElementById('admin-nav-links').classList.remove('open');
+
+            if (viewLoaders[pageId] && !loadedViews.has(pageId)) {
+                await viewLoaders[pageId]();
+                loadedViews.add(pageId);
+            }
         });
+    }
+
+    async function refreshCurrentView() {
+        if (!isAuthReady) return;
+        const activeDiv = document.querySelector('.content.active');
+        if (activeDiv && viewLoaders[activeDiv.id]) {
+            if (activeDiv.id.includes('inventory')) localStorage.removeItem(`inventory_meta_${appId}`);
+            if (activeDiv.id.includes('employees')) localStorage.removeItem(`employees_cache_${appId}`);
+            await viewLoaders[activeDiv.id]();
+        }
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        updateThemeIcon();
     }
 
     function updateThemeIcon() {
         const isDarkMode = document.body.classList.contains('dark-mode');
         if (themeToggleButtons) themeToggleButtons.forEach(btn => { btn.innerHTML = isDarkMode ? '&#9728;&#65039;' : '&#127769;'; });
-    }
-    function toggleTheme() {
-        document.body.classList.toggle('dark-mode');
-        localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-        updateThemeIcon();
     }
 
     function showAdminView() {
@@ -1099,7 +1123,15 @@
         document.getElementById('admin-view').style.display = 'block';
         showPage('admin-tasks');
         if (!isAdminInitialized) { initAdminView(); isAdminInitialized = true; }
-        refreshAllData();
+    }
+
+    function switchToUser() {
+        checkUnsavedChanges(() => {
+            document.getElementById('admin-view').style.display = 'none';
+            document.getElementById('user-view').style.display = 'block';
+            showPage('user-tasks');
+            if (!isUserInitialized) { initUserView(); isUserInitialized = true; }
+        });
     }
 
     function updatePriceVisibility() {
@@ -1118,59 +1150,40 @@
         }
     }
 
+    // --- PASSWORD & COMMANDS ---
+    async function checkAdminPassword(password) {
+        const docRef = doc(db, `artifacts/${appId}/config/admin`);
+        try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) return docSnap.data().password === password;
+            else { await setDoc(docRef, { password: 'admin' }); return password === 'admin'; }
+        } catch (e) { return false; }
+    }
+
     const passwordActions = {
         'admin_1': async () => {
-            const password = prompt("Potwierdź hasłem administratora:");
-            if (password === null) return;
-            if (await checkAdminPassword(password)) {
-                localStorage.setItem('defaultView', 'admin');
-                showModal('Sukces', 'Panel administratora został ustawiony jako domyślny.');
-                showAdminView();
-            } else { showModal('Błąd', 'Niepoprawne hasło!'); }
+            const p = prompt("Potwierdź hasłem:"); if(p&&await checkAdminPassword(p)) { localStorage.setItem('defaultView', 'admin'); showModal('Sukces', 'Panel administratora domyślny.'); showAdminView(); }
         },
         'admin_0': async () => {
-            const password = prompt("Potwierdź hasłem administratora:");
-            if (password === null) return;
-            if (await checkAdminPassword(password)) {
-                localStorage.setItem('defaultView', 'user');
-                showModal('Sukces', 'Panel użytkownika został ustawiony jako domyślny.');
-                switchToUser();
-            } else { showModal('Błąd', 'Niepoprawne hasło!'); }
+            const p = prompt("Potwierdź hasłem:"); if(p&&await checkAdminPassword(p)) { localStorage.setItem('defaultView', 'user'); showModal('Sukces', 'Panel użytkownika domyślny.'); switchToUser(); }
         },
         'passwd': async () => {
-            const newPass1 = prompt("Wpisz nowe hasło:");
-            if (newPass1 === null) return;
-            const newPass2 = prompt("Powtórz nowe hasło:");
-            if (newPass2 === null) return;
+            const newPass1 = prompt("Wpisz nowe hasło:"); if (newPass1 === null) return;
+            const newPass2 = prompt("Powtórz nowe hasło:"); if (newPass2 === null) return;
             if (newPass1 && newPass1 === newPass2) {
                 try {
-                    const docRef = doc(db, `artifacts/${appId}/config/admin`);
-                    await setDoc(docRef, { password: newPass1 });
+                    await setDoc(doc(db, `artifacts/${appId}/config/admin`), { password: newPass1 });
                     showModal('Sukces', 'Hasło zostało zmienione.');
                 } catch (e) { showModal('Błąd', 'Nie udało się zmienić hasła.'); }
             } else { showModal('Błąd', 'Hasła nie są takie same lub pole jest puste.'); }
         },
-        'value_1': async () => {
-            const password = prompt("Potwierdź hasłem administratora:");
-            if (password === null) return;
-            if (await checkAdminPassword(password)) {
-                showUserPrices = true;
-                localStorage.setItem('showUserPrices', '1');
-                updatePriceVisibility();
-                showModal('Sukces', 'Ceny w panelu użytkownika zostały WŁĄCZONE.');
-            } else { showModal('Błąd', 'Niepoprawne hasło!'); }
+        'value_1': async () => { const p=prompt("Hasło:"); if(p&&await checkAdminPassword(p)) { showUserPrices=true; localStorage.setItem('showUserPrices','1'); updatePriceVisibility(); showModal('Sukces','Ceny włączone'); }},
+        'value_0': async () => { const p=prompt("Hasło:"); if(p&&await checkAdminPassword(p)) { showUserPrices=false; localStorage.setItem('showUserPrices','0'); updatePriceVisibility(); showModal('Sukces','Ceny wyłączone'); }},
+        'sql': () => {
+            showSourceTagsAdmin = !showSourceTagsAdmin;
+            showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`);
+            refreshCurrentView();
         },
-        'value_0': async () => {
-            const password = prompt("Potwierdź hasłem administratora:");
-            if (password === null) return;
-            if (await checkAdminPassword(password)) {
-                showUserPrices = false;
-                localStorage.setItem('showUserPrices', '0');
-                updatePriceVisibility();
-                showModal('Sukces', 'Ceny w panelu użytkownika zostały WYŁĄCZONE.');
-            } else { showModal('Błąd', 'Niepoprawne hasło!'); }
-        },
-        'sql': () => { showSourceTagsAdmin = !showSourceTagsAdmin; showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`); refreshAllData(); },
         'dev': () => window.open('https://psb-app-58090.web.app/', '_blank'),
         'iddqd': () => window.open('https://www.youtube.com/watch?v=dXji8ycMolI', '_blank'),
         'minecraft': () => window.open('https://classic.minecraft.net', '_blank'),
@@ -1179,34 +1192,20 @@
             const isActive = document.body.classList.contains('jeb-mode');
             showModal('🐑 Beeee!', isActive ? 'Tęczowy motyw jeb_ aktywowany! 🌈' : 'Koniec tęczy.');
         },
-        'Dinnerbone': () => {
-            document.body.classList.toggle('upside-down-mode');
-            showModal('🙃 Dinnerbone', document.body.classList.contains('upside-down-mode') ? 'Do góry nogami!' : 'Powrót do normy.');
-        },
-        'Grumm': () => {
-            document.body.classList.toggle('upside-down-mode');
-            showModal('🙃 Grumm', document.body.classList.contains('upside-down-mode') ? 'Do góry nogami!' : 'Powrót do normy.');
-        },
+        'Dinnerbone': () => { document.body.classList.toggle('upside-down-mode'); showModal('🙃', 'Do góry nogami!'); },
+        'Grumm': () => { document.body.classList.toggle('upside-down-mode'); showModal('🙃', 'Do góry nogami!'); },
         'help': () => {
-            const isAdminView = document.getElementById('admin-view').style.display === 'block';
-            let commands = ['sql', 'dev', 'iddqd', 'minecraft', 'jeb_', 'Dinnerbone', 'Grumm', 'help'];
-            if (isAdminView) { commands.push('admin_1', 'admin_0', 'passwd', 'value_1', 'value_0'); }
-            showModal('Dostępne komendy', '- ' + commands.join('\n- '));
+            const isAdmin = document.getElementById('admin-view').style.display === 'block';
+            let cmds = ['sql', 'dev', 'iddqd', 'minecraft', 'jeb_', 'Dinnerbone', 'Grumm', 'help'];
+
+            if (isAdmin) {
+                const adminCmds = ['admin_1', 'admin_0', 'passwd', 'value_1', 'value_0'];
+                cmds = [...adminCmds, ...cmds];
+            }
+
+            showModal('Dostępne komendy', '- ' + cmds.join('\n- '));
         }
     };
-
-    async function checkAdminPassword(password) {
-        const docRef = doc(db, `artifacts/${appId}/config/admin`);
-        try {
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                return docSnap.data().password === password;
-            } else {
-                await setDoc(docRef, { password: 'admin' });
-                return password === 'admin';
-            }
-        } catch (e) { console.error("Error checking password:", e); return false; }
-    }
 
     async function handleCommandPrompt() {
         const userInput = prompt("Wpisz hasło lub komendę:");
@@ -1218,28 +1217,16 @@
         }
     }
 
-    function switchToUser() {
-        checkUnsavedChanges(() => {
-            document.getElementById('admin-view').style.display = 'none';
-            document.getElementById('user-view').style.display = 'block';
-            showPage('user-tasks');
-            if (!isUserInitialized) { initUserView(); isUserInitialized = true; }
-            refreshAllData();
-        });
-    }
+    const getSourceTag = (source) => showSourceTagsAdmin ? `<span class="source-tag ${source}">${source}</span>` : '';
 
-    // --- INVENTORY LOGIC (BATCHED) ---
+    // --- INVENTORY ---
     async function loadInventory() {
         if (!isAuthReady) return;
-
         const localKey = `inventory_data_${appId}`;
         const localMetaKey = `inventory_meta_${appId}`;
-
         try {
-            // 1. Najpierw pobierz tylko metadane (KOSZT: 1 ODCZYT)
             const metaRef = doc(db, `artifacts/${appId}/public/data/inventory_batches`, 'metadata');
             const metaSnap = await getDoc(metaRef);
-
             let needsUpdate = true;
             let serverLastUpdate = null;
 
@@ -1247,57 +1234,33 @@
                 const meta = metaSnap.data();
                 if (meta.lastUpdate) {
                     serverLastUpdate = meta.lastUpdate.seconds;
-                    const date = new Date(serverLastUpdate * 1000);
-                    const dateStr = `Ostatni import: ${date.toLocaleString()}`;
+                    const dateStr = `Ostatni import: ${new Date(serverLastUpdate * 1000).toLocaleString()}`;
+                    const i1=document.getElementById('admin-db-info'), i2=document.getElementById('user-db-info');
+                    if(i1) i1.textContent = dateStr; if(i2) i2.textContent = dateStr;
 
-                    const dbInfoEl = document.getElementById('admin-db-info');
-                    if(dbInfoEl) dbInfoEl.textContent = dateStr;
-
-                    const userDbInfoEl = document.getElementById('user-db-info');
-                    if(userDbInfoEl) userDbInfoEl.textContent = dateStr;
-
-                    // Sprawdź czy mamy dane w cache i czy są aktualne
                     const localMeta = localStorage.getItem(localMetaKey);
                     if (localMeta && parseInt(localMeta) === serverLastUpdate) {
                         const cachedData = localStorage.getItem(localKey);
-                        if (cachedData) {
-                            console.log("Ładowanie z cache (oszczędność odczytów!)");
-                            inventoryData = JSON.parse(cachedData);
-                            needsUpdate = false;
-                        }
+                        if (cachedData) { inventoryData = JSON.parse(cachedData); needsUpdate = false; }
                     }
                 }
             }
 
-            // 2. Pobierz "duże" dane tylko jeśli są nieaktualne (KOSZT: N ODCZYTÓW)
             if (needsUpdate) {
-                console.log("Pobieranie nowych danych z Firebase...");
                 const q = collection(db, `artifacts/${appId}/public/data/inventory_batches`);
                 const snapshot = await getDocs(q);
                 let allItems = [];
                 snapshot.forEach(doc => {
-                    // Pomijamy dokument metadata przy iteracji produktów
                     if (doc.id === 'metadata') return;
-
-                    const data = doc.data();
-                    if (data.products && Array.isArray(data.products)) {
-                        allItems = allItems.concat(data.products);
-                    }
+                    if (doc.data().products) allItems = allItems.concat(doc.data().products);
                 });
                 inventoryData = allItems;
-
-                // Zapisz do cache
                 localStorage.setItem(localKey, JSON.stringify(inventoryData));
-                if (serverLastUpdate) {
-                    localStorage.setItem(localMetaKey, serverLastUpdate.toString());
-                }
+                if (serverLastUpdate) localStorage.setItem(localMetaKey, serverLastUpdate.toString());
             }
-
-            renderInventory(false);
-            renderInventory(true);
-        } catch (e) {
-            console.error("Inventory load error:", e);
-        }
+            const isAdmin = document.getElementById('admin-view').style.display === 'block';
+            renderInventory(isAdmin);
+        } catch (e) { console.error("Inventory error", e); }
     }
 
     function renderInventory(isAdmin) {
@@ -1306,10 +1269,12 @@
         const countEl = document.getElementById(`${prefix}-inventory-count`);
         const loadMoreBtn = document.getElementById(`${prefix}-load-more-btn`);
         if(!listEl) return;
+
         const nameSearchRaw = document.getElementById(`${prefix}-inv-search-name`).value.toLowerCase();
         const codeSearch = document.getElementById(`${prefix}-inv-search-code`).value.toLowerCase();
         const sortValue = document.getElementById(`${prefix}-inv-sort`).value;
         const nameParts = nameSearchRaw.split('%').filter(part => part.trim() !== "");
+
         let filtered = inventoryData.filter(item => {
             if(!showZeros && item.quantity <= 0) return false;
             const n = item.name ? item.name.toLowerCase() : "";
@@ -1318,6 +1283,7 @@
             const matchCode = !codeSearch || c.includes(codeSearch);
             return matchName && matchCode;
         });
+
         filtered.sort((a, b) => {
             const [key, dir] = sortValue.split('_');
             let valA = key === 'name' ? a.name : (key === 'price' ? a.price : a.quantity);
@@ -1325,53 +1291,568 @@
             if (typeof valA === 'string') { return dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA); }
             else { return dir === 'asc' ? valA - valB : valB - valA; }
         });
+
         const itemsToShow = filtered.slice(0, displayLimit);
         if(countEl) countEl.textContent = `Wyświetlanie ${itemsToShow.length} z ${filtered.length} (całość: ${inventoryData.length})`;
+
         if(loadMoreBtn) {
             if(itemsToShow.length < filtered.length) {
                 loadMoreBtn.style.display = 'inline-block';
                 loadMoreBtn.onclick = () => { displayLimit += 100; renderInventory(isAdmin); };
             } else { loadMoreBtn.style.display = 'none'; }
         }
+
         if (itemsToShow.length === 0) { listEl.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Brak wyników</td></tr>'; return; }
+
         listEl.innerHTML = itemsToShow.map(item => {
             const qtyClass = item.quantity <= 0 ? 'out' : '';
-            const barcodeHtml = item.barcode ? `${item.barcode}` : '-';
             return `<tr>
                     <td data-label="Produkt"><strong>${item.name}</strong></td>
-                    <td data-label="Kod">${barcodeHtml}</td>
+                    <td data-label="Kod">${item.barcode || '-'}</td>
                     <td data-label="Ilość"><span class="quantity-badge ${qtyClass}">${item.quantity} szt</span></td>
                     <td data-label="Cena"><span class="price-tag">${parseFloat(item.price).toFixed(2)} zł</span></td>
                 </tr>`;
         }).join('');
     }
 
-    // --- GLOBAL SCANNER LISTENER ---
-    let scannerBuffer = "";
-    let lastKeyTime = 0;
-    document.addEventListener('keydown', (e) => {
-        const now = Date.now();
-        if (now - lastKeyTime > 100) scannerBuffer = "";
-        lastKeyTime = now;
-        if (e.key.length === 1) scannerBuffer += e.key;
-        if (scannerBuffer.startsWith('@') && /@\d+/.test(scannerBuffer)) {
-            const code = scannerBuffer.substring(1);
-            const isAdmin = document.getElementById('admin-view').style.display === 'block';
-            const prefix = isAdmin ? 'admin' : 'user';
-            const codeInput = document.getElementById(`${prefix}-inv-search-code`);
-            const nameInput = document.getElementById(`${prefix}-inv-search-name`);
-            if(codeInput) {
-                if(nameInput) nameInput.value = "";
-                codeInput.value = code;
-                codeInput.focus();
-                renderInventory(isAdmin);
-                scannerBuffer = "";
-                e.preventDefault();
+    // --- HELPER: Create Task Row DOM Element ---
+    function createTaskElement(task, isAdmin, filterPerson) {
+        const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
+        if (filterPerson && !assigneesList.includes(filterPerson)) return null;
+
+        const isPriority = task.content.startsWith('!!!');
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `item-row task-item ${task.done ? 'done' : ''} ${isPriority ? 'priority' : ''}`;
+        if (task.source === 'firebase' && task.userAdded) { itemDiv.classList.add('user-submitted'); }
+        itemDiv.dataset.taskId = task.id;
+        itemDiv.dataset.source = task.source;
+        itemDiv.dataset.fullContent = task.content;
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'item-content-wrapper';
+        const mainCheckbox = document.createElement('input');
+        mainCheckbox.type = 'checkbox';
+        mainCheckbox.checked = task.done;
+        mainCheckbox.style.marginRight = '10px';
+        mainCheckbox.onchange = async () => {
+            const isChecked = mainCheckbox.checked;
+            const updateData = { done: isChecked, completedAt: isChecked ? new Date() : null };
+            try {
+                itemDiv.classList.toggle('done', mainCheckbox.checked);
+                if (task.source === 'supabase') { await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-','')); }
+                else { await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData); }
+                if (isPriority && mainCheckbox.checked) new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-758719.wav').play();
+            } catch (error) { mainCheckbox.checked = !mainCheckbox.checked; }
+        };
+
+        const taskContentContainer = document.createElement('span');
+        taskContentContainer.className = 'task-text-container';
+        taskContentContainer.innerHTML = parseTaskContent(isPriority ? task.content.substring(3).trim() : task.content);
+
+        const sourceTag = document.createElement('span');
+        if(showSourceTagsAdmin) { sourceTag.innerHTML = getSourceTag(task.source); }
+
+        contentWrapper.append(mainCheckbox, taskContentContainer);
+        if(showSourceTagsAdmin) contentWrapper.appendChild(sourceTag);
+
+        if (task.dueDate) {
+            const dueDateSpan = document.createElement('span');
+            dueDateSpan.classList.add('due-date-text');
+            const d = new Date(task.dueDate);
+            dueDateSpan.textContent = `Do: ${d.getDate()}.${d.getMonth()+1}`;
+            const today = new Date(); today.setHours(0,0,0,0);
+            if (d <= today && !task.done) itemDiv.classList.add('due-date-warning');
+            contentWrapper.appendChild(dueDateSpan);
+        }
+
+        const rightSideInfo = document.createElement('div');
+        rightSideInfo.className = 'right-aligned-info';
+        let completedInfo = '';
+        if (task.done && task.completedAt) {
+            const cDate = task.completedAt.seconds ? new Date(task.completedAt.seconds * 1000) : new Date(task.completedAt);
+            completedInfo = `<div class="date-info" style="color: green;">✓ ${cDate.toLocaleDateString('pl-PL')}</div>`;
+        }
+        rightSideInfo.innerHTML = `
+            <div class="assignees">Osoby: ${assigneesList.length > 0 ? assigneesList.join(', ') : 'brak'}</div>
+            ${task.createdAt ? `<div class="date-info">Dodano: ${new Date(task.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}
+            ${completedInfo}
+         `;
+        itemDiv.append(contentWrapper, rightSideInfo);
+
+        const editHandler = () => { openEditTaskModal(task); };
+
+        if (isAdmin) {
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.innerHTML = `<button class="edit-btn">Edytuj</button><button class="toggle-btn">${task.visible === false ? 'Odkryj' : 'Ukryj'}</button><button class="delete-task-btn">Usuń</button>`;
+            buttonsDiv.querySelector('.edit-btn').onclick = editHandler;
+            buttonsDiv.querySelector('.toggle-btn').onclick = async () => {
+                const updateData = { visible: !(task.visible !== false) };
+                if (task.source === 'supabase') await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-',''));
+                else await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
+                itemDiv.remove();
+            };
+            buttonsDiv.querySelector('.delete-task-btn').onclick = async () => {
+                if (confirm('Czy na pewno chcesz usunąć to zadanie?')) {
+                    if (task.source === 'supabase') await supabase.from('tasks').delete().eq('id', task.id.replace('supabase-',''));
+                    else await deleteDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id));
+                    itemDiv.remove();
+                }
+            };
+            itemDiv.appendChild(buttonsDiv);
+        } else {
+            if (task.source === 'firebase' && task.userAdded) {
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.innerHTML = `<button class="edit-btn">Edytuj</button><button class="delete-task-btn">Usuń</button>`;
+                buttonsDiv.querySelector('.edit-btn').onclick = editHandler;
+                buttonsDiv.querySelector('.delete-task-btn').onclick = async () => {
+                    if (confirm('Czy na pewno chcesz usunąć to zadanie?')) {
+                        await deleteDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id));
+                        itemDiv.remove();
+                    }
+                };
+                itemDiv.appendChild(buttonsDiv);
             }
         }
-    });
+        return itemDiv;
+    }
 
-    // --- NOTEBOOK HELPERS ---
+    // --- TASKS (Optimized Strategy: Load on Demand) ---
+    async function renderTasks(isAdmin) {
+        const listElement = document.getElementById(isAdmin ? 'admin-task-list-visible' : 'user-task-list');
+        const hiddenListElement = isAdmin ? document.getElementById('admin-task-list-hidden') : null;
+        if (!isAuthReady) { if (listElement) listElement.innerHTML = 'Ładowanie uwierzytelniania...'; return; }
+
+        const filterPerson = document.getElementById(isAdmin ? 'admin-task-filter-person' : 'user-task-filter-person').value;
+
+        // 1. SUPABASE
+        const { data: supabaseTasks } = await supabase.from('tasks').select('*');
+        const formattedSupabaseTasks = (supabaseTasks || []).map(task => ({ ...task, source: 'supabase', createdAt: task.created_at, id: `supabase-${task.id}` }));
+
+        // 2. FIREBASE: Fetch only VISIBLE tasks
+        const firebaseTasksColRef = collection(db, `artifacts/${appId}/public/data/tasks`);
+        const q = query(firebaseTasksColRef, where("visible", "==", true));
+        const firebaseTasksSnapshot = await getDocs(q);
+        const firebaseTasks = firebaseTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+
+        const allTasks = [...formattedSupabaseTasks, ...firebaseTasks];
+
+        allTasks.sort((a, b) => {
+            const aIsPriority = a.content.startsWith('!!!');
+            const bIsPriority = b.content.startsWith('!!!');
+            if (aIsPriority && !bIsPriority) return -1;
+            if (!aIsPriority && bIsPriority) return 1;
+            return (b.createdAt ? new Date(b.createdAt) : 0) - (a.createdAt ? new Date(a.createdAt) : 0);
+        });
+
+        // RENDER VISIBLE LIST
+        listElement.innerHTML = '';
+        let visibleCount = 0;
+        allTasks.forEach(task => {
+            if (task.visible === false) return;
+            const el = createTaskElement(task, isAdmin, filterPerson);
+            if (el) { listElement.appendChild(el); visibleCount++; }
+        });
+        if (visibleCount === 0) listElement.innerHTML = '<p>Brak zadań.</p>';
+
+        // ADMIN HIDDEN LIST - Load on Demand
+        if (isAdmin && hiddenListElement) {
+            hiddenListElement.innerHTML = '';
+
+            const loadBtn = document.createElement('button');
+            loadBtn.textContent = 'Załaduj ukryte zadania (Archiwum)';
+            loadBtn.style.width = '100%';
+            loadBtn.style.padding = '10px';
+            loadBtn.style.marginBottom = '20px';
+
+            loadBtn.onclick = async () => {
+                loadBtn.textContent = 'Pobieranie...';
+                loadBtn.disabled = true;
+
+                const qHidden = query(firebaseTasksColRef, where("visible", "==", false));
+                const snap = await getDocs(qHidden);
+                const hiddenTasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+
+                hiddenTasks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                loadBtn.remove();
+
+                if (hiddenTasks.length === 0) {
+                    hiddenListElement.innerHTML = '<p>Brak ukrytych zadań.</p>';
+                } else {
+                    hiddenTasks.forEach(task => {
+                        const el = createTaskElement(task, isAdmin, filterPerson);
+                        if (el) hiddenListElement.appendChild(el);
+                    });
+                }
+            };
+            hiddenListElement.parentNode.insertBefore(loadBtn, hiddenListElement);
+        }
+    }
+
+    // --- HELPER: Create Order Row ---
+    function createOrderElement(order, isAdmin) {
+        const isPriority = order.name.startsWith('!!!');
+        const displayName = isPriority ? order.name.substring(3).trim() : order.name;
+        const itemDiv = document.createElement('div');
+        itemDiv.className = `item-row order-item ${order.done ? 'done' : ''} ${isPriority ? 'priority' : ''}`;
+        itemDiv.dataset.orderId = order.id;
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'item-content-wrapper';
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = displayName;
+        contentWrapper.append(nameSpan);
+
+        // SQL Tag Injection
+        if(showSourceTagsAdmin) {
+            const tag = document.createElement('span');
+            tag.innerHTML = getSourceTag(order.source);
+            contentWrapper.appendChild(tag);
+        }
+
+        const supplierInfo = document.createElement('span');
+        supplierInfo.classList.add('supplier-info');
+        supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
+        contentWrapper.appendChild(supplierInfo);
+
+        const rightSideInfo = document.createElement('div');
+        rightSideInfo.className = 'right-aligned-info';
+        rightSideInfo.innerHTML = `${order.createdAt ? `<div class="date-info">${new Date(order.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
+
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.className = 'order-buttons';
+        const doneBtn = document.createElement('button');
+        doneBtn.textContent = 'Zamówione';
+        doneBtn.onclick = async () => {
+            if (isPriority) new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-770340.wav').play();
+            try {
+                if (order.source === 'supabase') { await supabase.from('orders').update({ is_completed: true }).eq('id', order.id.replace('supabase-','')); }
+                else { await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), { done: true }); }
+                itemDiv.classList.add('done');
+                itemDiv.remove();
+            } catch (error) { showModal('Błąd', 'Nie udało się zaktualizować statusu.'); }
+        };
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edytuj';
+        editBtn.onclick = async () => {
+            const newName = prompt('Nowa nazwa produktu:', order.name);
+            if (newName === null) return;
+            const newSupplier = prompt('Nowy dostawca:', order.supplier || '');
+            if (newSupplier === null) return;
+            try {
+                if (order.source === 'supabase') { await supabase.from('orders').update({ name: newName, supplier: newSupplier }).eq('id', order.id.replace('supabase-','')); }
+                else { await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), { name: newName, supplier: newSupplier }); }
+                nameSpan.textContent = newName;
+                supplierInfo.textContent = `(${newSupplier})`;
+            } catch(error) { showModal('Błąd', 'Nie udało się zaktualizować.'); }
+        };
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Usuń';
+        deleteBtn.className = 'delete-order-btn';
+        deleteBtn.onclick = async () => {
+            if (confirm('Czy na pewno chcesz usunąć tę pozycję?')) {
+                try {
+                    if (order.source === 'supabase') { await supabase.from('orders').delete().eq('id', order.id.replace('supabase-','')); }
+                    else { await deleteDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id)); }
+                    itemDiv.remove();
+                } catch (error) { showModal('Błąd', 'Nie udało się usunąć.'); }
+            }
+        };
+
+        if (!isAdmin) {
+            if (!order.done) { buttonsDiv.appendChild(doneBtn); if (order.source === 'firebase') { buttonsDiv.appendChild(editBtn); } }
+        } else {
+            if (!order.done) { buttonsDiv.appendChild(editBtn); buttonsDiv.appendChild(doneBtn); }
+            buttonsDiv.appendChild(deleteBtn);
+        }
+        itemDiv.append(contentWrapper, rightSideInfo, buttonsDiv);
+        return itemDiv;
+    }
+
+    // --- ORDERS ---
+    async function renderOrders(isAdmin) {
+        const activeListElement = document.getElementById(isAdmin ? 'admin-order-list-active' : 'user-order-list');
+        const completedListElement = isAdmin ? document.getElementById('admin-order-list-completed') : null;
+        if (!isAuthReady) { if (activeListElement) activeListElement.innerHTML = 'Ładowanie...'; return; }
+
+        // 1. ACTIVE LIST (Main View) - Always Fetch
+        const { data: supabaseOrders } = await supabase.from('orders').select('*').eq('is_completed', false);
+        const formattedSupabaseOrders = (supabaseOrders || []).map(order => ({ ...order, done: order.is_completed, source: 'supabase', createdAt: order.created_at, id: `supabase-${order.id}` }));
+
+        const qActive = query(collection(db, `artifacts/${appId}/public/data/orders`), where("done", "==", false));
+        const firebaseOrdersSnapshot = await getDocs(qActive);
+        const firebaseOrders = firebaseOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+
+        const activeOrders = [...formattedSupabaseOrders, ...firebaseOrders];
+        activeOrders.sort((a, b) => {
+            const aIsPriority = a.name.startsWith('!!!');
+            const bIsPriority = b.name.startsWith('!!!');
+            if (aIsPriority !== bIsPriority) return aIsPriority ? -1 : 1;
+            return (b.createdAt ? new Date(b.createdAt) : 0) - (a.createdAt ? new Date(a.createdAt) : 0);
+        });
+
+        activeListElement.innerHTML = '';
+        if (activeOrders.length === 0) activeListElement.innerHTML = '<p>Brak pozycji.</p>';
+        activeOrders.forEach(order => {
+            activeListElement.appendChild(createOrderElement(order, isAdmin));
+        });
+
+        // 2. HISTORY LIST (Admin Only) - Load on Demand
+        if (isAdmin && completedListElement) {
+            completedListElement.innerHTML = '';
+
+            const loadBtn = document.createElement('button');
+            loadBtn.textContent = 'Pokaż historię zamówień';
+            loadBtn.style.width = '100%';
+            loadBtn.style.padding = '10px';
+            loadBtn.style.marginBottom = '20px';
+
+            loadBtn.onclick = async () => {
+                loadBtn.textContent = 'Pobieranie...';
+                loadBtn.disabled = true;
+
+                const qDone = query(collection(db, `artifacts/${appId}/public/data/orders`), where("done", "==", true));
+                const snap = await getDocs(qDone);
+                const historyOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+
+                historyOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                loadBtn.remove();
+
+                if (historyOrders.length === 0) {
+                    completedListElement.innerHTML = '<p>Brak historii.</p>';
+                } else {
+                    historyOrders.forEach(order => {
+                        completedListElement.appendChild(createOrderElement(order, isAdmin));
+                    });
+                }
+            };
+            completedListElement.parentNode.insertBefore(loadBtn, completedListElement);
+        }
+    }
+
+    // --- VACATION REQUESTS ---
+    async function renderVacationRequests(isAdmin) {
+        const userListElement = document.getElementById('user-schedule-request-list');
+        const adminVisibleListElement = document.getElementById('admin-schedule-request-list-visible');
+        const adminHiddenListElement = document.getElementById('admin-schedule-request-list-hidden');
+        if (!isAuthReady) { if(userListElement) userListElement.innerHTML='Ładowanie...'; return; }
+
+        const filterPerson = document.getElementById(isAdmin ? 'admin-request-filter-person' : 'user-request-filter-person').value;
+
+        const { data: supabaseRequests } = await supabase.from('vacation_requests').select('*');
+        const formattedSupabaseRequests = (supabaseRequests || []).map(req => ({ ...req, source: 'supabase', createdAt: req.created_at, id: `supabase-${req.id}` }));
+        const firebaseRequestsSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/vacation_requests`));
+        const firebaseRequests = firebaseRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+        let allRequests = [...formattedSupabaseRequests, ...firebaseRequests];
+        allRequests.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+
+        const renderList = (requestsToRender, targetElement) => {
+            if (!targetElement) return;
+
+            const filteredRequests = requestsToRender.filter(req => {
+                if (!filterPerson) return true;
+                return req.employee_name === filterPerson;
+            });
+
+            targetElement.innerHTML = filteredRequests.length === 0 ? '<p>Brak wniosków.</p>' : '';
+            filteredRequests.forEach(req => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `item-row vacation-request`;
+                let statusText = 'Oczekujący', statusColor = 'request-status pending';
+                if (req.is_accepted === true) { statusText = 'Zaakceptowany'; statusColor = 'request-status accepted'; itemDiv.classList.add('accepted'); }
+                else if (req.rejection_reason) { statusText = 'Odrzucony'; statusColor = 'request-status rejected'; itemDiv.classList.add('rejected'); }
+                itemDiv.dataset.id = req.id;
+                const contentWrapper = document.createElement('div');
+                contentWrapper.className = 'item-content-wrapper';
+
+                // SQL Tag
+                const sourceTagHtml = getSourceTag(req.source);
+
+                let notesText = req.notes || '';
+                if(req.rejection_reason) { notesText += ` (Powód: ${req.rejection_reason})`; }
+                contentWrapper.innerHTML = `<span style="font-weight: bold; flex-shrink: 0; min-width: 150px;">${req.employee_name} ${sourceTagHtml}</span>
+                    <span style="margin-left: 15px; flex-shrink: 0;">${req.start_date} do ${req.end_date}</span>
+                    <span class="${statusColor}" style="margin-left: 15px;">(${statusText})</span>
+                    <span class="request-notes" style="flex-grow: 1; text-align: right; padding: 0 20px;">${notesText}</span>`;
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.className = 'right-aligned-info';
+                if (isAdmin) {
+                    const adminBtnsContainer = document.createElement('div');
+                    adminBtnsContainer.innerHTML = `<div style="margin-top: 5px;">
+                            <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-chk" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
+                            <button class="toggle-vis">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
+                            <button class="edit-btn">Edytuj</button>
+                            ${req.source === 'firebase' ? '<button class="reject-btn" style="background-color: var(--reject-color)!important;">Odrzuć</button>' : ''}
+                            <button class="del-btn">Usuń</button></div>`;
+                    adminBtnsContainer.querySelector('.accept-chk').onchange = async (e) => {
+                        const u={is_accepted:e.target.checked, rejection_reason:""};
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+                    adminBtnsContainer.querySelector('.toggle-vis').onclick = async () => {
+                        const u={is_visible:!(req.is_visible!==false)};
+                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
+                        renderVacationRequests(isAdmin);
+                    };
+                    adminBtnsContainer.querySelector('.edit-btn').onclick = async () => {
+                        const ns=prompt('Od:',req.start_date), ne=prompt('Do:',req.end_date), nn=prompt('Notatka:',req.notes);
+                        if(ns&&ne) {
+                            const u={start_date:ns,end_date:ne,notes:nn};
+                            if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
+                            else await updateDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id),u);
+                            renderVacationRequests(isAdmin);
+                        }
+                    };
+                    if(adminBtnsContainer.querySelector('.reject-btn')) adminBtnsContainer.querySelector('.reject-btn').onclick = async () => {
+                        const r=prompt("Powód:"); if(r) { await updateDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id),{is_accepted:false,rejection_reason:r}); renderVacationRequests(isAdmin); }
+                    };
+                    adminBtnsContainer.querySelector('.del-btn').onclick = async () => {
+                        if(confirm('Usunąć?')) {
+                            if(req.source==='supabase') await supabase.from('vacation_requests').delete().eq('id',req.id.replace('supabase-',''));
+                            else await deleteDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id));
+                            renderVacationRequests(isAdmin);
+                        }
+                    };
+                    buttonsDiv.appendChild(adminBtnsContainer);
+                } else {
+                    const userBtnsDiv = document.createElement('div');
+                    const userEditBtn = document.createElement('button');
+                    userEditBtn.textContent = 'Edytuj';
+                    userEditBtn.onclick = async () => {
+                        const ns=prompt('Od:',req.start_date), ne=prompt('Do:',req.end_date), nn=prompt('Notatka:',req.notes);
+                        if(ns&&ne) {
+                            const u={start_date:ns,end_date:ne,notes:nn};
+                            await updateDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id),u);
+                            renderVacationRequests(isAdmin);
+                        }
+                    };
+                    const delBtn = document.createElement('button'); delBtn.textContent='Usuń'; delBtn.className='delete-vacation-btn';
+                    delBtn.onclick=async()=>{ if(confirm('Usunąć?')) { await deleteDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id)); renderVacationRequests(isAdmin); }};
+                    if (!req.is_accepted && !req.rejection_reason) { userBtnsDiv.append(userEditBtn, delBtn); }
+                    buttonsDiv.appendChild(userBtnsDiv);
+                }
+                itemDiv.append(contentWrapper, buttonsDiv);
+                targetElement.appendChild(itemDiv);
+            });
+        };
+        if (isAdmin) {
+            const filterStart = document.getElementById('admin-filter-start').value;
+            const filterEnd = document.getElementById('admin-filter-end').value;
+            let filteredData = allRequests;
+            if (filterStart) filteredData = filteredData.filter(req => new Date(req.end_date) >= new Date(filterStart));
+            if (filterEnd) filteredData = filteredData.filter(req => new Date(req.start_date) <= new Date(filterEnd));
+            renderList(filteredData.filter(req => req.is_visible !== false), adminVisibleListElement);
+            renderList(filteredData.filter(req => req.is_visible === false), adminHiddenListElement);
+        } else { renderList(allRequests.filter(req => req.is_visible !== false), userListElement); }
+    }
+
+    // --- NOTES (Source Tag Added) ---
+    async function renderNotes(isAdmin) {
+        if (!isAuthReady) return;
+        const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
+        listEl.innerHTML = 'Ładowanie...';
+        const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
+        const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public }));
+        const fbPath = `artifacts/${appId}/public/data/notes`;
+        const fbSnapshot = await getDocs(collection(db, fbPath));
+        const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
+        const allNotes = [...formattedSupabaseNotes, ...firebaseNotes]
+            .filter(note => isAdmin || note.public || note.is_public)
+            .sort((a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)));
+        listEl.innerHTML = allNotes.length === 0 ? 'Brak notatek.' : '';
+        allNotes.forEach(note => {
+            const item = document.createElement('div');
+            item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public || note.is_public ? 'public' : ''}`;
+            item.dataset.id = note.id;
+            item.dataset.source = note.source;
+            if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
+
+            // Source Tag
+            const sourceTagHtml = getSourceTag(note.source);
+
+            const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title} ${sourceTagHtml}</span>
+                               <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>`;
+            item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'note-actions';
+            const pinBtn = document.createElement('span');
+            pinBtn.className = 'note-pin-btn';
+            pinBtn.innerHTML = '&#128204;';
+            pinBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('pin', note, isAdmin); };
+            const publishBtn = document.createElement('span');
+            publishBtn.className = 'note-publish-btn';
+            publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
+            publishBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('publish', note, isAdmin); };
+            const shareBtn = document.createElement('span');
+            shareBtn.className = 'note-share-btn';
+            shareBtn.innerHTML = '&#128279;';
+            shareBtn.onclick = (e) => { e.stopPropagation(); navigator.clipboard.writeText(`https://publicnotebook.web.app/?uuid=${note.uuid||note.id}`); showModal('Sukces', 'Link skopiowany.'); };
+            actionsDiv.appendChild(pinBtn);
+            if (isAdmin) { actionsDiv.appendChild(publishBtn); }
+            if(note.uuid || note.source === 'firebase') actionsDiv.appendChild(shareBtn);
+            item.appendChild(actionsDiv);
+            item.onclick = () => {
+                checkUnsavedChanges(() => {
+                    if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
+                    else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
+                    document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                });
+            };
+            listEl.appendChild(item);
+        });
+    }
+
+    async function handleNoteAction(action, note, isAdmin) {
+        const source = note.source;
+        const noteId = source === 'supabase' ? note.id.replace('supabase-', '') : note.id;
+        try {
+            if (action === 'pin') {
+                const newPinnedState = !(note.pinned || note.is_pinned);
+                if (source === 'supabase') { await supabase.from('notes').update({ is_pinned: newPinnedState }).eq('id', noteId); }
+                else { await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, noteId), { pinned: newPinnedState }); }
+            } else if (action === 'publish') {
+                if (isAdmin) {
+                    const newPublicState = !(note.public || note.is_public);
+                    if(source === 'supabase') { await supabase.from('notes').update({ is_public: newPublicState }).eq('id', noteId); }
+                    else { await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, noteId), { public: newPublicState }); }
+                } else { showModal('Błąd', 'Tylko administrator może zmieniać status publiczny.'); }
+            }
+            renderNotes(true); renderNotes(false);
+        } catch (error) { showModal('Błąd', 'Akcja nieudana.'); }
+    }
+
+    // --- EMPLOYEES & CACHING ---
+    async function loadEmployees(forceRefresh = false) {
+        if (!isAuthReady) return;
+        const cacheKey = `employees_cache_${appId}`;
+        const cacheTimeKey = `employees_time_${appId}`;
+        const CACHE_DURATION = 24 * 60 * 60 * 1000;
+
+        try {
+            const cached = localStorage.getItem(cacheKey);
+            const cacheTime = localStorage.getItem(cacheTimeKey);
+            const now = Date.now();
+
+            if (!forceRefresh && cached && cacheTime && (now - parseInt(cacheTime) < CACHE_DURATION)) {
+                employeeData = JSON.parse(cached);
+            } else {
+                const snapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/employees`));
+                employeeData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                localStorage.setItem(cacheKey, JSON.stringify(employeeData));
+                localStorage.setItem(cacheTimeKey, now.toString());
+            }
+
+            employeeData.sort((a, b) => (a.lastName||'').localeCompare(b.lastName||'') || (a.firstName||'').localeCompare(b.firstName||''));
+            populateEmployeeForms();
+            renderEmployeeTable();
+        } catch(e) { console.error("Employee load error:", e); }
+    }
+
+    // --- HELPER FUNCTIONS & REST OF LOGIC (Preserved from original) ---
+
+    // ... Note Helpers ...
     function convertTextToHtml(text) {
         if (!text) return '';
         const lines = text.split('\n');
@@ -1478,487 +1959,7 @@
         return processedContent;
     }
 
-    // --- RENDER FUNCTIONS ---
-    async function renderTasks(isAdmin) {
-        const listElement = document.getElementById(isAdmin ? 'admin-task-list-visible' : 'user-task-list');
-        const hiddenListElement = isAdmin ? document.getElementById('admin-task-list-hidden') : null;
-        if (!isAuthReady) { if (listElement) listElement.innerHTML = 'Ładowanie uwierzytelniania...'; return; }
-
-        // ZMIANA: Pobranie wartości filtra
-        const filterPerson = document.getElementById(isAdmin ? 'admin-task-filter-person' : 'user-task-filter-person').value;
-
-        const { data: supabaseTasks, error: supabaseError } = await supabase.from('tasks').select('*');
-        const formattedSupabaseTasks = (supabaseTasks || []).map(task => ({ ...task, source: 'supabase', createdAt: task.created_at, id: `supabase-${task.id}` }));
-        const firebaseTasksColRef = collection(db, `artifacts/${appId}/public/data/tasks`);
-        const firebaseTasksSnapshot = await getDocs(firebaseTasksColRef);
-        const firebaseTasks = firebaseTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
-        const allTasks = [...formattedSupabaseTasks, ...firebaseTasks];
-        allTasks.sort((a, b) => {
-            const aIsPriority = a.content.startsWith('!!!');
-            const bIsPriority = b.content.startsWith('!!!');
-            if (aIsPriority && !bIsPriority) return -1;
-            if (!aIsPriority && bIsPriority) return 1;
-            return (b.createdAt ? new Date(b.createdAt) : 0) - (a.createdAt ? new Date(a.createdAt) : 0);
-        });
-        const renderList = (tasksToRender, targetElement) => {
-            if (!targetElement) return;
-            // ZMIANA: Dodatkowe filtrowanie w JS
-            const filteredTasks = tasksToRender.filter(task => {
-                if (!filterPerson) return true; // Brak filtra = pokaż wszystko
-                // Normalizacja assignees
-                const assigneesList = Array.isArray(task.assignees)
-                    ? task.assignees
-                    : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
-
-                return assigneesList.includes(filterPerson);
-            });
-
-            targetElement.innerHTML = filteredTasks.length === 0 ? '<p>Brak zadań.</p>' : '';
-            filteredTasks.forEach(task => {
-                const isPriority = task.content.startsWith('!!!');
-                const itemDiv = document.createElement('div');
-                itemDiv.className = `item-row task-item ${task.done ? 'done' : ''} ${isPriority ? 'priority' : ''}`;
-                if (task.source === 'firebase' && task.userAdded) { itemDiv.classList.add('user-submitted'); }
-                itemDiv.dataset.taskId = task.id;
-                itemDiv.dataset.source = task.source;
-                itemDiv.dataset.fullContent = task.content;
-                const contentWrapper = document.createElement('div');
-                contentWrapper.className = 'item-content-wrapper';
-                const mainCheckbox = document.createElement('input');
-                mainCheckbox.type = 'checkbox';
-                mainCheckbox.checked = task.done;
-                mainCheckbox.style.marginRight = '10px';
-                mainCheckbox.onchange = async () => {
-                    const isChecked = mainCheckbox.checked;
-                    const updateData = {
-                        done: isChecked,
-                        completedAt: isChecked ? new Date() : null
-                    };
-                    try {
-                        if (task.source === 'supabase') { await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-','')); }
-                        else { await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData); }
-                        itemDiv.classList.toggle('done', mainCheckbox.checked);
-                        if (isPriority && mainCheckbox.checked) new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-758719.wav').play();
-                        refreshAllData();
-                    } catch (error) { mainCheckbox.checked = !mainCheckbox.checked; }
-                };
-                const taskContentContainer = document.createElement('span');
-                taskContentContainer.className = 'task-text-container';
-                taskContentContainer.innerHTML = parseTaskContent(isPriority ? task.content.substring(3).trim() : task.content);
-                contentWrapper.append(mainCheckbox, taskContentContainer);
-                if (task.dueDate) {
-                    const dueDateSpan = document.createElement('span');
-                    dueDateSpan.classList.add('due-date-text');
-                    const dateParts = task.dueDate.split('-');
-                    const dueDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-                    const today = new Date(); today.setHours(0, 0, 0, 0);
-                    const day = dueDate.getDate().toString().padStart(2, '0');
-                    const month = (dueDate.getMonth() + 1).toString().padStart(2, '0');
-                    dueDateSpan.textContent = `Wykonać do: ${day}.${month}`;
-                    if (dueDate <= today && !task.done) { itemDiv.classList.add('due-date-warning'); }
-                    contentWrapper.appendChild(dueDateSpan);
-                }
-                const rightSideInfo = document.createElement('div');
-                rightSideInfo.className = 'right-aligned-info';
-                const assigneesList = Array.isArray(task.assignees) ? task.assignees : (typeof task.assignees === 'string' && task.assignees.length > 0 ? task.assignees.split(/[,;]/).map(s => s.trim()) : []);
-
-                let completedInfo = '';
-                if (task.done && task.completedAt) {
-                    const cDate = task.completedAt.seconds ? new Date(task.completedAt.seconds * 1000) : new Date(task.completedAt);
-                    const dateStr = cDate.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' });
-                    const timeStr = cDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
-                    completedInfo = `<div class="date-info" style="color: green;">✓ ${dateStr}, ${timeStr}</div>`;
-                }
-
-                rightSideInfo.innerHTML = `
-                    <div class="assignees">Osoby: ${assigneesList.length > 0 ? assigneesList.join(', ') : 'brak'}</div>
-                    ${task.createdAt ? `<div class="date-info">Dodano: ${new Date(task.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}
-                    ${completedInfo}
-                `;
-                itemDiv.append(contentWrapper, rightSideInfo);
-
-                const editHandler = () => {
-                    openEditTaskModal(task);
-                };
-
-                if (isAdmin) {
-                    const buttonsDiv = document.createElement('div');
-                    buttonsDiv.innerHTML = `<button class="edit-btn">Edytuj</button><button class="toggle-btn">${task.visible === false ? 'Odkryj' : 'Ukryj'}</button><button class="delete-task-btn">Usuń</button>`;
-                    buttonsDiv.querySelector('.edit-btn').onclick = editHandler;
-                    buttonsDiv.querySelector('.toggle-btn').onclick = async () => {
-                        const updateData = { visible: !(task.visible !== false) };
-                        if (task.source === 'supabase') await supabase.from('tasks').update(updateData).eq('id', task.id.replace('supabase-',''));
-                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id), updateData);
-                        refreshAllData();
-                    };
-                    buttonsDiv.querySelector('.delete-task-btn').onclick = async () => {
-                        if (confirm('Czy na pewno chcesz usunąć to zadanie?')) {
-                            if (task.source === 'supabase') await supabase.from('tasks').delete().eq('id', task.id.replace('supabase-',''));
-                            else await deleteDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id));
-                            refreshAllData();
-                        }
-                    };
-                    itemDiv.appendChild(buttonsDiv);
-                } else {
-                    if (task.source === 'firebase' && task.userAdded) {
-                        const buttonsDiv = document.createElement('div');
-                        buttonsDiv.innerHTML = `<button class="edit-btn">Edytuj</button><button class="delete-task-btn">Usuń</button>`;
-                        buttonsDiv.querySelector('.edit-btn').onclick = editHandler;
-                        buttonsDiv.querySelector('.delete-task-btn').onclick = async () => {
-                            if (confirm('Czy na pewno chcesz usunąć to zadanie?')) {
-                                await deleteDoc(doc(db, `artifacts/${appId}/public/data/tasks`, task.id));
-                                refreshAllData();
-                            }
-                        };
-                        itemDiv.appendChild(buttonsDiv);
-                    }
-                }
-                targetElement.appendChild(itemDiv);
-            });
-        };
-        if (isAdmin) { renderList(allTasks.filter(t => t.visible !== false), listElement); renderList(allTasks.filter(t => t.visible === false), hiddenListElement); }
-        else { renderList(allTasks.filter(t => t.visible !== false), document.getElementById('user-task-list')); }
-    }
-
-    // --- ZMIANA: UNIWERSALNA FUNKCJA RENDERUJĄCA DROPDOWN ---
-    function renderCustomDropdown(container, inputName, preselectedValues = []) {
-        if (!container) return;
-
-        const activeEmployees = employeeData.filter(e => !e.isArchived);
-
-        container.innerHTML = '';
-        container.className = 'custom-dropdown';
-
-        const selectedDiv = document.createElement('div');
-        selectedDiv.className = 'dropdown-selected';
-        selectedDiv.textContent = 'Wybierz osoby...';
-
-        const optionsDiv = document.createElement('div');
-        optionsDiv.className = 'dropdown-options';
-
-        if (activeEmployees.length === 0) {
-            const emptyMsg = document.createElement('div');
-            emptyMsg.style.padding = "8px";
-            emptyMsg.textContent = "Brak pracowników";
-            optionsDiv.appendChild(emptyMsg);
-        } else {
-            activeEmployees.forEach(emp => {
-                const label = document.createElement('label');
-                label.className = 'dropdown-option';
-
-                const chk = document.createElement('input');
-                chk.type = 'checkbox';
-                chk.value = emp.firstName;
-                chk.name = inputName;
-
-                if (preselectedValues.includes(emp.firstName)) {
-                    chk.checked = true;
-                }
-
-                chk.addEventListener('change', () => {
-                    updateDropdownText(container, inputName);
-                });
-
-                label.onclick = (e) => {
-                    if (e.target !== chk) {
-                        e.preventDefault();
-                        chk.checked = !chk.checked;
-                        chk.dispatchEvent(new Event('change'));
-                    }
-                };
-
-                label.appendChild(chk);
-                label.appendChild(document.createTextNode(emp.firstName));
-                optionsDiv.appendChild(label);
-            });
-        }
-
-        selectedDiv.onclick = (e) => {
-            e.stopPropagation();
-            document.querySelectorAll('.dropdown-options.open').forEach(el => {
-                if (el !== optionsDiv) el.classList.remove('open');
-            });
-            optionsDiv.classList.toggle('open');
-        };
-
-        container.appendChild(selectedDiv);
-        container.appendChild(optionsDiv);
-
-        updateDropdownText(container, inputName);
-    }
-
-
-    async function renderOrders(isAdmin) {
-        const activeListElement = document.getElementById(isAdmin ? 'admin-order-list-active' : 'user-order-list');
-        const completedListElement = isAdmin ? document.getElementById('admin-order-list-completed') : null;
-        if (!isAuthReady) { if (activeListElement) activeListElement.innerHTML = 'Ładowanie...'; return; }
-        const { data: supabaseOrders, error: supabaseError } = await supabase.from('orders').select('*');
-        const formattedSupabaseOrders = (supabaseOrders || []).map(order => ({ ...order, done: order.is_completed, source: 'supabase', createdAt: order.created_at, id: `supabase-${order.id}` }));
-        const firebaseOrdersSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/orders`));
-        const firebaseOrders = firebaseOrdersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
-        const allOrders = [...formattedSupabaseOrders, ...firebaseOrders];
-        allOrders.sort((a, b) => {
-            const aIsPriority = a.name.startsWith('!!!');
-            const bIsPriority = b.name.startsWith('!!!');
-            if (aIsPriority !== bIsPriority) return aIsPriority ? -1 : 1;
-            return (b.createdAt ? new Date(b.createdAt) : 0) - (a.createdAt ? new Date(a.createdAt) : 0);
-        });
-        const renderList = (ordersToRender, targetElement) => {
-            if (!targetElement) return;
-            targetElement.innerHTML = ordersToRender.length === 0 ? '<p>Brak pozycji.</p>' : '';
-            ordersToRender.forEach(order => {
-                const isPriority = order.name.startsWith('!!!');
-                const displayName = isPriority ? order.name.substring(3).trim() : order.name;
-                const itemDiv = document.createElement('div');
-                itemDiv.className = `item-row order-item ${order.done ? 'done' : ''} ${isPriority ? 'priority' : ''}`;
-                itemDiv.dataset.orderId = order.id;
-                const contentWrapper = document.createElement('div');
-                contentWrapper.className = 'item-content-wrapper';
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = displayName;
-                contentWrapper.append(nameSpan);
-                const supplierInfo = document.createElement('span');
-                supplierInfo.classList.add('supplier-info');
-                supplierInfo.textContent = `(${order.supplier || 'brak dostawcy'})`;
-                contentWrapper.appendChild(supplierInfo);
-                const rightSideInfo = document.createElement('div');
-                rightSideInfo.className = 'right-aligned-info';
-                rightSideInfo.innerHTML = `${order.createdAt ? `<div class="date-info">${new Date(order.createdAt).toLocaleDateString('pl-PL')}</div>` : ''}`;
-                const buttonsDiv = document.createElement('div');
-                buttonsDiv.className = 'order-buttons';
-                const doneBtn = document.createElement('button');
-                doneBtn.textContent = 'Zamówione';
-                doneBtn.onclick = async () => {
-                    if (isPriority) new Audio('https://raw.githubusercontent.com/coffynerd/task_app/main/GLaDOS-770340.wav').play();
-                    try {
-                        if (order.source === 'supabase') { await supabase.from('orders').update({ is_completed: true }).eq('id', order.id.replace('supabase-','')); }
-                        else { await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), { done: true }); }
-                        refreshAllData();
-                    } catch (error) { showModal('Błąd', 'Nie udało się zaktualizować statusu.'); }
-                };
-                const editBtn = document.createElement('button');
-                editBtn.textContent = 'Edytuj';
-                editBtn.onclick = async () => {
-                    const newName = prompt('Nowa nazwa produktu:', order.name);
-                    if (newName === null) return;
-                    const newSupplier = prompt('Nowy dostawca:', order.supplier || '');
-                    if (newSupplier === null) return;
-                    try {
-                        if (order.source === 'supabase') { await supabase.from('orders').update({ name: newName, supplier: newSupplier }).eq('id', order.id.replace('supabase-','')); }
-                        else { await updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), { name: newName, supplier: newSupplier }); }
-                        refreshAllData();
-                    } catch(error) { showModal('Błąd', 'Nie udało się zaktualizować.'); }
-                };
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = 'Usuń';
-                deleteBtn.className = 'delete-order-btn';
-                deleteBtn.onclick = async () => {
-                    if (confirm('Czy na pewno chcesz usunąć tę pozycję?')) {
-                        try {
-                            if (order.source === 'supabase') { await supabase.from('orders').delete().eq('id', order.id.replace('supabase-','')); }
-                            else { await deleteDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id)); }
-                            refreshAllData();
-                        } catch (error) { showModal('Błąd', 'Nie udało się usunąć.'); }
-                    }
-                };
-                if (!isAdmin) { if (!order.done) { buttonsDiv.appendChild(doneBtn); if (order.source === 'firebase') { buttonsDiv.appendChild(editBtn); } } }
-                else { if (!order.done) { buttonsDiv.appendChild(editBtn); buttonsDiv.appendChild(doneBtn); } buttonsDiv.appendChild(deleteBtn); }
-                itemDiv.append(contentWrapper, rightSideInfo, buttonsDiv);
-                targetElement.appendChild(itemDiv);
-            });
-        };
-        const activeOrders = allOrders.filter(o => o.done !== true);
-        const completedOrders = allOrders.filter(o => o.done === true);
-        if (isAdmin) { renderList(activeOrders, activeListElement); renderList(completedOrders, completedListElement); }
-        else { renderList(activeOrders, activeListElement); }
-    }
-
-    async function renderNotes(isAdmin) {
-        if (!isAuthReady) return;
-        const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
-        listEl.innerHTML = 'Ładowanie...';
-        const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
-        const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public }));
-        const fbPath = `artifacts/${appId}/public/data/notes`;
-        const fbSnapshot = await getDocs(collection(db, fbPath));
-        const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
-        const allNotes = [...formattedSupabaseNotes, ...firebaseNotes]
-            .filter(note => isAdmin || note.public || note.is_public)
-            .sort((a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)));
-        listEl.innerHTML = allNotes.length === 0 ? 'Brak notatek.' : '';
-        allNotes.forEach(note => {
-            const item = document.createElement('div');
-            item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public || note.is_public ? 'public' : ''}`;
-            item.dataset.id = note.id;
-            item.dataset.source = note.source;
-            if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
-            const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title}</span>
-                               <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>`;
-            item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'note-actions';
-            const pinBtn = document.createElement('span');
-            pinBtn.className = 'note-pin-btn';
-            pinBtn.innerHTML = '&#128204;';
-            pinBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('pin', note, isAdmin); };
-            const publishBtn = document.createElement('span');
-            publishBtn.className = 'note-publish-btn';
-            publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
-            publishBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('publish', note, isAdmin); };
-            const shareBtn = document.createElement('span');
-            shareBtn.className = 'note-share-btn';
-            shareBtn.innerHTML = '&#128279;';
-            shareBtn.onclick = (e) => { e.stopPropagation(); navigator.clipboard.writeText(`https://coffynerd.github.io/publicnotebook/?uuid=${note.uuid||note.id}`); showModal('Sukces', 'Link skopiowany.'); };
-            actionsDiv.appendChild(pinBtn);
-            if (isAdmin) { actionsDiv.appendChild(publishBtn); }
-            if(note.uuid || note.source === 'firebase') actionsDiv.appendChild(shareBtn);
-            item.appendChild(actionsDiv);
-            item.onclick = () => {
-                checkUnsavedChanges(() => {
-                    if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
-                    else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
-                    document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
-                    item.classList.add('selected');
-                });
-            };
-            listEl.appendChild(item);
-        });
-    }
-
-    async function renderVacationRequests(isAdmin) {
-        const userListElement = document.getElementById('user-schedule-request-list');
-        const adminVisibleListElement = document.getElementById('admin-schedule-request-list-visible');
-        const adminHiddenListElement = document.getElementById('admin-schedule-request-list-hidden');
-        if (!isAuthReady) { if(userListElement) userListElement.innerHTML='Ładowanie...'; return; }
-
-        // ZMIANA: Pobranie wartości filtra
-        const filterPerson = document.getElementById(isAdmin ? 'admin-request-filter-person' : 'user-request-filter-person').value;
-
-        const { data: supabaseRequests } = await supabase.from('vacation_requests').select('*');
-        const formattedSupabaseRequests = (supabaseRequests || []).map(req => ({ ...req, source: 'supabase', createdAt: req.created_at, id: `supabase-${req.id}` }));
-        const firebaseRequestsSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/vacation_requests`));
-        const firebaseRequests = firebaseRequestsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
-        let allRequests = [...formattedSupabaseRequests, ...firebaseRequests];
-        allRequests.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
-        const renderList = (requestsToRender, targetElement) => {
-            if (!targetElement) return;
-
-            // ZMIANA: Filtrowanie po osobie
-            const filteredRequests = requestsToRender.filter(req => {
-                if (!filterPerson) return true;
-                return req.employee_name === filterPerson;
-            });
-
-            targetElement.innerHTML = filteredRequests.length === 0 ? '<p>Brak wniosków.</p>' : '';
-            filteredRequests.forEach(req => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = `item-row vacation-request`;
-                let statusText = 'Oczekujący', statusColor = 'request-status pending';
-                if (req.is_accepted === true) { statusText = 'Zaakceptowany'; statusColor = 'request-status accepted'; itemDiv.classList.add('accepted'); }
-                else if (req.rejection_reason) { statusText = 'Odrzucony'; statusColor = 'request-status rejected'; itemDiv.classList.add('rejected'); }
-                itemDiv.dataset.id = req.id;
-                const contentWrapper = document.createElement('div');
-                contentWrapper.className = 'item-content-wrapper';
-                let notesText = req.notes || '';
-                if(req.rejection_reason) { notesText += ` (Powód: ${req.rejection_reason})`; }
-                contentWrapper.innerHTML = `<span style="font-weight: bold; flex-shrink: 0; min-width: 150px;">${req.employee_name}</span>
-                    <span style="margin-left: 15px; flex-shrink: 0;">${req.start_date} do ${req.end_date}</span>
-                    <span class="${statusColor}" style="margin-left: 15px;">(${statusText})</span>
-                    <span class="request-notes" style="flex-grow: 1; text-align: right; padding: 0 20px;">${notesText}</span>`;
-                const buttonsDiv = document.createElement('div');
-                buttonsDiv.className = 'right-aligned-info';
-                if (isAdmin) {
-                    const adminBtnsContainer = document.createElement('div');
-                    adminBtnsContainer.innerHTML = `<div style="margin-top: 5px;">
-                            <label style="cursor:pointer; margin-right: 10px;"><input type="checkbox" class="accept-chk" ${req.is_accepted ? 'checked' : ''}> Akceptuj</label>
-                            <button class="toggle-vis">${req.is_visible !== false ? 'Ukryj' : 'Pokaż'}</button>
-                            <button class="edit-btn">Edytuj</button>
-                            ${req.source === 'firebase' ? '<button class="reject-btn" style="background-color: var(--reject-color)!important;">Odrzuć</button>' : ''}
-                            <button class="del-btn">Usuń</button></div>`;
-                    adminBtnsContainer.querySelector('.accept-chk').onchange = async (e) => {
-                        const u={is_accepted:e.target.checked, rejection_reason:""};
-                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
-                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
-                        renderVacationRequests(isAdmin);
-                    };
-                    adminBtnsContainer.querySelector('.toggle-vis').onclick = async () => {
-                        const u={is_visible:!(req.is_visible!==false)};
-                        if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
-                        else await updateDoc(doc(db, `artifacts/${appId}/public/data/vacation_requests`, req.id), u);
-                        renderVacationRequests(isAdmin);
-                    };
-                    adminBtnsContainer.querySelector('.edit-btn').onclick = async () => {
-                        const ns=prompt('Od:',req.start_date), ne=prompt('Do:',req.end_date), nn=prompt('Notatka:',req.notes);
-                        if(ns&&ne) {
-                            const u={start_date:ns,end_date:ne,notes:nn};
-                            if(req.source==='supabase') await supabase.from('vacation_requests').update(u).eq('id', req.id.replace('supabase-',''));
-                            else await updateDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id),u);
-                            renderVacationRequests(isAdmin);
-                        }
-                    };
-                    if(adminBtnsContainer.querySelector('.reject-btn')) adminBtnsContainer.querySelector('.reject-btn').onclick = async () => {
-                        const r=prompt("Powód:"); if(r) { await updateDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id),{is_accepted:false,rejection_reason:r}); renderVacationRequests(isAdmin); }
-                    };
-                    adminBtnsContainer.querySelector('.del-btn').onclick = async () => {
-                        if(confirm('Usunąć?')) {
-                            if(req.source==='supabase') await supabase.from('vacation_requests').delete().eq('id',req.id.replace('supabase-',''));
-                            else await deleteDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id));
-                            renderVacationRequests(isAdmin);
-                        }
-                    };
-                    buttonsDiv.appendChild(adminBtnsContainer);
-                } else {
-                    const userBtnsDiv = document.createElement('div');
-                    const userEditBtn = document.createElement('button');
-                    userEditBtn.textContent = 'Edytuj';
-                    userEditBtn.onclick = async () => {
-                        const ns=prompt('Od:',req.start_date), ne=prompt('Do:',req.end_date), nn=prompt('Notatka:',req.notes);
-                        if(ns&&ne) {
-                            const u={start_date:ns,end_date:ne,notes:nn};
-                            await updateDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id),u);
-                            renderVacationRequests(isAdmin);
-                        }
-                    };
-                    const delBtn = document.createElement('button'); delBtn.textContent='Usuń'; delBtn.className='delete-vacation-btn';
-                    delBtn.onclick=async()=>{ if(confirm('Usunąć?')) { await deleteDoc(doc(db,`artifacts/${appId}/public/data/vacation_requests`,req.id)); renderVacationRequests(isAdmin); }};
-                    if (!req.is_accepted && !req.rejection_reason) { userBtnsDiv.append(userEditBtn, delBtn); }
-                    buttonsDiv.appendChild(userBtnsDiv);
-                }
-                itemDiv.append(contentWrapper, buttonsDiv);
-                targetElement.appendChild(itemDiv);
-            });
-        };
-        if (isAdmin) {
-            const filterStart = document.getElementById('admin-filter-start').value;
-            const filterEnd = document.getElementById('admin-filter-end').value;
-            let filteredData = allRequests;
-            if (filterStart) filteredData = filteredData.filter(req => new Date(req.end_date) >= new Date(filterStart));
-            if (filterEnd) filteredData = filteredData.filter(req => new Date(req.start_date) <= new Date(filterEnd));
-            renderList(filteredData.filter(req => req.is_visible !== false), adminVisibleListElement);
-            renderList(filteredData.filter(req => req.is_visible === false), adminHiddenListElement);
-        } else { renderList(allRequests.filter(req => req.is_visible !== false), userListElement); }
-    }
-
-    async function handleNoteAction(action, note, isAdmin) {
-        const source = note.source;
-        const noteId = source === 'supabase' ? note.id.replace('supabase-', '') : note.id;
-        try {
-            if (action === 'pin') {
-                const newPinnedState = !(note.pinned || note.is_pinned);
-                if (source === 'supabase') { await supabase.from('notes').update({ is_pinned: newPinnedState }).eq('id', noteId); }
-                else { await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, noteId), { pinned: newPinnedState }); }
-            } else if (action === 'publish') {
-                if (isAdmin) {
-                    const newPublicState = !(note.public || note.is_public);
-                    if(source === 'supabase') { await supabase.from('notes').update({ is_public: newPublicState }).eq('id', noteId); }
-                    else { await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, noteId), { public: newPublicState }); }
-                } else { showModal('Błąd', 'Tylko administrator może zmieniać status publiczny.'); }
-            }
-            renderNotes(true); renderNotes(false);
-        } catch (error) { showModal('Błąd', 'Akcja nieudana.'); }
-    }
-
-    // --- NOTEBOOK EDITOR LOGIC ---
+    // ... Editor Logic ...
     function clearUserEditor() {
         checkUnsavedChanges(() => {
             currentUserNoteId = null;
@@ -2000,7 +2001,6 @@
         }
         lastSavedState = { title, content }; renderNotes(false); renderNotes(true);
     }
-
     function clearAdminEditor() {
         checkUnsavedChanges(() => {
             currentAdminNoteId = null;
@@ -2088,26 +2088,12 @@
             }
         });
         await Promise.all(promises);
-        if (createdAny) refreshAllData();
     }
 
-    // --- EMPLOYEES LOGIC ---
-    async function loadEmployees() {
-        if (!isAuthReady) return;
-        try {
-            const snapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/employees`));
-            employeeData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            employeeData.sort((a, b) => (a.lastName||'').localeCompare(b.lastName||'') || (a.firstName||'').localeCompare(b.firstName||''));
-            populateEmployeeForms();
-            renderEmployeeTable();
-        } catch(e) { console.error("Employee load error:", e); }
-    }
-
-    // ZMIANA: Implementacja Custom Dropdown
+    // --- DROPDOWNS & FORMS ---
     function populateEmployeeForms() {
         const activeEmployees = employeeData.filter(e => !e.isArchived);
 
-        // 1. Wypełnij Selecty w Wnioskach (bez zmian)
         ['user-employee-name', 'admin-employee-name'].forEach(id => {
             const select = document.getElementById(id);
             if (!select) return;
@@ -2122,7 +2108,6 @@
             if (currentVal) select.value = currentVal;
         });
 
-        // 2. Wypełnij Selecty Filtrów
         ['user-task-filter-person', 'admin-task-filter-person'].forEach(id => {
             const select = document.getElementById(id);
             if(!select) return;
@@ -2152,92 +2137,71 @@
             if(currentVal) select.value = currentVal;
         });
 
-        // 3. Wypełnij CUSTOM DROPDOWNS w Zadaniach
         ['user-assignee-container', 'admin-assignee-container'].forEach(id => {
             const container = document.getElementById(id);
             if (!container) return;
-
-            // Czyścimy i nadajemy klasę bazową
-            container.innerHTML = '';
-            container.className = 'custom-dropdown';
-
-            // Stwórz nagłówek (To co widać przed rozwinięciem)
-            const selectedDiv = document.createElement('div');
-            selectedDiv.className = 'dropdown-selected';
-            selectedDiv.textContent = 'Wybierz osoby...';
-
-            // Stwórz ukrytą listę opcji
-            const optionsDiv = document.createElement('div');
-            optionsDiv.className = 'dropdown-options';
-
-            const fieldName = id.includes('user') ? 'user-assignee' : 'admin-assignee';
-
-            if (activeEmployees.length === 0) {
-                const emptyMsg = document.createElement('div');
-                emptyMsg.style.padding = "8px";
-                emptyMsg.textContent = "Brak pracowników";
-                optionsDiv.appendChild(emptyMsg);
-            } else {
-                activeEmployees.forEach(emp => {
-                    const label = document.createElement('label');
-                    label.className = 'dropdown-option';
-
-                    const chk = document.createElement('input');
-                    chk.type = 'checkbox';
-                    chk.value = emp.firstName;
-                    chk.name = fieldName;
-
-                    // Event listener do aktualizacji tekstu w nagłówku
-                    chk.addEventListener('change', () => {
-                        updateDropdownText(container, fieldName);
-                    });
-
-                    // Kliknięcie w wiersz przełącza checkbox
-                    label.onclick = (e) => {
-                        if (e.target !== chk) {
-                            e.preventDefault();
-                            chk.checked = !chk.checked;
-                            // Wywołaj zdarzenie change ręcznie
-                            chk.dispatchEvent(new Event('change'));
-                        }
-                    };
-
-                    label.appendChild(chk);
-                    label.appendChild(document.createTextNode(emp.firstName));
-                    optionsDiv.appendChild(label);
-                });
-            }
-
-            // Logika otwierania/zamykania
-            selectedDiv.onclick = (e) => {
-                e.stopPropagation(); // Zapobiega natychmiastowemu zamknięciu przez globalny listener
-                // Zamknij inne otwarte dropdowny
-                document.querySelectorAll('.dropdown-options.open').forEach(el => {
-                    if (el !== optionsDiv) el.classList.remove('open');
-                });
-                optionsDiv.classList.toggle('open');
-            };
-
-            container.appendChild(selectedDiv);
-            container.appendChild(optionsDiv);
+            renderCustomDropdown(container, id.includes('user') ? 'user-assignee' : 'admin-assignee');
         });
     }
 
-    // Nowa funkcja pomocnicza do aktualizacji tekstu
+    function renderCustomDropdown(container, inputName, preselectedValues = []) {
+        if (!container) return;
+        const activeEmployees = employeeData.filter(e => !e.isArchived);
+        container.innerHTML = '';
+        container.className = 'custom-dropdown';
+        const selectedDiv = document.createElement('div');
+        selectedDiv.className = 'dropdown-selected';
+        selectedDiv.textContent = 'Wybierz osoby...';
+        const optionsDiv = document.createElement('div');
+        optionsDiv.className = 'dropdown-options';
+
+        if (activeEmployees.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.style.padding = "8px";
+            emptyMsg.textContent = "Brak pracowników";
+            optionsDiv.appendChild(emptyMsg);
+        } else {
+            activeEmployees.forEach(emp => {
+                const label = document.createElement('label');
+                label.className = 'dropdown-option';
+                const chk = document.createElement('input');
+                chk.type = 'checkbox';
+                chk.value = emp.firstName;
+                chk.name = inputName;
+                if (preselectedValues.includes(emp.firstName)) chk.checked = true;
+                chk.addEventListener('change', () => updateDropdownText(container, inputName));
+                label.onclick = (e) => {
+                    if (e.target !== chk) {
+                        e.preventDefault();
+                        chk.checked = !chk.checked;
+                        chk.dispatchEvent(new Event('change'));
+                    }
+                };
+                label.appendChild(chk);
+                label.appendChild(document.createTextNode(emp.firstName));
+                optionsDiv.appendChild(label);
+            });
+        }
+        selectedDiv.onclick = (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.dropdown-options.open').forEach(el => {
+                if (el !== optionsDiv) el.classList.remove('open');
+            });
+            optionsDiv.classList.toggle('open');
+        };
+        container.appendChild(selectedDiv);
+        container.appendChild(optionsDiv);
+        updateDropdownText(container, inputName);
+    }
+
     function updateDropdownText(container, inputName) {
         const checked = container.querySelectorAll(`input[name="${inputName}"]:checked`);
         const displayDiv = container.querySelector('.dropdown-selected');
-
-        if (checked.length === 0) {
-            displayDiv.textContent = 'Wybierz osoby...';
-        } else {
+        if (checked.length === 0) { displayDiv.textContent = 'Wybierz osoby...'; }
+        else {
             const names = Array.from(checked).map(cb => cb.value);
-            // Skróć tekst jeśli za długi
-            if (names.join(', ').length > 25) {
-                displayDiv.textContent = `Wybrano: ${checked.length} os.`;
-            } else {
-                displayDiv.textContent = names.join(', ');
-            }
+            if (names.join(', ').length > 25) { displayDiv.textContent = `Wybrano: ${checked.length} os.`; }
+            else { displayDiv.textContent = names.join(', '); }
         }
     }
 
@@ -2245,9 +2209,7 @@
         const activeListEl = document.getElementById('admin-employee-list-active');
         const archivedListEl = document.getElementById('admin-employee-list-archived');
         if (!activeListEl) return;
-
         activeListEl.innerHTML=''; archivedListEl.innerHTML='';
-
         const createEmpRow = (emp) => {
             const itemDiv = document.createElement('div');
             itemDiv.className = `item-row ${emp.isArchived ? 'done' : ''}`;
@@ -2268,86 +2230,28 @@
             btns.append(edit, arch, del); itemDiv.appendChild(btns);
             return itemDiv;
         };
-
         employeeData.forEach(e => (e.isArchived ? archivedListEl : activeListEl).appendChild(createEmpRow(e)));
         if(activeListEl.innerHTML==='') activeListEl.innerHTML='<p>Brak.</p>';
         if(archivedListEl.innerHTML==='') archivedListEl.innerHTML='<p>Brak.</p>';
     }
 
-    // --- ZMIANA: OBSŁUGA MODALA EDYCJI ---
     function openEditTaskModal(task) {
         editingTask = task;
-
         document.getElementById('edit-task-content').value = task.content.startsWith('!!!') ? task.content.substring(3).trim() : task.content;
         document.getElementById('edit-task-date').value = task.dueDate || '';
-
-        // Parsuj istniejących przypisanych
         let currentAssignees = [];
-        if (Array.isArray(task.assignees)) {
-            currentAssignees = task.assignees;
-        } else if (typeof task.assignees === 'string' && task.assignees.trim() !== '') {
-            currentAssignees = task.assignees.split(';').map(s => s.trim());
-        }
-
-        // Wyrenderuj dropdown w modalu z zaznaczonymi osobami
+        if (Array.isArray(task.assignees)) { currentAssignees = task.assignees; }
+        else if (typeof task.assignees === 'string' && task.assignees.trim() !== '') { currentAssignees = task.assignees.split(';').map(s => s.trim()); }
         const container = document.getElementById('edit-task-assignees-container');
         renderCustomDropdown(container, 'edit-task-assignee', currentAssignees);
-
         document.getElementById('edit-task-modal').style.display = 'flex';
-    }
-
-    document.getElementById('edit-task-cancel-btn').onclick = () => {
-        document.getElementById('edit-task-modal').style.display = 'none';
-        editingTask = null;
-    };
-
-    document.getElementById('edit-task-save-btn').onclick = async () => {
-        if (!editingTask) return;
-
-        let newContent = document.getElementById('edit-task-content').value;
-        if (editingTask.content.startsWith('!!!')) {
-            newContent = '!!! ' + newContent;
-        }
-
-        const newDueDate = document.getElementById('edit-task-date').value;
-
-        // Pobierz zaznaczonych z dropdowna edycji
-        const checkedBoxes = document.querySelectorAll('input[name="edit-task-assignee"]:checked');
-        const newAssignees = Array.from(checkedBoxes).map(cb => cb.value);
-
-        const updateData = { content: newContent, assignees: newAssignees, dueDate: newDueDate || null };
-
-        try {
-            if (editingTask.source === 'supabase') {
-                await supabase.from('tasks').update(updateData).eq('id', editingTask.id.replace('supabase-',''));
-            } else {
-                await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, editingTask.id), updateData);
-            }
-            document.getElementById('edit-task-modal').style.display = 'none';
-            refreshAllData();
-        } catch (e) {
-            showModal('Błąd', 'Nie udało się zapisać zmian.');
-        }
-    };
-
-
-    async function refreshAllData() {
-        if (!isAuthReady) return;
-        const inAdminView = document.getElementById('admin-view').style.display === 'block';
-        await loadInventory();
-        await loadEmployees();
-        const promises = [renderTasks(inAdminView), renderOrders(inAdminView), renderNotes(true), renderNotes(false), renderVacationRequests(inAdminView)];
-        if (inAdminView) {
-            promises.push(renderRecurringTasks());
-        }
-        await Promise.all(promises);
     }
 
     // --- INITIALIZATION ---
     function initUserView() {
         document.getElementById('user-order-form').onsubmit = async (e) => { e.preventDefault();
             await addDoc(collection(db, `artifacts/${appId}/public/data/orders`), { name:document.getElementById('user-order-name').value, supplier:document.getElementById('user-order-supplier').value, done:false, createdAt:new Date(), submittedByUserId:userId });
-            renderOrders(false); e.target.reset();
+            e.target.reset(); renderOrders(false);
         };
         document.getElementById('user-new-note-btn').onclick = clearUserEditor;
         document.getElementById('user-save-note-btn').onclick = saveUserNote;
@@ -2367,7 +2271,6 @@
             e.preventDefault(); const f=e.target;
             const checkedBoxes = f.querySelectorAll('input[name="user-assignee"]:checked');
             const assignees = Array.from(checkedBoxes).map(cb => cb.value);
-
             await addDoc(collection(db,`artifacts/${appId}/public/data/tasks`), { content:f.querySelector('#user-task-input').value, assignees:assignees, done:false, visible:true, createdAt:new Date(), userAdded:true, dueDate:f.querySelector('#user-due-date-input').value });
             f.reset();
             f.querySelectorAll('input[name="user-assignee"]').forEach(cb => cb.checked = false);
@@ -2376,13 +2279,8 @@
             renderTasks(false);
         };
         document.getElementById('user-toggle-zeros-btn').onclick = () => { showZeros=!showZeros; renderInventory(false); };
-
-        document.getElementById('user-task-filter-person').onchange = () => {
-            renderTasks(false);
-        };
-        document.getElementById('user-request-filter-person').onchange = () => {
-            renderVacationRequests(false);
-        };
+        document.getElementById('user-task-filter-person').onchange = () => { renderTasks(false); };
+        document.getElementById('user-request-filter-person').onchange = () => { renderVacationRequests(false); };
     }
 
     function initAdminView() {
@@ -2390,7 +2288,6 @@
             e.preventDefault(); const f=e.target;
             const checkedBoxes = f.querySelectorAll('input[name="admin-assignee"]:checked');
             const assignees = Array.from(checkedBoxes).map(cb => cb.value);
-
             await addDoc(collection(db,`artifacts/${appId}/public/data/tasks`), { content:f.querySelector('#admin-task-input').value, assignees:assignees, done:false, visible:true, createdAt:new Date(), dueDate:f.querySelector('#admin-due-date-input').value });
             f.reset();
             f.querySelectorAll('input[name="admin-assignee"]').forEach(cb => cb.checked = false);
@@ -2427,15 +2324,8 @@
         document.getElementById('admin-toggle-zeros-btn').onclick = () => { showZeros=!showZeros; renderInventory(true); };
         document.getElementById('admin-filter-btn').onclick = () => renderVacationRequests(true);
         document.getElementById('admin-clear-filter-btn').onclick = () => { document.getElementById('admin-filter-start').value=''; document.getElementById('admin-filter-end').value=''; renderVacationRequests(true); };
-
-        document.getElementById('admin-task-filter-person').onchange = () => {
-            renderTasks(true);
-        };
-        document.getElementById('admin-request-filter-person').onchange = () => {
-            renderVacationRequests(true);
-        };
-
-        // --- EMPLOYEE FORM LISTENER ---
+        document.getElementById('admin-task-filter-person').onchange = () => { renderTasks(true); };
+        document.getElementById('admin-request-filter-person').onchange = () => { renderVacationRequests(true); };
         const empForm = document.getElementById('admin-employee-form');
         if (empForm) {
             empForm.onsubmit = async (e) => {
@@ -2450,6 +2340,24 @@
                 } catch (err) { showModal('Błąd', err.message); }
             };
         }
+        document.getElementById('edit-task-cancel-btn').onclick = () => {
+            document.getElementById('edit-task-modal').style.display = 'none'; editingTask = null;
+        };
+        document.getElementById('edit-task-save-btn').onclick = async () => {
+            if (!editingTask) return;
+            let newContent = document.getElementById('edit-task-content').value;
+            if (editingTask.content.startsWith('!!!')) { newContent = '!!! ' + newContent; }
+            const newDueDate = document.getElementById('edit-task-date').value;
+            const checkedBoxes = document.querySelectorAll('input[name="edit-task-assignee"]:checked');
+            const newAssignees = Array.from(checkedBoxes).map(cb => cb.value);
+            const updateData = { content: newContent, assignees: newAssignees, dueDate: newDueDate || null };
+            try {
+                if (editingTask.source === 'supabase') { await supabase.from('tasks').update(updateData).eq('id', editingTask.id.replace('supabase-','')); }
+                else { await updateDoc(doc(db, `artifacts/${appId}/public/data/tasks`, editingTask.id), updateData); }
+                document.getElementById('edit-task-modal').style.display = 'none';
+                refreshCurrentView();
+            } catch (e) { showModal('Błąd', 'Nie udało się zapisać zmian.'); }
+        };
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -2457,20 +2365,22 @@
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
         initUserView(); initAdminView();
-        if (localStorage.getItem('defaultView') === 'admin') { showAdminView(); }
-        else { document.getElementById('user-view').style.display = 'block'; isUserInitialized = true; refreshAllData(); }
-        updatePriceVisibility();
-        document.querySelectorAll('.refresh-btn').forEach(btn => btn.onclick = refreshAllData);
+
+        // Setup Listeners
+        document.querySelectorAll('.refresh-btn').forEach(btn => btn.onclick = refreshCurrentView);
         themeToggleButtons.forEach(btn => btn.onclick = toggleTheme);
         document.querySelectorAll('.hamburger-btn').forEach(btn => { btn.onclick = () => btn.closest('.nav-bar').querySelector('.nav-links').classList.toggle('open'); });
+
         document.body.addEventListener('click', (e) => {
             const navLink = e.target.closest('a[data-page]');
             if (navLink) { e.preventDefault(); showPage(navLink.dataset.page); }
             if (e.target.closest('#switch-to-admin-btn') || e.target.closest('#admin-commands-btn')) handleCommandPrompt();
             if (e.target.closest('#switch-to-user-btn')) switchToUser();
+            if (!e.target.closest('.custom-dropdown')) { document.querySelectorAll('.dropdown-options.open').forEach(el => { el.classList.remove('open'); }); }
         });
         document.getElementById('user-note-content-input').addEventListener('click', (e)=>{if(e.target.closest('a')) window.open(e.target.closest('a').href,'_blank');});
         document.getElementById('note-content-input').addEventListener('click', (e)=>{if(e.target.closest('a')) window.open(e.target.closest('a').href,'_blank');});
+
         function setupTaskListeners() {
             document.body.addEventListener('change', async (e) => {
                 if(e.target.classList.contains('subtask-checkbox')) {
@@ -2487,19 +2397,22 @@
             });
         }
         setupTaskListeners();
-        ['user', 'admin'].forEach(prefix => {
-            const render = () => renderInventory(prefix === 'admin');
-            document.getElementById(`${prefix}-inv-search-name`)?.addEventListener('input', render);
-            document.getElementById(`${prefix}-inv-search-code`)?.addEventListener('input', render);
-            document.getElementById(`${prefix}-inv-sort`)?.addEventListener('change', render);
-        });
 
-        // Zamknij dropdowny przy kliknięciu poza nie
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.custom-dropdown')) {
-                document.querySelectorAll('.dropdown-options.open').forEach(el => {
-                    el.classList.remove('open');
-                });
+        // Scanner
+        let scannerBuffer = ""; let lastKeyTime = 0;
+        document.addEventListener('keydown', (e) => {
+            const now = Date.now();
+            if (now - lastKeyTime > 100) scannerBuffer = "";
+            lastKeyTime = now;
+            if (e.key.length === 1) scannerBuffer += e.key;
+            if (scannerBuffer.startsWith('@') && /@\d+/.test(scannerBuffer)) {
+                const code = scannerBuffer.substring(1);
+                const isAdmin = document.getElementById('admin-view').style.display === 'block';
+                const prefix = isAdmin ? 'admin' : 'user';
+                const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+                if(codeInput) {
+                    codeInput.value = code; renderInventory(isAdmin); scannerBuffer = ""; e.preventDefault();
+                }
             }
         });
     });
