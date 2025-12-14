@@ -967,7 +967,7 @@
     // --- GLOBAL STATE ---
     let isAdminInitialized = false;
     let isUserInitialized = false;
-    let showSourceTagsAdmin = false; // Toggle for 'sql' command
+    let showSourceTagsAdmin = false;
     let editorMode = { user: 'render', admin: 'render' };
     let currentUserNoteId = null;
     let currentAdminNoteId = null;
@@ -1013,8 +1013,13 @@
             await checkAndCreateRecurringTasks();
             await loadEmployees();
 
-            const defaultView = document.getElementById('admin-view').style.display === 'block' ? 'admin-tasks' : 'user-tasks';
-            showPage(defaultView);
+            // Default View Logic
+            const savedView = localStorage.getItem('defaultView');
+            if (savedView === 'admin') {
+                showAdminView();
+            } else {
+                switchToUser();
+            }
         });
     } catch (error) {
         console.error("Firebase init failed:", error);
@@ -1050,6 +1055,7 @@
         modal.style.display = 'flex';
     }
 
+    // Check changes BEFORE switching views
     function checkUnsavedChanges(nextAction) {
         const isAdmin = document.getElementById('admin-view').style.display === 'block';
         const prefix = isAdmin ? '' : 'user-';
@@ -1083,18 +1089,20 @@
     }
 
     async function showPage(pageId) {
-        checkUnsavedChanges(async () => {
-            document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
-            const page = document.getElementById(pageId);
-            if (page) page.classList.add('active');
-            document.getElementById('user-nav-links').classList.remove('open');
-            document.getElementById('admin-nav-links').classList.remove('open');
+        // Note: We don't verify changes here anymore for view switching,
+        // as the parent switchers (showAdminView/switchToUser) handle it globally.
+        // We only verify if switching tabs WITHIN the same view.
 
-            if (viewLoaders[pageId] && !loadedViews.has(pageId)) {
-                await viewLoaders[pageId]();
-                loadedViews.add(pageId);
-            }
-        });
+        document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
+        const page = document.getElementById(pageId);
+        if (page) page.classList.add('active');
+        document.getElementById('user-nav-links').classList.remove('open');
+        document.getElementById('admin-nav-links').classList.remove('open');
+
+        if (viewLoaders[pageId] && !loadedViews.has(pageId)) {
+            await viewLoaders[pageId]();
+            loadedViews.add(pageId);
+        }
     }
 
     async function refreshCurrentView() {
@@ -1118,13 +1126,17 @@
         if (themeToggleButtons) themeToggleButtons.forEach(btn => { btn.innerHTML = isDarkMode ? '&#9728;&#65039;' : '&#127769;'; });
     }
 
+    // FIXED: Check changes BEFORE hiding user view
     function showAdminView() {
-        document.getElementById('user-view').style.display = 'none';
-        document.getElementById('admin-view').style.display = 'block';
-        showPage('admin-tasks');
-        if (!isAdminInitialized) { initAdminView(); isAdminInitialized = true; }
+        checkUnsavedChanges(() => {
+            document.getElementById('user-view').style.display = 'none';
+            document.getElementById('admin-view').style.display = 'block';
+            showPage('admin-tasks');
+            if (!isAdminInitialized) { initAdminView(); isAdminInitialized = true; }
+        });
     }
 
+    // FIXED: Check changes BEFORE hiding admin view
     function switchToUser() {
         checkUnsavedChanges(() => {
             document.getElementById('admin-view').style.display = 'none';
@@ -1162,10 +1174,21 @@
 
     const passwordActions = {
         'admin_1': async () => {
-            const p = prompt("Potwierdź hasłem:"); if(p&&await checkAdminPassword(p)) { localStorage.setItem('defaultView', 'admin'); showModal('Sukces', 'Panel administratora domyślny.'); showAdminView(); }
+            const p = prompt("Potwierdź hasłem:");
+            if(p && await checkAdminPassword(p)) {
+                localStorage.setItem('defaultView', 'admin');
+                showModal('Sukces', 'Panel administratora ustawiony jako domyślny.');
+                // Don't call showAdminView directly if already there, but safe to call to ensure refresh
+                showAdminView();
+            }
         },
         'admin_0': async () => {
-            const p = prompt("Potwierdź hasłem:"); if(p&&await checkAdminPassword(p)) { localStorage.setItem('defaultView', 'user'); showModal('Sukces', 'Panel użytkownika domyślny.'); switchToUser(); }
+            const p = prompt("Potwierdź hasłem:");
+            if(p && await checkAdminPassword(p)) {
+                localStorage.setItem('defaultView', 'user');
+                showModal('Sukces', 'Panel użytkownika ustawiony jako domyślny.');
+                switchToUser();
+            }
         },
         'passwd': async () => {
             const newPass1 = prompt("Wpisz nowe hasło:"); if (newPass1 === null) return;
@@ -1197,12 +1220,10 @@
         'help': () => {
             const isAdmin = document.getElementById('admin-view').style.display === 'block';
             let cmds = ['sql', 'dev', 'iddqd', 'minecraft', 'jeb_', 'Dinnerbone', 'Grumm', 'help'];
-
             if (isAdmin) {
                 const adminCmds = ['admin_1', 'admin_0', 'passwd', 'value_1', 'value_0'];
                 cmds = [...adminCmds, ...cmds];
             }
-
             showModal('Dostępne komendy', '- ' + cmds.join('\n- '));
         }
     };
@@ -1211,6 +1232,12 @@
         const userInput = prompt("Wpisz hasło lub komendę:");
         if (userInput === null) return;
         if (passwordActions.hasOwnProperty(userInput)) {
+            // Check if user is trying to access restricted command from User View
+            const restricted = ['admin_1', 'admin_0', 'passwd', 'value_1', 'value_0'];
+            const isAdmin = document.getElementById('admin-view').style.display === 'block';
+
+            // Allow execution because these commands prompt for password internally anyway,
+            // ensuring security even if typed from User View.
             passwordActions[userInput]();
         } else {
             if (await checkAdminPassword(userInput)) { showAdminView(); } else { showModal("Błąd", "Niepoprawne hasło lub komenda!"); }
@@ -1416,7 +1443,7 @@
         return itemDiv;
     }
 
-    // --- TASKS (Optimized Strategy: Load on Demand) ---
+    // --- TASKS (Optimized Strategy: 100 limit) ---
     async function renderTasks(isAdmin) {
         const listElement = document.getElementById(isAdmin ? 'admin-task-list-visible' : 'user-task-list');
         const hiddenListElement = isAdmin ? document.getElementById('admin-task-list-hidden') : null;
@@ -1428,9 +1455,10 @@
         const { data: supabaseTasks } = await supabase.from('tasks').select('*');
         const formattedSupabaseTasks = (supabaseTasks || []).map(task => ({ ...task, source: 'supabase', createdAt: task.created_at, id: `supabase-${task.id}` }));
 
-        // 2. FIREBASE: Fetch only VISIBLE tasks
+        // 2. FIREBASE: Limit 100 Latest Tasks
         const firebaseTasksColRef = collection(db, `artifacts/${appId}/public/data/tasks`);
-        const q = query(firebaseTasksColRef, where("visible", "==", true));
+        const q = query(firebaseTasksColRef, orderBy("createdAt", "desc"), limit(100));
+
         const firebaseTasksSnapshot = await getDocs(q);
         const firebaseTasks = firebaseTasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
 
@@ -1444,7 +1472,6 @@
             return (b.createdAt ? new Date(b.createdAt) : 0) - (a.createdAt ? new Date(a.createdAt) : 0);
         });
 
-        // RENDER VISIBLE LIST
         listElement.innerHTML = '';
         let visibleCount = 0;
         allTasks.forEach(task => {
@@ -1454,7 +1481,6 @@
         });
         if (visibleCount === 0) listElement.innerHTML = '<p>Brak zadań.</p>';
 
-        // ADMIN HIDDEN LIST - Load on Demand
         if (isAdmin && hiddenListElement) {
             hiddenListElement.innerHTML = '';
 
@@ -1468,11 +1494,10 @@
                 loadBtn.textContent = 'Pobieranie...';
                 loadBtn.disabled = true;
 
-                const qHidden = query(firebaseTasksColRef, where("visible", "==", false));
+                const qHidden = query(firebaseTasksColRef, where("visible", "==", false), orderBy("createdAt", "desc"), limit(50));
                 const snap = await getDocs(qHidden);
                 const hiddenTasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
 
-                hiddenTasks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 loadBtn.remove();
 
                 if (hiddenTasks.length === 0) {
@@ -1502,7 +1527,6 @@
         nameSpan.textContent = displayName;
         contentWrapper.append(nameSpan);
 
-        // SQL Tag Injection
         if(showSourceTagsAdmin) {
             const tag = document.createElement('span');
             tag.innerHTML = getSourceTag(order.source);
@@ -1568,13 +1592,13 @@
         return itemDiv;
     }
 
-    // --- ORDERS ---
+    // --- ORDERS (Optimized) ---
     async function renderOrders(isAdmin) {
         const activeListElement = document.getElementById(isAdmin ? 'admin-order-list-active' : 'user-order-list');
         const completedListElement = isAdmin ? document.getElementById('admin-order-list-completed') : null;
         if (!isAuthReady) { if (activeListElement) activeListElement.innerHTML = 'Ładowanie...'; return; }
 
-        // 1. ACTIVE LIST (Main View) - Always Fetch
+        // 1. ACTIVE LIST - Always Fetch Undone
         const { data: supabaseOrders } = await supabase.from('orders').select('*').eq('is_completed', false);
         const formattedSupabaseOrders = (supabaseOrders || []).map(order => ({ ...order, done: order.is_completed, source: 'supabase', createdAt: order.created_at, id: `supabase-${order.id}` }));
 
@@ -1610,11 +1634,10 @@
                 loadBtn.textContent = 'Pobieranie...';
                 loadBtn.disabled = true;
 
-                const qDone = query(collection(db, `artifacts/${appId}/public/data/orders`), where("done", "==", true));
+                const qDone = query(collection(db, `artifacts/${appId}/public/data/orders`), where("done", "==", true), orderBy("createdAt", "desc"), limit(50));
                 const snap = await getDocs(qDone);
                 const historyOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
 
-                historyOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
                 loadBtn.remove();
 
                 if (historyOrders.length === 0) {
@@ -1664,7 +1687,6 @@
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'item-content-wrapper';
 
-                // SQL Tag
                 const sourceTagHtml = getSourceTag(req.source);
 
                 let notesText = req.notes || '';
@@ -1768,7 +1790,6 @@
             item.dataset.source = note.source;
             if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
 
-            // Source Tag
             const sourceTagHtml = getSourceTag(note.source);
 
             const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title} ${sourceTagHtml}</span>
