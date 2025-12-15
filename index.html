@@ -1013,13 +1013,9 @@
             await checkAndCreateRecurringTasks();
             await loadEmployees();
 
-            // Default View Logic
             const savedView = localStorage.getItem('defaultView');
-            if (savedView === 'admin') {
-                showAdminView();
-            } else {
-                switchToUser();
-            }
+            if (savedView === 'admin') showAdminView();
+            else switchToUser();
         });
     } catch (error) {
         console.error("Firebase init failed:", error);
@@ -1055,7 +1051,6 @@
         modal.style.display = 'flex';
     }
 
-    // Check changes BEFORE switching views
     function checkUnsavedChanges(nextAction) {
         const isAdmin = document.getElementById('admin-view').style.display === 'block';
         const prefix = isAdmin ? '' : 'user-';
@@ -1089,10 +1084,6 @@
     }
 
     async function showPage(pageId) {
-        // Note: We don't verify changes here anymore for view switching,
-        // as the parent switchers (showAdminView/switchToUser) handle it globally.
-        // We only verify if switching tabs WITHIN the same view.
-
         document.querySelectorAll('.content').forEach(div => div.classList.remove('active'));
         const page = document.getElementById(pageId);
         if (page) page.classList.add('active');
@@ -1126,7 +1117,6 @@
         if (themeToggleButtons) themeToggleButtons.forEach(btn => { btn.innerHTML = isDarkMode ? '&#9728;&#65039;' : '&#127769;'; });
     }
 
-    // FIXED: Check changes BEFORE hiding user view
     function showAdminView() {
         checkUnsavedChanges(() => {
             document.getElementById('user-view').style.display = 'none';
@@ -1136,7 +1126,6 @@
         });
     }
 
-    // FIXED: Check changes BEFORE hiding admin view
     function switchToUser() {
         checkUnsavedChanges(() => {
             document.getElementById('admin-view').style.display = 'none';
@@ -1174,21 +1163,10 @@
 
     const passwordActions = {
         'admin_1': async () => {
-            const p = prompt("Potwierdź hasłem:");
-            if(p && await checkAdminPassword(p)) {
-                localStorage.setItem('defaultView', 'admin');
-                showModal('Sukces', 'Panel administratora ustawiony jako domyślny.');
-                // Don't call showAdminView directly if already there, but safe to call to ensure refresh
-                showAdminView();
-            }
+            const p = prompt("Potwierdź hasłem:"); if(p&&await checkAdminPassword(p)) { localStorage.setItem('defaultView', 'admin'); showModal('Sukces', 'Panel administratora domyślny.'); showAdminView(); }
         },
         'admin_0': async () => {
-            const p = prompt("Potwierdź hasłem:");
-            if(p && await checkAdminPassword(p)) {
-                localStorage.setItem('defaultView', 'user');
-                showModal('Sukces', 'Panel użytkownika ustawiony jako domyślny.');
-                switchToUser();
-            }
+            const p = prompt("Potwierdź hasłem:"); if(p&&await checkAdminPassword(p)) { localStorage.setItem('defaultView', 'user'); showModal('Sukces', 'Panel użytkownika domyślny.'); switchToUser(); }
         },
         'passwd': async () => {
             const newPass1 = prompt("Wpisz nowe hasło:"); if (newPass1 === null) return;
@@ -1232,12 +1210,8 @@
         const userInput = prompt("Wpisz hasło lub komendę:");
         if (userInput === null) return;
         if (passwordActions.hasOwnProperty(userInput)) {
-            // Check if user is trying to access restricted command from User View
             const restricted = ['admin_1', 'admin_0', 'passwd', 'value_1', 'value_0'];
             const isAdmin = document.getElementById('admin-view').style.display === 'block';
-
-            // Allow execution because these commands prompt for password internally anyway,
-            // ensuring security even if typed from User View.
             passwordActions[userInput]();
         } else {
             if (await checkAdminPassword(userInput)) { showAdminView(); } else { showModal("Błąd", "Niepoprawne hasło lub komenda!"); }
@@ -1687,6 +1661,7 @@
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'item-content-wrapper';
 
+                // SQL Tag
                 const sourceTagHtml = getSourceTag(req.source);
 
                 let notesText = req.notes || '';
@@ -1790,6 +1765,7 @@
             item.dataset.source = note.source;
             if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
 
+            // Source Tag
             const sourceTagHtml = getSourceTag(note.source);
 
             const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title} ${sourceTagHtml}</span>
@@ -2392,6 +2368,14 @@
         themeToggleButtons.forEach(btn => btn.onclick = toggleTheme);
         document.querySelectorAll('.hamburger-btn').forEach(btn => { btn.onclick = () => btn.closest('.nav-bar').querySelector('.nav-links').classList.toggle('open'); });
 
+        // --- SEARCH INPUT LISTENERS (FIX) ---
+        ['user', 'admin'].forEach(prefix => {
+            const render = () => { displayLimit = 100; renderInventory(prefix === 'admin'); };
+            document.getElementById(`${prefix}-inv-search-name`)?.addEventListener('input', render);
+            document.getElementById(`${prefix}-inv-search-code`)?.addEventListener('input', render);
+            document.getElementById(`${prefix}-inv-sort`)?.addEventListener('change', render);
+        });
+
         document.body.addEventListener('click', (e) => {
             const navLink = e.target.closest('a[data-page]');
             if (navLink) { e.preventDefault(); showPage(navLink.dataset.page); }
@@ -2432,7 +2416,11 @@
                 const prefix = isAdmin ? 'admin' : 'user';
                 const codeInput = document.getElementById(`${prefix}-inv-search-code`);
                 if(codeInput) {
-                    codeInput.value = code; renderInventory(isAdmin); scannerBuffer = ""; e.preventDefault();
+                    codeInput.value = code;
+                    displayLimit = 100; // Reset pagination limit on scan
+                    renderInventory(isAdmin);
+                    scannerBuffer = "";
+                    e.preventDefault();
                 }
             }
         });
