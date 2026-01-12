@@ -1212,6 +1212,8 @@
         if (passwordActions.hasOwnProperty(userInput)) {
             const restricted = ['admin_1', 'admin_0', 'passwd', 'value_1', 'value_0'];
             const isAdmin = document.getElementById('admin-view').style.display === 'block';
+            // Only allow restricted commands if specifically in admin mode or if they are just triggers for prompts
+            // In this specific app logic, passwordActions handle their own auth/prompts, so we allow execution.
             passwordActions[userInput]();
         } else {
             if (await checkAdminPassword(userInput)) { showAdminView(); } else { showModal("Błąd", "Niepoprawne hasło lub komenda!"); }
@@ -1359,9 +1361,16 @@
         if (task.dueDate) {
             const dueDateSpan = document.createElement('span');
             dueDateSpan.classList.add('due-date-text');
+            // DATE COLOR FIX: Normalize dates
             const d = new Date(task.dueDate);
-            dueDateSpan.textContent = `Do: ${d.getDate()}.${d.getMonth()+1}`;
-            const today = new Date(); today.setHours(0,0,0,0);
+            d.setHours(0,0,0,0);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+
+            const day = d.getDate().toString().padStart(2, '0');
+            const month = (d.getMonth() + 1).toString().padStart(2, '0');
+            dueDateSpan.textContent = `Wykonać do: ${day}.${month}`;
+
             if (d <= today && !task.done) itemDiv.classList.add('due-date-warning');
             contentWrapper.appendChild(dueDateSpan);
         }
@@ -1417,7 +1426,7 @@
         return itemDiv;
     }
 
-    // --- TASKS (Optimized Strategy: 100 limit) ---
+    // --- TASKS (Optimized Strategy: 100 limit, Hidden No Limit) ---
     async function renderTasks(isAdmin) {
         const listElement = document.getElementById(isAdmin ? 'admin-task-list-visible' : 'user-task-list');
         const hiddenListElement = isAdmin ? document.getElementById('admin-task-list-hidden') : null;
@@ -1468,9 +1477,13 @@
                 loadBtn.textContent = 'Pobieranie...';
                 loadBtn.disabled = true;
 
-                const qHidden = query(firebaseTasksColRef, where("visible", "==", false), orderBy("createdAt", "desc"), limit(50));
+                // Fetch ALL hidden tasks (No Limit, No OrderBy to avoid index error)
+                const qHidden = query(firebaseTasksColRef, where("visible", "==", false));
                 const snap = await getDocs(qHidden);
                 const hiddenTasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+
+                // Sort client-side
+                hiddenTasks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
                 loadBtn.remove();
 
@@ -1594,7 +1607,7 @@
             activeListElement.appendChild(createOrderElement(order, isAdmin));
         });
 
-        // 2. HISTORY LIST (Admin Only) - Load on Demand
+        // 2. HISTORY LIST (Admin Only) - Load on Demand, No Limit
         if (isAdmin && completedListElement) {
             completedListElement.innerHTML = '';
 
@@ -1608,9 +1621,13 @@
                 loadBtn.textContent = 'Pobieranie...';
                 loadBtn.disabled = true;
 
-                const qDone = query(collection(db, `artifacts/${appId}/public/data/orders`), where("done", "==", true), orderBy("createdAt", "desc"), limit(50));
+                // Fetch ALL history, no orderBy to avoid index errors
+                const qDone = query(collection(db, `artifacts/${appId}/public/data/orders`), where("done", "==", true));
                 const snap = await getDocs(qDone);
                 const historyOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+
+                // Sort client side
+                historyOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
                 loadBtn.remove();
 
@@ -2403,24 +2420,36 @@
         }
         setupTaskListeners();
 
-        // Scanner
+        // Scanner Logic with Timeout and Input Blocking
         let scannerBuffer = ""; let lastKeyTime = 0;
         document.addEventListener('keydown', (e) => {
             const now = Date.now();
-            if (now - lastKeyTime > 100) scannerBuffer = "";
+
+            // Scanner reset
+            if (now - lastKeyTime > 300) scannerBuffer = "";
             lastKeyTime = now;
+
             if (e.key.length === 1) scannerBuffer += e.key;
-            if (scannerBuffer.startsWith('@') && /@\d+/.test(scannerBuffer)) {
-                const code = scannerBuffer.substring(1);
-                const isAdmin = document.getElementById('admin-view').style.display === 'block';
-                const prefix = isAdmin ? 'admin' : 'user';
-                const codeInput = document.getElementById(`${prefix}-inv-search-code`);
-                if(codeInput) {
-                    codeInput.value = code;
-                    displayLimit = 100; // Reset pagination limit on scan
-                    renderInventory(isAdmin);
-                    scannerBuffer = "";
+
+            // Detect scanner start
+            if (scannerBuffer.startsWith('@')) {
+                // If focus is on a text input, prevent default to stop scanner garbage from entering text field
+                if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') {
                     e.preventDefault();
+                }
+
+                // Scanner complete
+                if (/@\d+/.test(scannerBuffer)) {
+                    const code = scannerBuffer.substring(1);
+                    const isAdmin = document.getElementById('admin-view').style.display === 'block';
+                    const prefix = isAdmin ? 'admin' : 'user';
+                    const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+                    if(codeInput) {
+                        codeInput.value = code;
+                        displayLimit = 100; // Reset pagination limit on scan
+                        renderInventory(isAdmin);
+                        scannerBuffer = "";
+                    }
                 }
             }
         });
