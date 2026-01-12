@@ -69,35 +69,18 @@
 
         /* --- FILTERS --- */
         .filter-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-            background: var(--surface-light);
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid var(--border-light);
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+            background: var(--surface-light); padding: 10px; border-radius: 5px; border: 1px solid var(--border-light);
         }
-        .dark-mode .filter-bar {
-            background: var(--surface-dark);
-            border-color: var(--border-dark);
-        }
-        .filter-bar select {
-            padding: 6px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
+        .dark-mode .filter-bar { background: var(--surface-dark); border-color: var(--border-dark); }
+        .filter-bar select { padding: 6px; border-radius: 4px; border: 1px solid #ccc; }
 
         /* --- ITEM ROWS --- */
         .item-row {
             border-bottom: 1px solid var(--border-light); padding: 10px 5px;
             display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
         }
-        .item-row.done {
-            color: red !important;
-            text-decoration: line-through;
-            background-color: #f9f9f9;
-        }
+        .item-row.done { color: red !important; text-decoration: line-through; background-color: #f9f9f9; }
         .item-row.priority { color: var(--priority-color); font-weight: bold; }
         .item-row.user-submitted { color: var(--user-task-color); }
         .item-row.user-submitted.done, .item-row.priority.done { color: red !important; }
@@ -123,30 +106,51 @@
             width: 100%; border-collapse: collapse; background: var(--surface-light);
             border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        .inventory-table th, .inventory-table td {
-            padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-light);
-        }
+        .inventory-table th, .inventory-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-light); }
         .inventory-table th { background-color: #f8f9fa; font-weight: bold; color: #555; cursor: pointer; }
         .inventory-table tr:hover { background-color: rgba(0,0,0,0.02); }
         .price-tag { font-weight: bold; color: #28a745; }
-
-        /* Updated Quantity Badges */
         .quantity-badge {
             background: #fff; border: 1px solid #ddd; color: #000;
             padding: 4px 8px; border-radius: 12px; font-size: 0.9em; font-weight: bold;
         }
         .quantity-badge.out { background: #dc3545; color: #fff; border-color: #dc3545; }
-
         .load-more-container { text-align: center; margin-top: 15px; padding-bottom: 20px; }
         .load-more-btn { background-color: #6c757d; width: 100%; max-width: 300px; }
-
-        /* --- PRICE HIDING LOGIC --- */
         #user-inventory.price-hidden .inventory-table th:nth-child(4),
         #user-inventory.price-hidden .inventory-table td:nth-child(4),
         #admin-inventory.price-hidden .inventory-table th:nth-child(4),
-        #admin-inventory.price-hidden .inventory-table td:nth-child(4) {
-            display: none;
+        #admin-inventory.price-hidden .inventory-table td:nth-child(4) { display: none; }
+
+        /* --- CONTACTS MODULE STYLES (NOWE) --- */
+        .company-card {
+            padding: 15px; border-bottom: 1px solid var(--border-light);
+            cursor: pointer; transition: background-color 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
         }
+        .company-card:hover { background-color: rgba(0,0,0,0.05); }
+        .dark-mode .company-card:hover { background-color: rgba(255,255,255,0.05); }
+        .dark-mode .company-card { border-bottom-color: var(--border-dark); }
+
+        .contact-card {
+            background: var(--surface-light); border: 1px solid var(--border-light);
+            border-radius: 8px; padding: 15px; margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .dark-mode .contact-card { background: #2c2c2c; border-color: #444; }
+
+        .contact-role { font-weight: bold; font-size: 1.1em; margin-bottom: 8px; display: block; color: var(--priority-color); }
+        .contact-detail { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; color: var(--text-light); }
+        .dark-mode .contact-detail { color: var(--text-dark); }
+        .contact-detail a { color: var(--user-task-color); text-decoration: none; }
+        .contact-actions {
+            margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;
+            text-align: right;
+        }
+        .dark-mode .contact-actions { border-top-color: #444; }
+        .contact-actions button { font-size: 0.8em; padding: 4px 8px; }
+
 
         h2, h3 { color: var(--text-light); }
         form {
@@ -157,132 +161,37 @@
             padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; resize: none;
         }
 
-        /* --- CUSTOM DROPDOWN (MULTI-SELECT) --- */
-        .custom-dropdown {
-            position: relative;
-            margin-bottom: 10px;
-            margin-right: 10px;
-            min-width: 200px;
-            display: inline-block;
-            vertical-align: top;
-        }
-
+        /* --- CUSTOM DROPDOWN --- */
+        .custom-dropdown { position: relative; margin-bottom: 10px; margin-right: 10px; min-width: 200px; display: inline-block; vertical-align: top; }
         .dropdown-selected {
-            background-color: var(--surface-light);
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 8px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 19px;
-            user-select: none;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            background-color: var(--surface-light); border: 1px solid #ccc; border-radius: 4px; padding: 8px;
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center; min-height: 19px;
+            user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-
-        .dropdown-selected:after {
-            content: '▼';
-            font-size: 0.8em;
-            margin-left: 10px;
-            color: #666;
-        }
-
+        .dropdown-selected:after { content: '▼'; font-size: 0.8em; margin-left: 10px; color: #666; }
         .dropdown-options {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: var(--surface-light);
-            border: 1px solid #ccc;
-            border-radius: 0 0 4px 4px;
-            z-index: 1000;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            box-sizing: border-box;
+            display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 200px; overflow-y: auto;
+            background-color: var(--surface-light); border: 1px solid #ccc; border-radius: 0 0 4px 4px;
+            z-index: 1000; box-shadow: 0 4px 8px rgba(0,0,0,0.1); box-sizing: border-box;
         }
+        .dropdown-options.open { display: block; }
+        .dropdown-option { padding: 8px 10px; display: flex; align-items: center; cursor: pointer; border-bottom: 1px solid var(--border-light); transition: background-color 0.2s; }
+        .dropdown-option:last-child { border-bottom: none; }
+        .dropdown-option:hover { background-color: rgba(0,0,0,0.05); }
+        .dropdown-option input[type="checkbox"] { margin-right: 10px; cursor: pointer; }
+        .dark-mode .dropdown-selected { background-color: #2a2a2a; border-color: #444; color: var(--text-dark); }
+        .dark-mode .dropdown-options { background-color: #2a2a2a; border-color: #444; }
+        .dark-mode .dropdown-option { border-bottom-color: #444; color: var(--text-dark); }
+        .dark-mode .dropdown-option:hover { background-color: rgba(255,255,255,0.05); }
 
-        .dropdown-options.open {
-            display: block;
-        }
-
-        .dropdown-option {
-            padding: 8px 10px;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            border-bottom: 1px solid var(--border-light);
-            transition: background-color 0.2s;
-        }
-
-        .dropdown-option:last-child {
-            border-bottom: none;
-        }
-
-        .dropdown-option:hover {
-            background-color: rgba(0,0,0,0.05);
-        }
-
-        .dropdown-option input[type="checkbox"] {
-            margin-right: 10px;
-            cursor: pointer;
-        }
-
-        /* Dark Mode dla Dropdowna */
-        .dark-mode .dropdown-selected {
-            background-color: #2a2a2a;
-            border-color: #444;
-            color: var(--text-dark);
-        }
-        .dark-mode .dropdown-options {
-            background-color: #2a2a2a;
-            border-color: #444;
-        }
-        .dark-mode .dropdown-option {
-            border-bottom-color: #444;
-            color: var(--text-dark);
-        }
-        .dark-mode .dropdown-option:hover {
-            background-color: rgba(255,255,255,0.05);
-        }
-
-        /* --- TASK FORM LAYOUT FIXES (DESKTOP SINGLE ROW) --- */
         @media (min-width: 769px) {
-            #user-task-form, #admin-task-form {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                flex-wrap: nowrap;
-            }
-            #user-task-form h3, #admin-task-form h3 {
-                display: none;
-            }
-            #user-task-form input[type="text"], #admin-task-form input[type="text"] {
-                flex: 2;
-                margin-right: 0;
-            }
-            #user-task-form .custom-dropdown, #admin-task-form .custom-dropdown {
-                flex: 1;
-                margin-bottom: 0;
-                margin-right: 0;
-                min-width: 180px;
-            }
-            #user-task-form input[type="date"], #admin-task-form input[type="date"] {
-                margin-top: 0 !important;
-                margin-right: 0;
-                width: auto;
-            }
-            #user-task-form button, #admin-task-form button {
-                margin-left: 0;
-                white-space: nowrap;
-            }
-            .desktop-hide-label {
-                display: none !important;
-            }
+            #user-task-form, #admin-task-form { display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
+            #user-task-form h3, #admin-task-form h3 { display: none; }
+            #user-task-form input[type="text"], #admin-task-form input[type="text"] { flex: 2; margin-right: 0; }
+            #user-task-form .custom-dropdown, #admin-task-form .custom-dropdown { flex: 1; margin-bottom: 0; margin-right: 0; min-width: 180px; }
+            #user-task-form input[type="date"], #admin-task-form input[type="date"] { margin-top: 0 !important; margin-right: 0; width: auto; }
+            #user-task-form button, #admin-task-form button { margin-left: 0; white-space: nowrap; }
+            .desktop-hide-label { display: none !important; }
         }
 
         .vacation-request-form { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
@@ -292,13 +201,7 @@
         button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; transition: background-color 0.3s; }
         button:disabled { background-color: #aaa; cursor: not-allowed; }
         .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
-
-        .item-row button.reject-btn {
-            background-color: var(--reject-color) !important;
-            color: white;
-            border: 1px solid var(--reject-color);
-        }
-
+        .item-row button.reject-btn { background-color: var(--reject-color) !important; color: white; border: 1px solid var(--reject-color); }
         .google-sheet-iframe { width: 100%; height: 75vh; border: 1px solid var(--border-light); border-radius: 5px; }
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .page-header a { display: inline-block; padding: 8px 16px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9em; transition: background-color 0.3s; }
@@ -332,8 +235,6 @@
         .dark-mode .quantity-badge { background: #333; color: #fff; border-color: #555; }
         .dark-mode .quantity-badge.out { background: #5c181f; color: #ff6b6b; border-color: #5c181f; }
         .dark-mode .source-tag.firebase { color: black; }
-
-        /* DARK MODE VACATION FIX */
         .dark-mode .vacation-request.accepted { background-color: #051b0b; }
         .dark-mode .vacation-request.rejected { background-color: #2c0b0e; }
         .dark-mode .request-notes { color: #aaa; }
@@ -416,140 +317,32 @@
             .order-item .order-buttons button { margin-left: 0; margin-right: 10px; }
             .vacation-request-form { flex-direction: column; align-items: stretch; gap: 10px; }
             .vacation-request-form .vacation-form-row { flex: initial; }
-
-            /* Inventory Mobile */
             .inventory-table thead { display: none; }
             .inventory-table tr { display: block; border-bottom: 2px solid #444; margin-bottom: 10px; }
             .inventory-table td { display: flex; justify-content: space-between; align-items: center; text-align: right; padding: 10px; }
             .inventory-table td::before { content: attr(data-label); font-weight: bold; float: left; }
-
-            /* --- ZMIANY W LAYOUCIE WNIOSKÓW (KARTY) --- */
-            .vacation-request {
-                flex-direction: column;
-                align-items: flex-start;
-                padding: 15px;
-                margin-bottom: 15px;
-                background: var(--surface-light);
-                border: 1px solid var(--border-light);
-                border-radius: 8px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            }
-            .dark-mode .vacation-request {
-                background: #1e1e1e;
-                border-color: #333;
-            }
-
-            /* Wrapper treści wewnątrz karty */
-            .vacation-request .item-content-wrapper {
-                flex-direction: column;
-                align-items: flex-start;
-                width: 100%;
-                gap: 8px;
-            }
-
-            /* Imię pracownika - ZMIANA KOLORU NA ZWYKŁY */
-            .vacation-request .item-content-wrapper > span:nth-child(1) {
-                font-size: 1.2em;
-                color: var(--text-light); /* Używamy koloru tekstu motywu, nie niebieskiego */
-                font-weight: bold;
-                display: block;
-                width: 100%;
-                margin-left: 0 !important;
-            }
-            .dark-mode .vacation-request .item-content-wrapper > span:nth-child(1) {
-                color: var(--text-dark);
-            }
-
-            /* Daty */
-            .vacation-request .item-content-wrapper > span:nth-child(2) {
-                color: #555;
-                font-weight: 500;
-                display: block;
-                margin-left: 0 !important;
-            }
-            .dark-mode .vacation-request .item-content-wrapper > span:nth-child(2) {
-                color: #aaa;
-            }
-            .vacation-request .item-content-wrapper > span:nth-child(2)::before {
-                content: '📅 ';
-            }
-
-            /* Status */
-            .vacation-request .request-status {
-                display: inline-block;
-                padding: 4px 8px;
-                border-radius: 4px;
-                background-color: rgba(0,0,0,0.05);
-                margin-left: 0 !important;
-                margin-top: 5px;
-            }
-            .dark-mode .vacation-request .request-status {
-                background-color: rgba(255,255,255,0.1);
-            }
-
-            /* Notatka */
-            .vacation-request .request-notes {
-                text-align: left !important;
-                padding: 10px;
-                background: #f9f9f9;
-                border-radius: 4px;
-                width: 100%;
-                box-sizing: border-box;
-                font-size: 0.9em;
-                margin-top: 5px;
-                display: block;
-            }
-            .dark-mode .vacation-request .request-notes {
-                background: #2c2c2c;
-            }
-
-            /* Kontener przycisków */
-            .vacation-request .right-aligned-info {
-                width: 100%;
-                margin-top: 15px;
-                text-align: center;
-                padding-top: 10px;
-                border-top: 1px solid var(--border-light);
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: flex-end;
-            }
-            .dark-mode .vacation-request .right-aligned-info {
-                border-top-color: #333;
-            }
-
-            /* Przyciski */
-            .vacation-request button {
-                padding: 10px 15px;
-                margin: 5px;
-                flex: 1 0 auto;
-                min-width: 80px;
-            }
-
-            .vacation-request .right-aligned-info > div {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 5px;
-                width: 100%;
-                justify-content: flex-end;
-            }
+            .vacation-request { flex-direction: column; align-items: flex-start; padding: 15px; margin-bottom: 15px; background: var(--surface-light); border: 1px solid var(--border-light); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+            .dark-mode .vacation-request { background: #1e1e1e; border-color: #333; }
+            .vacation-request .item-content-wrapper { flex-direction: column; align-items: flex-start; width: 100%; gap: 8px; }
+            .vacation-request .item-content-wrapper > span:nth-child(1) { font-size: 1.2em; color: var(--text-light); font-weight: bold; display: block; width: 100%; margin-left: 0 !important; }
+            .dark-mode .vacation-request .item-content-wrapper > span:nth-child(1) { color: var(--text-dark); }
+            .vacation-request .item-content-wrapper > span:nth-child(2) { color: #555; font-weight: 500; display: block; margin-left: 0 !important; }
+            .dark-mode .vacation-request .item-content-wrapper > span:nth-child(2) { color: #aaa; }
+            .vacation-request .item-content-wrapper > span:nth-child(2)::before { content: '📅 '; }
+            .vacation-request .request-status { display: inline-block; padding: 4px 8px; border-radius: 4px; background-color: rgba(0,0,0,0.05); margin-left: 0 !important; margin-top: 5px; }
+            .dark-mode .vacation-request .request-status { background-color: rgba(255,255,255,0.1); }
+            .vacation-request .request-notes { text-align: left !important; padding: 10px; background: #f9f9f9; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 0.9em; margin-top: 5px; display: block; }
+            .dark-mode .vacation-request .request-notes { background: #2c2c2c; }
+            .vacation-request .right-aligned-info { width: 100%; margin-top: 15px; text-align: center; padding-top: 10px; border-top: 1px solid var(--border-light); display: flex; flex-wrap: wrap; justify-content: flex-end; }
+            .dark-mode .vacation-request .right-aligned-info { border-top-color: #333; }
+            .vacation-request button { padding: 10px 15px; margin: 5px; flex: 1 0 auto; min-width: 80px; }
+            .vacation-request .right-aligned-info > div { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; justify-content: flex-end; }
         }
 
         /* --- EASTER EGGS --- */
-        /* JEB_ (MINECRAFT SHEEP) */
-        @keyframes rainbow-cycle {
-            0% { filter: hue-rotate(0deg); }
-            100% { filter: hue-rotate(360deg); }
-        }
-        .jeb-mode {
-            animation: rainbow-cycle 2s linear infinite;
-        }
-
-        /* DINNERBONE / GRUMM */
-        .upside-down-mode {
-            transform: rotate(180deg);
-            min-height: 100vh;
-        }
+        @keyframes rainbow-cycle { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+        .jeb-mode { animation: rainbow-cycle 2s linear infinite; }
+        .upside-down-mode { transform: rotate(180deg); min-height: 100vh; }
     </style>
 </head>
 <body>
@@ -579,16 +372,39 @@
         <div style="text-align: left;">
             <label style="font-size: 0.9em; color: #666;">Treść:</label>
             <input type="text" id="edit-task-content" class="modal-input" style="width: 100%; box-sizing: border-box; margin-bottom: 15px;">
-
             <label style="font-size: 0.9em; color: #666;">Dla kogo:</label>
             <div id="edit-task-assignees-container" style="margin-bottom: 15px;"></div>
-
             <label style="font-size: 0.9em; color: #666;">Termin:</label>
             <input type="date" id="edit-task-date" class="modal-input" style="width: 100%; box-sizing: border-box; margin-bottom: 20px;">
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 10px;">
             <button id="edit-task-cancel-btn" style="background-color: #6c757d;">Anuluj</button>
             <button id="edit-task-save-btn">Zapisz</button>
+        </div>
+    </div>
+</div>
+
+<div id="company-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h4 id="company-modal-title">Dodaj Firmę</h4>
+        <input type="text" id="company-name-input" class="modal-input" placeholder="Nazwa firmy" style="width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="company-modal-cancel" style="background-color: #6c757d;">Anuluj</button>
+            <button id="company-modal-save">Zapisz</button>
+        </div>
+    </div>
+</div>
+
+<div id="contact-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h4 id="contact-modal-title">Dane Kontaktu</h4>
+        <input type="text" id="contact-label-input" class="modal-input" placeholder="Rola / Osoba (np. Biuro, Przedstawiciel)" style="width: 100%; box-sizing: border-box; margin-bottom: 10px;">
+        <input type="tel" id="contact-phone-input" class="modal-input" placeholder="Telefon" style="width: 100%; box-sizing: border-box; margin-bottom: 10px;">
+        <input type="email" id="contact-email-input" class="modal-input" placeholder="Email" style="width: 100%; box-sizing: border-box; margin-bottom: 10px;">
+        <input type="text" id="contact-note-input" class="modal-input" placeholder="Dodatkowa notatka" style="width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="contact-modal-cancel" style="background-color: #6c757d;">Anuluj</button>
+            <button id="contact-modal-save">Zapisz</button>
         </div>
     </div>
 </div>
@@ -616,17 +432,13 @@
             <h3>Dodaj zadanie</h3>
             <input type="text" id="user-task-input" placeholder="Treść zadania" required>
             <label class="desktop-hide-label" style="display:block; margin-bottom:5px; font-size:0.9em; color:#666;">Dla kogo:</label>
-            <div id="user-assignee-container">
-                Ładowanie...
-            </div>
+            <div id="user-assignee-container">Ładowanie...</div>
             <input type="date" id="user-due-date-input" title="Termin wykonania" style="margin-top:10px;">
             <button type="submit">Dodaj</button>
         </form>
         <div class="filter-bar">
             <label for="user-task-filter-person">Filtruj wg osoby:</label>
-            <select id="user-task-filter-person">
-                <option value="">Wszyscy</option>
-            </select>
+            <select id="user-task-filter-person"><option value="">Wszyscy</option></select>
         </div>
         <div id="user-task-list">Ładowanie...</div>
     </div>
@@ -648,9 +460,7 @@
         <form id="user-schedule-request-form" class="vacation-request-form">
             <div class="vacation-form-row">
                 <label for="user-employee-name">Imię i nazwisko:</label>
-                <select id="user-employee-name" required>
-                    <option value="">Wybierz...</option>
-                </select>
+                <select id="user-employee-name" required><option value="">Wybierz...</option></select>
             </div>
             <div class="vacation-form-row"><label for="user-start-date">Data od:</label><input type="date" id="user-start-date" required></div>
             <div class="vacation-form-row"><label for="user-end-date">Data do:</label><input type="date" id="user-end-date" required></div>
@@ -660,9 +470,7 @@
         <h3>Zgłoszone wnioski</h3>
         <div class="filter-bar">
             <label for="user-request-filter-person">Filtruj wg osoby:</label>
-            <select id="user-request-filter-person">
-                <option value="">Wszyscy</option>
-            </select>
+            <select id="user-request-filter-person"><option value="">Wszyscy</option></select>
         </div>
         <div id="user-schedule-request-list"></div>
     </div>
@@ -670,16 +478,9 @@
         <h2>Magazyn</h2>
         <div id="user-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
         <div class="inventory-controls">
-            <div class="filter-group">
-                <label>Nazwa produktu:</label>
-                <input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę...">
-            </div>
-            <div class="filter-group">
-                <label>Kod kreskowy (lub @skan):</label>
-                <input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
-            </div>
-            <div class="filter-group">
-                <label>Sortuj według:</label>
+            <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę..."></div>
+            <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
+            <div class="filter-group"><label>Sortuj według:</label>
                 <select id="user-inv-sort">
                     <option value="name_asc">Nazwa (A-Z)</option>
                     <option value="name_desc">Nazwa (Z-A)</option>
@@ -689,25 +490,14 @@
                     <option value="qty_desc">Ilość (malejąco)</option>
                 </select>
             </div>
-            <div class="filter-group" style="flex-direction: row; align-items: center; gap: 10px;">
-                <button id="user-toggle-zeros-btn" style="margin:0">Ukryj stany 0</button>
-            </div>
+            <div class="filter-group" style="flex-direction: row; align-items: center; gap: 10px;"><button id="user-toggle-zeros-btn" style="margin:0">Ukryj stany 0</button></div>
         </div>
         <div id="user-inventory-count" style="margin-bottom: 10px; font-size: 0.9em; color: #888;"></div>
         <table class="inventory-table">
-            <thead>
-            <tr>
-                <th>Produkt</th>
-                <th>Kod</th>
-                <th>Ilość</th>
-                <th>Cena (Brutto)</th>
-            </tr>
-            </thead>
+            <thead><tr><th>Produkt</th><th>Kod</th><th>Ilość</th><th>Cena (Brutto)</th></tr></thead>
             <tbody id="user-inventory-list"></tbody>
         </table>
-        <div class="load-more-container">
-            <button id="user-load-more-btn" class="load-more-btn" style="display: none;">Pokaż więcej</button>
-        </div>
+        <div class="load-more-container"><button id="user-load-more-btn" class="load-more-btn" style="display: none;">Pokaż więcej</button></div>
     </div>
     <div id="user-notes" class="content">
         <h2>Notatnik</h2>
@@ -744,6 +534,7 @@
             <a data-page="admin-inventory">📦 Magazyn</a>
             <a data-page="admin-schedule">📅 Grafik</a>
             <a data-page="admin-schedule-requests">📝 Wnioski</a>
+            <a data-page="admin-contacts">📞 Kontakty</a>
             <a data-page="admin-notes">📒 Notatnik</a>
             <a data-page="admin-employees">👥 Pracownicy</a>
             <a id="switch-to-user-btn">👤 Panel użytkownika</a>
@@ -761,18 +552,14 @@
             <h3>Dodaj zadanie</h3>
             <input type="text" id="admin-task-input" placeholder="Treść zadania" required>
             <label class="desktop-hide-label" style="display:block; margin-bottom:5px; font-size:0.9em; color:#666;">Dla kogo:</label>
-            <div id="admin-assignee-container">
-                Ładowanie pracowników...
-            </div>
+            <div id="admin-assignee-container">Ładowanie pracowników...</div>
             <input type="date" id="admin-due-date-input" title="Termin wykonania" style="margin-top:10px;">
             <button type="submit">Dodaj</button>
         </form>
         <h3>Lista zadań</h3>
         <div class="filter-bar">
             <label for="admin-task-filter-person">Filtruj wg osoby:</label>
-            <select id="admin-task-filter-person">
-                <option value="">Wszyscy</option>
-            </select>
+            <select id="admin-task-filter-person"><option value="">Wszyscy</option></select>
         </div>
         <div id="admin-task-list-visible">Ładowanie...</div>
         <h3>Zadania ukryte</h3>
@@ -799,16 +586,9 @@
             <a href="https://drive.google.com/file/d/1rleT0kRGo11zloRZge6lY9qKpGcpueE0/view?usp=drive_link" target="_blank">📱 App</a>
         </div>
         <div class="inventory-controls">
-            <div class="filter-group">
-                <label>Nazwa produktu:</label>
-                <input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę...">
-            </div>
-            <div class="filter-group">
-                <label>Kod kreskowy (lub @skan):</label>
-                <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*">
-            </div>
-            <div class="filter-group">
-                <label>Sortuj według:</label>
+            <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę..."></div>
+            <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
+            <div class="filter-group"><label>Sortuj według:</label>
                 <select id="admin-inv-sort">
                     <option value="name_asc">Nazwa (A-Z)</option>
                     <option value="name_desc">Nazwa (Z-A)</option>
@@ -818,25 +598,14 @@
                     <option value="qty_desc">Ilość (malejąco)</option>
                 </select>
             </div>
-            <div class="filter-group" style="flex-direction: row; align-items: center; gap: 10px;">
-                <button id="admin-toggle-zeros-btn" style="margin:0">Ukryj stany 0</button>
-            </div>
+            <div class="filter-group" style="flex-direction: row; align-items: center; gap: 10px;"><button id="admin-toggle-zeros-btn" style="margin:0">Ukryj stany 0</button></div>
         </div>
         <div id="admin-inventory-count" style="margin-bottom: 10px; font-size: 0.9em; color: #888;"></div>
         <table class="inventory-table">
-            <thead>
-            <tr>
-                <th>Produkt</th>
-                <th>Kod</th>
-                <th>Ilość</th>
-                <th>Cena</th>
-            </tr>
-            </thead>
+            <thead><tr><th>Produkt</th><th>Kod</th><th>Ilość</th><th>Cena</th></tr></thead>
             <tbody id="admin-inventory-list"></tbody>
         </table>
-        <div class="load-more-container">
-            <button id="admin-load-more-btn" class="load-more-btn" style="display: none;">Pokaż więcej</button>
-        </div>
+        <div class="load-more-container"><button id="admin-load-more-btn" class="load-more-btn" style="display: none;">Pokaż więcej</button></div>
     </div>
     <div id="admin-recurring-tasks" class="content">
         <h2>Zadania cykliczne</h2>
@@ -895,9 +664,7 @@
         <form id="admin-schedule-request-form" class="vacation-request-form">
             <div class="vacation-form-row">
                 <label for="admin-employee-name">Imię i nazwisko:</label>
-                <select id="admin-employee-name" required>
-                    <option value="">Wybierz...</option>
-                </select>
+                <select id="admin-employee-name" required><option value="">Wybierz...</option></select>
             </div>
             <div class="vacation-form-row"><label for="admin-start-date">Data od:</label><input type="date" id="admin-start-date" required></div>
             <div class="vacation-form-row"><label for="admin-end-date">Data do:</label><input type="date" id="admin-end-date" required></div>
@@ -913,14 +680,38 @@
         </div>
         <div class="filter-bar">
             <label for="admin-request-filter-person">Filtruj wg osoby:</label>
-            <select id="admin-request-filter-person">
-                <option value="">Wszyscy</option>
-            </select>
+            <select id="admin-request-filter-person"><option value="">Wszyscy</option></select>
         </div>
         <h3>Widoczne wnioski</h3>
         <div id="admin-schedule-request-list-visible">Ładowanie...</div>
         <h3>Ukryte wnioski</h3>
         <div id="admin-schedule-request-list-hidden">Ładowanie...</div>
+    </div>
+
+    <div id="admin-contacts" class="content">
+        <h2>Baza Kontaktów</h2>
+        <div class="inventory-controls">
+            <div class="filter-group" style="flex-grow: 1;">
+                <label>Szukaj firmy:</label>
+                <input type="text" id="admin-company-search" placeholder="🔍 Nazwa firmy...">
+            </div>
+            <div class="filter-group" style="flex: 0;">
+                <label>&nbsp;</label>
+                <button id="add-company-btn" style="white-space: nowrap;">+ Nowa Firma</button>
+            </div>
+        </div>
+        <div id="admin-company-list">Ładowanie...</div>
+    </div>
+
+    <div id="admin-company-details" class="content">
+        <div class="page-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button id="back-to-companies-btn" style="background-color: #6c757d; margin:0;">&larr; Wróć</button>
+                <h2 id="detail-company-name" style="margin:0;">Nazwa Firmy</h2>
+            </div>
+            <button id="add-contact-btn">+ Dodaj Kontakt</button>
+        </div>
+        <div id="admin-contact-list" style="margin-top: 20px;"></div>
     </div>
 
     <div id="admin-employees" class="content">
@@ -934,10 +725,8 @@
             <input type="text" id="admin-emp-note" placeholder="Notatka (opcjonalnie)" style="width: 100%; box-sizing: border-box; margin-top: 10px;">
             <button type="submit" style="margin-top: 10px; margin-left: 0;">Dodaj pracownika</button>
         </form>
-
         <h3>Aktywni Pracownicy</h3>
         <div id="admin-employee-list-active">Ładowanie...</div>
-
         <h3>Archiwum</h3>
         <div id="admin-employee-list-archived"></div>
     </div>
@@ -973,11 +762,18 @@
     let currentAdminNoteId = null;
     let inventoryData = [];
     let employeeData = [];
+    let allCompanies = [];
+    let currentCompanyData = null;
     let themeToggleButtons;
     let showZeros = true;
     let displayLimit = 100;
+
+    // USTAWIENIE DOMYŚLNE CENNIKA (0 - ukryte, 1 - widoczne)
+    // Pobiera z localStorage, jeśli brak - domyślnie false (0)
     let showUserPrices = localStorage.getItem('showUserPrices') === '1';
+
     let editingTask = null;
+    let editingContactIndex = -1;
     let lastSavedState = { title: '', content: '' };
 
     // --- OPTIMIZATION STATE ---
@@ -1036,7 +832,9 @@
         'admin-schedule': () => { },
         'admin-schedule-requests': () => renderVacationRequests(true),
         'admin-notes': () => renderNotes(true),
-        'admin-employees': () => loadEmployees(true)
+        'admin-employees': () => loadEmployees(true),
+        'admin-contacts': () => loadCompanies(),
+        'admin-company-details': () => {}
     };
 
     // --- UI UTILITIES ---
@@ -1140,6 +938,7 @@
         const adminContainer = document.getElementById('admin-inventory');
         const userDbInfo = document.getElementById('user-db-info');
 
+        // Sprawdza aktualny stan zmiennej (załadowanej z localStorage)
         if (showUserPrices) {
             if(userContainer) userContainer.classList.remove('price-hidden');
             if(adminContainer) adminContainer.classList.remove('price-hidden');
@@ -1178,8 +977,9 @@
                 } catch (e) { showModal('Błąd', 'Nie udało się zmienić hasła.'); }
             } else { showModal('Błąd', 'Hasła nie są takie same lub pole jest puste.'); }
         },
-        'value_1': async () => { const p=prompt("Hasło:"); if(p&&await checkAdminPassword(p)) { showUserPrices=true; localStorage.setItem('showUserPrices','1'); updatePriceVisibility(); showModal('Sukces','Ceny włączone'); }},
-        'value_0': async () => { const p=prompt("Hasło:"); if(p&&await checkAdminPassword(p)) { showUserPrices=false; localStorage.setItem('showUserPrices','0'); updatePriceVisibility(); showModal('Sukces','Ceny wyłączone'); }},
+        // Zapisywanie ustawienia widoczności cen w localStorage
+        'value_1': async () => { const p=prompt("Hasło:"); if(p&&await checkAdminPassword(p)) { showUserPrices=true; localStorage.setItem('showUserPrices','1'); updatePriceVisibility(); showModal('Sukces','Ceny włączone (zapisano).'); }},
+        'value_0': async () => { const p=prompt("Hasło:"); if(p&&await checkAdminPassword(p)) { showUserPrices=false; localStorage.setItem('showUserPrices','0'); updatePriceVisibility(); showModal('Sukces','Ceny wyłączone (zapisano).'); }},
         'sql': () => {
             showSourceTagsAdmin = !showSourceTagsAdmin;
             showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`);
@@ -1210,10 +1010,6 @@
         const userInput = prompt("Wpisz hasło lub komendę:");
         if (userInput === null) return;
         if (passwordActions.hasOwnProperty(userInput)) {
-            const restricted = ['admin_1', 'admin_0', 'passwd', 'value_1', 'value_0'];
-            const isAdmin = document.getElementById('admin-view').style.display === 'block';
-            // Only allow restricted commands if specifically in admin mode or if they are just triggers for prompts
-            // In this specific app logic, passwordActions handle their own auth/prompts, so we allow execution.
             passwordActions[userInput]();
         } else {
             if (await checkAdminPassword(userInput)) { showAdminView(); } else { showModal("Błąd", "Niepoprawne hasło lub komenda!"); }
@@ -1221,6 +1017,124 @@
     }
 
     const getSourceTag = (source) => showSourceTagsAdmin ? `<span class="source-tag ${source}">${source}</span>` : '';
+
+
+    // --- CONTACTS MODULE LOGIC ---
+
+    async function loadCompanies() {
+        if (!isAuthReady) return;
+        const listEl = document.getElementById('admin-company-list');
+        listEl.innerHTML = 'Ładowanie...';
+
+        try {
+            const q = query(collection(db, `artifacts/${appId}/public/data/companies`), orderBy("name"));
+            const snapshot = await getDocs(q);
+            allCompanies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderCompanyList();
+        } catch (e) {
+            console.error(e);
+            listEl.innerHTML = 'Błąd pobierania firm. Sprawdź konsolę.';
+        }
+    }
+
+    function renderCompanyList() {
+        const listEl = document.getElementById('admin-company-list');
+        const search = document.getElementById('admin-company-search').value.toLowerCase();
+
+        const filtered = allCompanies.filter(c => c.name.toLowerCase().includes(search));
+
+        if (filtered.length === 0) { listEl.innerHTML = '<p style="text-align:center; color:#666;">Brak firm lub brak wyników wyszukiwania.</p>'; return; }
+
+        listEl.innerHTML = '';
+        filtered.forEach(comp => {
+            const div = document.createElement('div');
+            div.className = 'company-card';
+            div.innerHTML = `<span>🏢 <strong>${comp.name}</strong></span> <span>&rsaquo;</span>`;
+            div.onclick = () => openCompanyDetails(comp);
+
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Usuń';
+            delBtn.style.marginLeft = '10px';
+            delBtn.style.backgroundColor = '#dc3545';
+            delBtn.style.fontSize = '0.7em';
+            delBtn.style.float = 'right';
+            delBtn.onclick = async (e) => {
+                e.stopPropagation();
+                if(confirm(`Usunąć firmę ${comp.name} i wszystkie jej kontakty?`)) {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/companies`, comp.id));
+                    loadCompanies();
+                }
+            };
+            const rightSpan = div.lastElementChild;
+            rightSpan.innerHTML = '';
+            rightSpan.appendChild(delBtn);
+
+            listEl.appendChild(div);
+        });
+    }
+
+    function openCompanyDetails(company) {
+        currentCompanyData = company;
+        document.getElementById('detail-company-name').textContent = company.name;
+        document.getElementById('admin-contacts').classList.remove('active');
+        document.getElementById('admin-company-details').classList.add('active');
+        renderContactList();
+    }
+
+    function renderContactList() {
+        const listEl = document.getElementById('admin-contact-list');
+        listEl.innerHTML = '';
+        const contacts = currentCompanyData.contacts || [];
+
+        if (contacts.length === 0) { listEl.innerHTML = '<p style="text-align:center; color:#666;">Brak kontaktów w tej firmie.</p>'; return; }
+
+        contacts.forEach((contact, index) => {
+            const card = document.createElement('div');
+            card.className = 'contact-card';
+
+            let html = `<span class="contact-role">${contact.label}</span>`;
+            if (contact.phone) html += `<div class="contact-detail">📞 <a href="tel:${contact.phone}">${contact.phone}</a></div>`;
+            if (contact.email) html += `<div class="contact-detail">📧 <a href="mailto:${contact.email}">${contact.email}</a></div>`;
+            if (contact.note) html += `<div class="contact-detail">📝 <span style="font-style:italic; color:#777;">${contact.note}</span></div>`;
+
+            html += `<div class="contact-actions">
+                <button class="edit-contact-btn">Edytuj</button>
+                <button class="delete-contact-btn" style="background-color: #dc3545;">Usuń</button>
+            </div>`;
+
+            card.innerHTML = html;
+
+            card.querySelector('.delete-contact-btn').onclick = async () => {
+                if(confirm('Usunąć ten kontakt?')) {
+                    const updatedContacts = contacts.filter((_, i) => i !== index);
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/companies`, currentCompanyData.id), { contacts: updatedContacts });
+                    currentCompanyData.contacts = updatedContacts;
+                    renderContactList();
+                }
+            };
+
+            card.querySelector('.edit-contact-btn').onclick = () => {
+                openContactModal(contact, index);
+            };
+
+            listEl.appendChild(card);
+        });
+    }
+
+    function openCompanyModal() {
+        document.getElementById('company-name-input').value = '';
+        document.getElementById('company-modal').style.display = 'flex';
+    }
+
+    function openContactModal(contact = null, index = -1) {
+        editingContactIndex = index;
+        document.getElementById('contact-label-input').value = contact ? contact.label : '';
+        document.getElementById('contact-phone-input').value = contact ? contact.phone : '';
+        document.getElementById('contact-email-input').value = contact ? contact.email : '';
+        document.getElementById('contact-note-input').value = contact ? contact.note : '';
+        document.getElementById('contact-modal').style.display = 'flex';
+    }
+
 
     // --- INVENTORY ---
     async function loadInventory() {
@@ -1361,7 +1275,6 @@
         if (task.dueDate) {
             const dueDateSpan = document.createElement('span');
             dueDateSpan.classList.add('due-date-text');
-            // DATE COLOR FIX: Normalize dates
             const d = new Date(task.dueDate);
             d.setHours(0,0,0,0);
             const today = new Date();
@@ -1426,7 +1339,7 @@
         return itemDiv;
     }
 
-    // --- TASKS (Optimized Strategy: 100 limit, Hidden No Limit) ---
+    // --- TASKS ---
     async function renderTasks(isAdmin) {
         const listElement = document.getElementById(isAdmin ? 'admin-task-list-visible' : 'user-task-list');
         const hiddenListElement = isAdmin ? document.getElementById('admin-task-list-hidden') : null;
@@ -1434,11 +1347,9 @@
 
         const filterPerson = document.getElementById(isAdmin ? 'admin-task-filter-person' : 'user-task-filter-person').value;
 
-        // 1. SUPABASE
         const { data: supabaseTasks } = await supabase.from('tasks').select('*');
         const formattedSupabaseTasks = (supabaseTasks || []).map(task => ({ ...task, source: 'supabase', createdAt: task.created_at, id: `supabase-${task.id}` }));
 
-        // 2. FIREBASE: Limit 100 Latest Tasks
         const firebaseTasksColRef = collection(db, `artifacts/${appId}/public/data/tasks`);
         const q = query(firebaseTasksColRef, orderBy("createdAt", "desc"), limit(100));
 
@@ -1466,7 +1377,6 @@
 
         if (isAdmin && hiddenListElement) {
             hiddenListElement.innerHTML = '';
-
             const loadBtn = document.createElement('button');
             loadBtn.textContent = 'Załaduj ukryte zadania (Archiwum)';
             loadBtn.style.width = '100%';
@@ -1476,17 +1386,11 @@
             loadBtn.onclick = async () => {
                 loadBtn.textContent = 'Pobieranie...';
                 loadBtn.disabled = true;
-
-                // Fetch ALL hidden tasks (No Limit, No OrderBy to avoid index error)
                 const qHidden = query(firebaseTasksColRef, where("visible", "==", false));
                 const snap = await getDocs(qHidden);
                 const hiddenTasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
-
-                // Sort client-side
                 hiddenTasks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
                 loadBtn.remove();
-
                 if (hiddenTasks.length === 0) {
                     hiddenListElement.innerHTML = '<p>Brak ukrytych zadań.</p>';
                 } else {
@@ -1579,13 +1483,12 @@
         return itemDiv;
     }
 
-    // --- ORDERS (Optimized) ---
+    // --- ORDERS ---
     async function renderOrders(isAdmin) {
         const activeListElement = document.getElementById(isAdmin ? 'admin-order-list-active' : 'user-order-list');
         const completedListElement = isAdmin ? document.getElementById('admin-order-list-completed') : null;
         if (!isAuthReady) { if (activeListElement) activeListElement.innerHTML = 'Ładowanie...'; return; }
 
-        // 1. ACTIVE LIST - Always Fetch Undone
         const { data: supabaseOrders } = await supabase.from('orders').select('*').eq('is_completed', false);
         const formattedSupabaseOrders = (supabaseOrders || []).map(order => ({ ...order, done: order.is_completed, source: 'supabase', createdAt: order.created_at, id: `supabase-${order.id}` }));
 
@@ -1607,10 +1510,8 @@
             activeListElement.appendChild(createOrderElement(order, isAdmin));
         });
 
-        // 2. HISTORY LIST (Admin Only) - Load on Demand, No Limit
         if (isAdmin && completedListElement) {
             completedListElement.innerHTML = '';
-
             const loadBtn = document.createElement('button');
             loadBtn.textContent = 'Pokaż historię zamówień';
             loadBtn.style.width = '100%';
@@ -1620,17 +1521,11 @@
             loadBtn.onclick = async () => {
                 loadBtn.textContent = 'Pobieranie...';
                 loadBtn.disabled = true;
-
-                // Fetch ALL history, no orderBy to avoid index errors
                 const qDone = query(collection(db, `artifacts/${appId}/public/data/orders`), where("done", "==", true));
                 const snap = await getDocs(qDone);
                 const historyOrders = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
-
-                // Sort client side
                 historyOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
                 loadBtn.remove();
-
                 if (historyOrders.length === 0) {
                     completedListElement.innerHTML = '<p>Brak historii.</p>';
                 } else {
@@ -1677,8 +1572,6 @@
                 itemDiv.dataset.id = req.id;
                 const contentWrapper = document.createElement('div');
                 contentWrapper.className = 'item-content-wrapper';
-
-                // SQL Tag
                 const sourceTagHtml = getSourceTag(req.source);
 
                 let notesText = req.notes || '';
@@ -1761,7 +1654,7 @@
         } else { renderList(allRequests.filter(req => req.is_visible !== false), userListElement); }
     }
 
-    // --- NOTES (Source Tag Added) ---
+    // --- NOTES ---
     async function renderNotes(isAdmin) {
         if (!isAuthReady) return;
         const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
@@ -1781,10 +1674,7 @@
             item.dataset.id = note.id;
             item.dataset.source = note.source;
             if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
-
-            // Source Tag
             const sourceTagHtml = getSourceTag(note.source);
-
             const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title} ${sourceTagHtml}</span>
                                <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>`;
             item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
@@ -1843,12 +1733,10 @@
         const cacheKey = `employees_cache_${appId}`;
         const cacheTimeKey = `employees_time_${appId}`;
         const CACHE_DURATION = 24 * 60 * 60 * 1000;
-
         try {
             const cached = localStorage.getItem(cacheKey);
             const cacheTime = localStorage.getItem(cacheTimeKey);
             const now = Date.now();
-
             if (!forceRefresh && cached && cacheTime && (now - parseInt(cacheTime) < CACHE_DURATION)) {
                 employeeData = JSON.parse(cached);
             } else {
@@ -1857,16 +1745,13 @@
                 localStorage.setItem(cacheKey, JSON.stringify(employeeData));
                 localStorage.setItem(cacheTimeKey, now.toString());
             }
-
             employeeData.sort((a, b) => (a.lastName||'').localeCompare(b.lastName||'') || (a.firstName||'').localeCompare(b.firstName||''));
             populateEmployeeForms();
             renderEmployeeTable();
         } catch(e) { console.error("Employee load error:", e); }
     }
 
-    // --- HELPER FUNCTIONS & REST OF LOGIC (Preserved from original) ---
-
-    // ... Note Helpers ...
+    // --- HELPER FUNCTIONS ---
     function convertTextToHtml(text) {
         if (!text) return '';
         const lines = text.split('\n');
@@ -1973,7 +1858,6 @@
         return processedContent;
     }
 
-    // ... Editor Logic ...
     function clearUserEditor() {
         checkUnsavedChanges(() => {
             currentUserNoteId = null;
@@ -2104,10 +1988,8 @@
         await Promise.all(promises);
     }
 
-    // --- DROPDOWNS & FORMS ---
     function populateEmployeeForms() {
         const activeEmployees = employeeData.filter(e => !e.isArchived);
-
         ['user-employee-name', 'admin-employee-name'].forEach(id => {
             const select = document.getElementById(id);
             if (!select) return;
@@ -2121,36 +2003,19 @@
             });
             if (currentVal) select.value = currentVal;
         });
-
-        ['user-task-filter-person', 'admin-task-filter-person'].forEach(id => {
+        ['user-task-filter-person', 'admin-task-filter-person', 'user-request-filter-person', 'admin-request-filter-person'].forEach(id => {
             const select = document.getElementById(id);
             if(!select) return;
             const currentVal = select.value;
             select.innerHTML = '<option value="">Wszyscy</option>';
             activeEmployees.forEach(emp => {
                 const opt = document.createElement('option');
-                opt.value = emp.firstName;
-                opt.textContent = emp.firstName;
+                opt.value = id.includes('request') ? `${emp.firstName} ${emp.lastName}` : emp.firstName;
+                opt.textContent = opt.value;
                 select.appendChild(opt);
             });
             if(currentVal) select.value = currentVal;
         });
-
-        ['user-request-filter-person', 'admin-request-filter-person'].forEach(id => {
-            const select = document.getElementById(id);
-            if(!select) return;
-            const currentVal = select.value;
-            select.innerHTML = '<option value="">Wszyscy</option>';
-            activeEmployees.forEach(emp => {
-                const fullName = `${emp.firstName} ${emp.lastName}`;
-                const opt = document.createElement('option');
-                opt.value = fullName;
-                opt.textContent = fullName;
-                select.appendChild(opt);
-            });
-            if(currentVal) select.value = currentVal;
-        });
-
         ['user-assignee-container', 'admin-assignee-container'].forEach(id => {
             const container = document.getElementById(id);
             if (!container) return;
@@ -2372,20 +2237,76 @@
                 refreshCurrentView();
             } catch (e) { showModal('Błąd', 'Nie udało się zapisać zmian.'); }
         };
+
+        // --- CONTACTS LISTENERS ---
+        document.getElementById('admin-company-search').addEventListener('input', renderCompanyList);
+
+        document.getElementById('add-company-btn').onclick = openCompanyModal;
+        document.getElementById('company-modal-cancel').onclick = () => document.getElementById('company-modal').style.display = 'none';
+
+        document.getElementById('company-modal-save').onclick = async () => {
+            const name = document.getElementById('company-name-input').value.trim();
+            if (!name) return;
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/public/data/companies`), {
+                    name: name,
+                    contacts: [],
+                    createdAt: new Date()
+                });
+                document.getElementById('company-modal').style.display = 'none';
+                loadCompanies();
+            } catch (e) { showModal('Błąd', e.message); }
+        };
+
+        document.getElementById('back-to-companies-btn').onclick = () => {
+            document.getElementById('admin-company-details').classList.remove('active');
+            document.getElementById('admin-contacts').classList.add('active');
+            currentCompanyData = null;
+        };
+
+        document.getElementById('add-contact-btn').onclick = () => openContactModal();
+        document.getElementById('contact-modal-cancel').onclick = () => document.getElementById('contact-modal').style.display = 'none';
+
+        document.getElementById('contact-modal-save').onclick = async () => {
+            const label = document.getElementById('contact-label-input').value.trim();
+            const phone = document.getElementById('contact-phone-input').value.trim();
+            const email = document.getElementById('contact-email-input').value.trim();
+            const note = document.getElementById('contact-note-input').value.trim();
+
+            if (!label) { alert('Podaj rolę/osobę!'); return; }
+
+            const newContact = { label, phone, email, note };
+            let updatedContacts = [...(currentCompanyData.contacts || [])];
+
+            if (editingContactIndex >= 0) {
+                updatedContacts[editingContactIndex] = newContact;
+            } else {
+                updatedContacts.push(newContact);
+            }
+
+            try {
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/companies`, currentCompanyData.id), { contacts: updatedContacts });
+                currentCompanyData.contacts = updatedContacts;
+                document.getElementById('contact-modal').style.display = 'none';
+                renderContactList();
+            } catch (e) { showModal('Błąd', 'Nie udało się zapisać kontaktu.'); }
+        };
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         themeToggleButtons = document.querySelectorAll('.theme-toggle-btn');
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
+
+        // INICJALIZACJA WIDOCZNOŚCI CEN (domyślnie ukryte, chyba że localStorage mówi inaczej)
+        updatePriceVisibility();
+
         initUserView(); initAdminView();
 
-        // Setup Listeners
         document.querySelectorAll('.refresh-btn').forEach(btn => btn.onclick = refreshCurrentView);
         themeToggleButtons.forEach(btn => btn.onclick = toggleTheme);
         document.querySelectorAll('.hamburger-btn').forEach(btn => { btn.onclick = () => btn.closest('.nav-bar').querySelector('.nav-links').classList.toggle('open'); });
 
-        // --- SEARCH INPUT LISTENERS (FIX) ---
         ['user', 'admin'].forEach(prefix => {
             const render = () => { displayLimit = 100; renderInventory(prefix === 'admin'); };
             document.getElementById(`${prefix}-inv-search-name`)?.addEventListener('input', render);
@@ -2420,25 +2341,14 @@
         }
         setupTaskListeners();
 
-        // Scanner Logic with Timeout and Input Blocking
         let scannerBuffer = ""; let lastKeyTime = 0;
         document.addEventListener('keydown', (e) => {
             const now = Date.now();
-
-            // Scanner reset
             if (now - lastKeyTime > 300) scannerBuffer = "";
             lastKeyTime = now;
-
             if (e.key.length === 1) scannerBuffer += e.key;
-
-            // Detect scanner start
             if (scannerBuffer.startsWith('@')) {
-                // If focus is on a text input, prevent default to stop scanner garbage from entering text field
-                if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') {
-                    e.preventDefault();
-                }
-
-                // Scanner complete
+                if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') { e.preventDefault(); }
                 if (/@\d+/.test(scannerBuffer)) {
                     const code = scannerBuffer.substring(1);
                     const isAdmin = document.getElementById('admin-view').style.display === 'block';
@@ -2446,7 +2356,7 @@
                     const codeInput = document.getElementById(`${prefix}-inv-search-code`);
                     if(codeInput) {
                         codeInput.value = code;
-                        displayLimit = 100; // Reset pagination limit on scan
+                        displayLimit = 100;
                         renderInventory(isAdmin);
                         scannerBuffer = "";
                     }
@@ -2455,5 +2365,3 @@
         });
     });
 </script>
-</body>
-</html>
