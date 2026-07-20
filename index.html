@@ -430,7 +430,8 @@
             <a data-page="user-schedule-requests">📝 Wnioski do grafiku</a>
             <a data-page="user-inventory">📦 Magazyn</a>
             <a data-page="user-notes">📒 Notatnik</a>
-            <a id="switch-to-admin-btn" style="display: none; font-weight: bold;">🔐 Panel Administratora</a>
+            <a id="switch-to-admin-direct-btn" style="display: none; font-weight: bold;">🔐 Panel Administratora</a>
+            <a id="switch-to-admin-password-btn" style="display: none; font-weight: bold;">🔑 Zaloguj do Panelu</a>
         </div>
         <div class="nav-actions">
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
@@ -564,7 +565,7 @@
         <div class="page-header">
             <h2>Zarządzanie Tokenami Dostępu</h2>
         </div>
-        <form id="admin-token-form" style="display: flex; flex-direction: column; gap: 15px; max-width: 500px;">
+        <form id="admin-token-form" style="display: flex; flex-direction: column; gap: 15px; max-width: 600px;">
             <h3>Wygeneruj Nowy Token</h3>
             <input type="text" id="new-token-title" placeholder="Tytuł / Nazwa użytkownika" required style="width: 100%; box-sizing: border-box;">
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
@@ -573,6 +574,9 @@
                 </label>
                 <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
                     <input type="checkbox" id="perm-value"> Wyświetlanie cen (value_1)
+                </label>
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="perm-konsola"> Dostęp na hasło (konsola)
                 </label>
             </div>
             <button type="submit" style="margin-left: 0; padding: 10px;">Generuj i Dodaj Token</button>
@@ -803,11 +807,12 @@
     let showZeros = true;
     let displayLimit = 100;
 
-    // SYSTEM TOKENÓW
+    // SYSTEM TOKENÓW I KONSOLI
     let currentAuthToken = null;
     let currentPermissions = {};
     let tokenListenerUnsubscribe = null;
-    let showUserPrices = false; // Zależne od uprawnienia value_1
+    let showUserPrices = false;
+    let isPasswordAdmin = false; // Zapamiętuje logowanie za pomocą hasła dla konsoli
 
     let editingTask = null;
     let editingContactIndex = -1;
@@ -879,12 +884,12 @@
             await checkAndCreateRecurringTasks();
             await loadEmployees();
 
-            // Bezpieczeństwo i inicjalizacja pierwszego logowania:
+            // Zabezpieczenie zerowego uruchomienia:
             const tokensSnap = await getDocs(query(collection(db, `artifacts/${appId}/public/data/auth_tokens`), limit(1)));
             if (tokensSnap.empty) {
                 const masterToken = generateRandomToken();
                 await addDoc(collection(db, `artifacts/${appId}/public/data/auth_tokens`), {
-                    token: masterToken, title: "Główny Administrator", permissions: { admin_1: true, value_1: true }, createdAt: new Date()
+                    token: masterToken, title: "Główny Administrator", permissions: { admin_1: true, value_1: true, konsola: true }, createdAt: new Date()
                 });
                 console.warn("==================================================");
                 console.warn("PIERWSZY TOKEN DOSTĘPU (MASTER): " + masterToken);
@@ -896,6 +901,16 @@
         });
     } catch (error) {
         console.error("Firebase init failed:", error);
+    }
+
+    // --- SYSTEM HASŁA DLA KONSOLI ---
+    async function checkAdminPassword(password) {
+        const docRef = doc(db, `artifacts/${appId}/config/admin`);
+        try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) return docSnap.data().password === password;
+            else { await setDoc(docRef, { password: 'admin' }); return password === 'admin'; }
+        } catch (e) { return false; }
     }
 
     // --- AUTHENTICATION FLOW (TOKENS) ---
@@ -948,11 +963,15 @@
             }
             document.getElementById('auth-modal').style.display = 'none';
 
-            // Ustawienie uprawnień dla cen
+            // Konfiguracja uprawnień
             showUserPrices = !!currentPermissions.value_1;
             updatePriceVisibility();
 
-            // Real-time listener: odcina dostęp jak token zostanie usunięty/zmieniony
+            // Wyświetlanie przycisków w menu:
+            document.getElementById('switch-to-admin-direct-btn').style.display = currentPermissions.admin_1 ? 'block' : 'none';
+            document.getElementById('switch-to-admin-password-btn').style.display = (!currentPermissions.admin_1 && currentPermissions.konsola) ? 'block' : 'none';
+
+            // Podpięcie pod weryfikację live
             if (tokenListenerUnsubscribe) tokenListenerUnsubscribe();
             tokenListenerUnsubscribe = onSnapshot(doc(db, `artifacts/${appId}/public/data/auth_tokens`, tokenDoc.id), (docSnap) => {
                 if (!docSnap.exists()) {
@@ -965,17 +984,21 @@
                     showUserPrices = !!currentPermissions.value_1;
                     updatePriceVisibility();
 
-                    if(!currentPermissions.admin_1 && document.getElementById('admin-view').style.display === 'block') {
+                    document.getElementById('switch-to-admin-direct-btn').style.display = currentPermissions.admin_1 ? 'block' : 'none';
+                    document.getElementById('switch-to-admin-password-btn').style.display = (!currentPermissions.admin_1 && currentPermissions.konsola) ? 'block' : 'none';
+
+                    // Odbierz uprawnienia admina (jeśli byłeś zalogowany bezpośrednio lub na hasło, a ktoś odebrał w panelu to prawo)
+                    if (!currentPermissions.admin_1 && !isPasswordAdmin && document.getElementById('admin-view').style.display === 'block') {
                         switchToUser();
                     }
-                    document.getElementById('switch-to-admin-btn').style.display = currentPermissions.admin_1 ? 'block' : 'none';
+                    if (!currentPermissions.admin_1 && isPasswordAdmin && !currentPermissions.konsola && document.getElementById('admin-view').style.display === 'block') {
+                        isPasswordAdmin = false;
+                        switchToUser();
+                    }
                 }
             });
 
-            // Widoczność przycisku admina
-            document.getElementById('switch-to-admin-btn').style.display = currentPermissions.admin_1 ? 'block' : 'none';
-
-            // Inicjalizacja odpowiedniego widoku
+            // Gdzie rzucić po odświeżeniu:
             const savedView = localStorage.getItem('defaultView');
             if (savedView === 'admin' && currentPermissions.admin_1) {
                 showAdminView();
@@ -1015,11 +1038,18 @@
             const data = docSnap.data();
             const item = document.createElement('div');
             item.className = 'item-row';
+
+            let perms = [];
+            if (data.permissions.admin_1) perms.push('Admin (admin_1)');
+            if (data.permissions.value_1) perms.push('Widok cen (value_1)');
+            if (data.permissions.konsola) perms.push('Dostęp na hasło (konsola)');
+            const permsText = perms.length > 0 ? perms.join(', ') : 'Brak';
+
             item.innerHTML = `
                 <div class="item-content-wrapper" style="flex-direction: column; align-items: flex-start; margin-bottom: 5px;">
                     <strong style="font-size: 1.4em; letter-spacing: 2px; color: var(--priority-color);">${data.token}</strong>
                     <span style="font-weight: bold;">Tytuł: ${data.title}</span>
-                    <span style="font-size: 0.9em; color: #888;">Uprawnienia: ${data.permissions.admin_1 ? 'Admin (admin_1), ' : ''}${data.permissions.value_1 ? 'Widok cen (value_1)' : 'Brak'}</span>
+                    <span style="font-size: 0.9em; color: #888;">Uprawnienia: ${permsText}</span>
                 </div>
                 <div>
                     <button class="delete-token-btn">Usuń Token</button>
@@ -1168,12 +1198,25 @@
         }
     }
 
-    // --- EASTER EGGS (Opcje Dev) ---
+    // --- EASTER EGGS / DEV COMMANDS ---
     const passwordActions = {
         'sql': () => {
             showSourceTagsAdmin = !showSourceTagsAdmin;
             showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`);
             refreshCurrentView();
+        },
+        'passwd': async () => {
+            const newPass1 = prompt("Wpisz nowe hasło do Panelu Administratora:");
+            if (!newPass1) return;
+            const newPass2 = prompt("Powtórz nowe hasło:");
+            if (!newPass2) return;
+
+            if (newPass1 === newPass2) {
+                try {
+                    await setDoc(doc(db, `artifacts/${appId}/config/admin`), { password: newPass1 });
+                    showModal('Sukces', 'Hasło zostało pomyślnie zmienione.');
+                } catch (e) { showModal('Błąd', 'Nie udało się zmienić hasła.'); }
+            } else { showModal('Błąd', 'Wpisane hasła nie są identyczne.'); }
         },
         'dev': () => window.open('https://psb-app-58090.web.app/', '_blank'),
         'iddqd': () => window.open('https://www.youtube.com/watch?v=dXji8ycMolI', '_blank'),
@@ -1186,7 +1229,7 @@
         'Dinnerbone': () => { document.body.classList.toggle('upside-down-mode'); showModal('🙃', 'Do góry nogami!'); },
         'Grumm': () => { document.body.classList.toggle('upside-down-mode'); showModal('🙃', 'Do góry nogami!'); },
         'help': () => {
-            let cmds = ['sql', 'dev', 'iddqd', 'minecraft', 'jeb_', 'Dinnerbone', 'Grumm', 'help'];
+            let cmds = ['passwd (zmiana hasła konsoli)', 'sql', 'dev', 'iddqd', 'minecraft', 'jeb_', 'Dinnerbone', 'Grumm', 'help'];
             showModal('Dostępne komendy Dev', '- ' + cmds.join('\n- '));
         }
     };
@@ -2348,7 +2391,7 @@
     }
 
     function initAdminView() {
-        // Formularz Tokenów (Nowy)
+        // Formularz Tokenów
         const tokenForm = document.getElementById('admin-token-form');
         if (tokenForm) {
             tokenForm.onsubmit = async (e) => {
@@ -2356,6 +2399,7 @@
                 const title = document.getElementById('new-token-title').value.trim();
                 const isAdmin = document.getElementById('perm-admin').checked;
                 const isValue = document.getElementById('perm-value').checked;
+                const isKonsola = document.getElementById('perm-konsola').checked;
 
                 // Sprawdzanie unikalności tokena
                 let token;
@@ -2372,7 +2416,8 @@
                     title: title,
                     permissions: {
                         admin_1: isAdmin,
-                        value_1: isValue
+                        value_1: isValue,
+                        konsola: isKonsola
                     },
                     createdAt: new Date()
                 });
@@ -2534,23 +2579,36 @@
             document.getElementById(`${prefix}-inv-sort`)?.addEventListener('change', render);
         });
 
-        document.body.addEventListener('click', (e) => {
+        document.body.addEventListener('click', async (e) => {
             const navLink = e.target.closest('a[data-page]');
             if (navLink) { e.preventDefault(); showPage(navLink.dataset.page); }
 
             // Logika przycisków Nawigacji (uzależniona od tokena)
-            if (e.target.closest('#switch-to-admin-btn')) {
+            if (e.target.closest('#switch-to-admin-direct-btn')) {
                 e.preventDefault();
                 if (currentPermissions.admin_1) {
-                    localStorage.setItem('defaultView', 'admin');
-                    showAdminView();
-                } else {
-                    showModal("Błąd", "Twój token nie ma uprawnień administratora.");
+                    showAdminView(); // tu nie zapisujemy do localstorage, bo direct zawsze jest na podstawie tokena
+                }
+            }
+            if (e.target.closest('#switch-to-admin-password-btn')) {
+                e.preventDefault();
+                if (currentPermissions.konsola) {
+                    const p = prompt("Podaj hasło administratora:");
+                    if (p) {
+                        const isValid = await checkAdminPassword(p);
+                        if (isValid) {
+                            isPasswordAdmin = true;
+                            showAdminView();
+                        } else {
+                            showModal("Błąd", "Nieprawidłowe hasło.");
+                        }
+                    }
                 }
             }
             if (e.target.closest('#switch-to-user-btn')) {
                 e.preventDefault();
-                localStorage.setItem('defaultView', 'user');
+                isPasswordAdmin = false;
+                localStorage.setItem('defaultView', 'user'); // opcjonalnie
                 switchToUser();
             }
             if (e.target.closest('#admin-commands-btn')) {
