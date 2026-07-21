@@ -421,6 +421,24 @@
     </div>
 </div>
 
+<!-- MODAL EDYCJI TOKENÓW -->
+<div id="edit-token-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <h4>Edytuj Token</h4>
+        <input type="hidden" id="edit-token-id">
+        <input type="text" id="edit-token-title" class="modal-input" placeholder="Tytuł / Nazwa użytkownika" required style="width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 15px; justify-content: center;">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="edit-perm-admin"> Admin</label>
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="edit-perm-value"> Ceny</label>
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;"><input type="checkbox" id="edit-perm-konsola"> Konsola</label>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="edit-token-cancel-btn" style="background-color: #6c757d;">Anuluj</button>
+            <button id="edit-token-save-btn">Zapisz</button>
+        </div>
+    </div>
+</div>
+
 <div id="user-view" style="display: none;">
     <div class="nav-bar blue-nav">
         <div class="nav-links" id="user-nav-links">
@@ -601,8 +619,10 @@
             <select id="admin-task-filter-person"><option value="">Wszyscy</option></select>
         </div>
         <div id="admin-task-list-visible">Ładowanie...</div>
+
         <h3>Zadania ukryte</h3>
-        <div id="admin-task-list-hidden"></div>
+        <button id="load-hidden-tasks-btn" style="width: 100%; padding: 10px; margin-bottom: 20px;">Załaduj ukryte zadania (Archiwum)</button>
+        <div id="admin-task-list-hidden" style="display: none;"></div>
     </div>
     <div id="admin-order" class="content">
         <h2>Do zamówienia (Admin)</h2>
@@ -987,7 +1007,7 @@
                     document.getElementById('switch-to-admin-direct-btn').style.display = currentPermissions.admin_1 ? 'block' : 'none';
                     document.getElementById('switch-to-admin-password-btn').style.display = (!currentPermissions.admin_1 && currentPermissions.konsola) ? 'block' : 'none';
 
-                    // Odbierz uprawnienia admina (jeśli byłeś zalogowany bezpośrednio lub na hasło, a ktoś odebrał w panelu to prawo)
+                    // Odbierz uprawnienia admina
                     if (!currentPermissions.admin_1 && !isPasswordAdmin && document.getElementById('admin-view').style.display === 'block') {
                         switchToUser();
                     }
@@ -998,13 +1018,19 @@
                 }
             });
 
-            // Gdzie rzucić po odświeżeniu:
-            const savedView = localStorage.getItem('defaultView');
-            if (savedView === 'admin' && currentPermissions.admin_1) {
-                showAdminView();
+            // Wymuszone przenoszenie do admina, chyba że z wyboru wpisano "user" (zapis w cache)
+            if (currentPermissions.admin_1) {
+                const savedView = localStorage.getItem('defaultView');
+                if (savedView === 'user' && !isManualEntry) {
+                    switchToUser();
+                } else {
+                    localStorage.setItem('defaultView', 'admin');
+                    showAdminView();
+                }
             } else {
                 switchToUser();
             }
+
         } catch (e) {
             console.error("Token verification error:", e);
             if (isManualEntry) {
@@ -1052,9 +1078,20 @@
                     <span style="font-size: 0.9em; color: #888;">Uprawnienia: ${permsText}</span>
                 </div>
                 <div>
-                    <button class="delete-token-btn">Usuń Token</button>
+                    <button class="edit-token-btn" style="background-color: #6c757d; margin-right: 5px;">Edytuj</button>
+                    <button class="delete-token-btn" style="background-color: #dc3545;">Usuń</button>
                 </div>
             `;
+
+            item.querySelector('.edit-token-btn').onclick = () => {
+                document.getElementById('edit-token-id').value = docSnap.id;
+                document.getElementById('edit-token-title').value = data.title;
+                document.getElementById('edit-perm-admin').checked = !!data.permissions.admin_1;
+                document.getElementById('edit-perm-value').checked = !!data.permissions.value_1;
+                document.getElementById('edit-perm-konsola').checked = !!data.permissions.konsola;
+                document.getElementById('edit-token-modal').style.display = 'flex';
+            };
+
             item.querySelector('.delete-token-btn').onclick = async () => {
                 if (confirm(`Na pewno chcesz usunąć token ${data.token}? Przypisany użytkownik natychmiastowo straci dostęp do panelu.`)) {
                     await deleteDoc(docSnap.ref);
@@ -1604,31 +1641,12 @@
         if (visibleCount === 0) listElement.innerHTML = '<p>Brak zadań.</p>';
 
         if (isAdmin && hiddenListElement) {
+            // Przycisk jest w HTML, wystarczy go wyświetlić, jeśli jeszcze nie jest kliknięty
+            document.getElementById('load-hidden-tasks-btn').style.display = 'block';
+            document.getElementById('load-hidden-tasks-btn').textContent = 'Załaduj ukryte zadania (Archiwum)';
+            document.getElementById('load-hidden-tasks-btn').disabled = false;
+            hiddenListElement.style.display = 'none';
             hiddenListElement.innerHTML = '';
-            const loadBtn = document.createElement('button');
-            loadBtn.textContent = 'Załaduj ukryte zadania (Archiwum)';
-            loadBtn.style.width = '100%';
-            loadBtn.style.padding = '10px';
-            loadBtn.style.marginBottom = '20px';
-
-            loadBtn.onclick = async () => {
-                loadBtn.textContent = 'Pobieranie...';
-                loadBtn.disabled = true;
-                const qHidden = query(firebaseTasksColRef, where("visible", "==", false));
-                const snap = await getDocs(qHidden);
-                const hiddenTasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
-                hiddenTasks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                loadBtn.remove();
-                if (hiddenTasks.length === 0) {
-                    hiddenListElement.innerHTML = '<p>Brak ukrytych zadań.</p>';
-                } else {
-                    hiddenTasks.forEach(task => {
-                        const el = createTaskElement(task, isAdmin, filterPerson);
-                        if (el) hiddenListElement.appendChild(el);
-                    });
-                }
-            };
-            hiddenListElement.parentNode.insertBefore(loadBtn, hiddenListElement);
         }
     }
 
@@ -1740,7 +1758,13 @@
 
         if (isAdmin && completedListElement) {
             completedListElement.innerHTML = '';
+
+            // Czyszczenie ewentualnych starych przycisków
+            const oldBtn = document.getElementById('dynamic-history-orders-btn');
+            if(oldBtn) oldBtn.remove();
+
             const loadBtn = document.createElement('button');
+            loadBtn.id = 'dynamic-history-orders-btn';
             loadBtn.textContent = 'Pokaż historię zamówień';
             loadBtn.style.width = '100%';
             loadBtn.style.padding = '10px';
@@ -1804,9 +1828,17 @@
 
                 let notesText = req.notes || '';
                 if(req.rejection_reason) { notesText += ` (Powód: ${req.rejection_reason})`; }
+
+                let dateStr = '';
+                if (req.createdAt) {
+                    const dateObj = req.createdAt.seconds ? new Date(req.createdAt.seconds * 1000) : new Date(req.createdAt);
+                    dateStr = dateObj.toLocaleDateString('pl-PL');
+                }
+
                 contentWrapper.innerHTML = `<span style="font-weight: bold; flex-shrink: 0; min-width: 150px;">${req.employee_name} ${sourceTagHtml}</span>
                     <span style="margin-left: 15px; flex-shrink: 0;">${req.start_date} do ${req.end_date}</span>
                     <span class="${statusColor}" style="margin-left: 15px;">(${statusText})</span>
+                    ${isAdmin && dateStr ? `<span style="margin-left: 15px; color: #888; font-size: 0.9em;">[Dodano: ${dateStr}]</span>` : ''}
                     <span class="request-notes" style="flex-grow: 1; text-align: right; padding: 0 20px;">${notesText}</span>`;
                 const buttonsDiv = document.createElement('div');
                 buttonsDiv.className = 'right-aligned-info';
@@ -2391,7 +2423,35 @@
     }
 
     function initAdminView() {
-        // Formularz Tokenów
+
+        // Zapis z modala edycji tokenów
+        document.getElementById('edit-token-cancel-btn').onclick = () => {
+            document.getElementById('edit-token-modal').style.display = 'none';
+        };
+        document.getElementById('edit-token-save-btn').onclick = async () => {
+            const docId = document.getElementById('edit-token-id').value;
+            const newTitle = document.getElementById('edit-token-title').value.trim();
+            const pAdmin = document.getElementById('edit-perm-admin').checked;
+            const pValue = document.getElementById('edit-perm-value').checked;
+            const pKonsola = document.getElementById('edit-perm-konsola').checked;
+
+            try {
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/auth_tokens`, docId), {
+                    title: newTitle,
+                    permissions: {
+                        admin_1: pAdmin,
+                        value_1: pValue,
+                        konsola: pKonsola
+                    }
+                });
+                document.getElementById('edit-token-modal').style.display = 'none';
+                renderAdminTokens();
+            } catch (e) {
+                showModal('Błąd', 'Nie udało się zaktualizować tokena.');
+            }
+        };
+
+        // Formularz nowego Tokena
         const tokenForm = document.getElementById('admin-token-form');
         if (tokenForm) {
             tokenForm.onsubmit = async (e) => {
@@ -2427,6 +2487,35 @@
                 renderAdminTokens();
             };
         }
+
+        // Guzik do pobierania ukrytych zadań (zamiast generować go na nowo za każdym renderem)
+        document.getElementById('load-hidden-tasks-btn').onclick = async (e) => {
+            const btn = e.target;
+            const hiddenListElement = document.getElementById('admin-task-list-hidden');
+            btn.textContent = 'Pobieranie...';
+            btn.disabled = true;
+
+            const firebaseTasksColRef = collection(db, `artifacts/${appId}/public/data/tasks`);
+            const qHidden = query(firebaseTasksColRef, where("visible", "==", false));
+            const snap = await getDocs(qHidden);
+            const hiddenTasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), source: 'firebase', createdAt: doc.data().createdAt?.toDate() }));
+            hiddenTasks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+            hiddenListElement.innerHTML = '';
+            hiddenListElement.style.display = 'block';
+            btn.style.display = 'none'; // Ukryj przycisk po załadowaniu
+
+            const filterPerson = document.getElementById('admin-task-filter-person').value;
+
+            if (hiddenTasks.length === 0) {
+                hiddenListElement.innerHTML = '<p>Brak ukrytych zadań.</p>';
+            } else {
+                hiddenTasks.forEach(task => {
+                    const el = createTaskElement(task, true, filterPerson);
+                    if (el) hiddenListElement.appendChild(el);
+                });
+            }
+        };
 
         document.getElementById('admin-task-form').onsubmit = async (e) => {
             e.preventDefault(); const f=e.target;
@@ -2566,7 +2655,6 @@
         updatePriceVisibility();
 
         initUserView();
-        // Admin view jest inicjowane po zweryfikowaniu uprawnień tokena
 
         document.querySelectorAll('.refresh-btn').forEach(btn => btn.onclick = refreshCurrentView);
         themeToggleButtons.forEach(btn => btn.onclick = toggleTheme);
@@ -2587,7 +2675,8 @@
             if (e.target.closest('#switch-to-admin-direct-btn')) {
                 e.preventDefault();
                 if (currentPermissions.admin_1) {
-                    showAdminView(); // tu nie zapisujemy do localstorage, bo direct zawsze jest na podstawie tokena
+                    localStorage.setItem('defaultView', 'admin');
+                    showAdminView();
                 }
             }
             if (e.target.closest('#switch-to-admin-password-btn')) {
@@ -2608,7 +2697,7 @@
             if (e.target.closest('#switch-to-user-btn')) {
                 e.preventDefault();
                 isPasswordAdmin = false;
-                localStorage.setItem('defaultView', 'user'); // opcjonalnie
+                localStorage.setItem('defaultView', 'user');
                 switchToUser();
             }
             if (e.target.closest('#admin-commands-btn')) {
