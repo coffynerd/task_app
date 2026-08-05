@@ -96,13 +96,19 @@
         .due-date-text { margin-left: 15px; font-size: 1em; font-weight: normal; }
         .right-aligned-info { text-align: right; }
 
-        /* --- INVENTORY STYLES --- */
+        /* --- INVENTORY STYLES (UKŁAD SIATKI 2x3 WG SZKICU) --- */
         .inventory-controls {
-            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
-            background: var(--surface-light); padding: 15px; border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); align-items: flex-end;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: var(--surface-light);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            align-items: end;
         }
-        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 140px; }
+        .filter-group { display: flex; flex-direction: column; width: 100%; }
         .filter-group label { font-size: 0.8em; margin-bottom: 5px; color: #666; }
         .inventory-table {
             width: 100%; border-collapse: collapse; background: var(--surface-light);
@@ -160,7 +166,7 @@
             padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         form input[type="text"], form input[type="tel"], form input[type="email"], form input[type="date"], form textarea, .inventory-controls input, .inventory-controls select, form select, .filter-bar select {
-            padding: 8px; margin-right: 10px; border: 1px solid #ccc; border-radius: 4px; resize: none;
+            padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: none; box-sizing: border-box; width: 100%;
         }
 
         /* --- CUSTOM DROPDOWN --- */
@@ -350,11 +356,11 @@
 <body>
 
 <!-- MODAL SKANERA APARATEM -->
-<div id="scanner-modal" class="modal-overlay" style="display: none;">
+<div id="scanner-modal" class="modal-overlay" style="display: none; z-index: 3000;">
     <div class="modal-content" style="max-width: 380px; width: 95%;">
         <h4>Skanuj kod kreskowy</h4>
         <div id="reader" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; overflow: hidden;"></div>
-        <button id="scanner-close-btn" style="margin-top: 15px; width: 100%; background-color: #6c757d;">Anuluj / Zamknij</button>
+        <button id="scanner-close-btn" style="margin-top: 15px; width: 100%; background-color: #6c757d; padding: 12px; font-size: 1em;">Anuluj / Zamknij</button>
     </div>
 </div>
 
@@ -519,16 +525,13 @@
     <div id="user-inventory" class="content">
         <h2>Magazyn</h2>
         <div id="user-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
+        <!-- UKŁAD SIATKI 2x3 -->
         <div class="inventory-controls">
+            <!-- WIERSZ 1 -->
             <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę..."></div>
+            <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
+            <!-- WIERSZ 2 -->
             <div class="filter-group"><label>Symbol:</label><input type="text" id="user-inv-search-symbol" placeholder="Wpisz symbol..."></div>
-            <div class="filter-group">
-                <label>Kod kreskowy (lub @skan):</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*" style="flex: 1; margin-right: 0;">
-                    <button id="user-camera-scan-btn" type="button" style="margin: 0; padding: 0 12px;" title="Skanuj aparatem">📷</button>
-                </div>
-            </div>
             <div class="filter-group"><label>Sortuj według:</label>
                 <select id="user-inv-sort">
                     <option value="name_asc">Nazwa (A-Z)</option>
@@ -539,7 +542,13 @@
                     <option value="qty_desc">Ilość (malejąco)</option>
                 </select>
             </div>
-            <div class="filter-group" style="flex-direction: row; align-items: center; gap: 10px;"><button id="user-toggle-zeros-btn" style="margin:0">Ukryj stany 0</button></div>
+            <!-- WIERSZ 3 -->
+            <div class="filter-group" style="justify-content: flex-end;">
+                <button id="user-toggle-zeros-btn" type="button" style="margin: 0; width: 100%; padding: 10px; box-sizing: border-box;">Ukryj stany 0</button>
+            </div>
+            <div class="filter-group" style="justify-content: flex-end;">
+                <button id="user-camera-scan-btn" type="button" style="margin: 0; width: 100%; padding: 10px; background-color: #28a745; color: white; font-weight: bold; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;" title="Skanuj aparatem">📷 Skanuj</button>
+            </div>
         </div>
         <div id="user-inventory-count" style="margin-bottom: 10px; font-size: 0.9em; color: #888;"></div>
         <table class="inventory-table">
@@ -662,16 +671,13 @@
             </div>
             <a href="https://drive.google.com/file/d/1rleT0kRGo11zloRZge6lY9qKpGcpueE0/view?usp=drive_link" target="_blank">📱 App</a>
         </div>
+        <!-- UKŁAD SIATKI 2x3 -->
         <div class="inventory-controls">
+            <!-- WIERSZ 1 -->
             <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę..."></div>
+            <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
+            <!-- WIERSZ 2 -->
             <div class="filter-group"><label>Symbol:</label><input type="text" id="admin-inv-search-symbol" placeholder="Wpisz symbol..."></div>
-            <div class="filter-group">
-                <label>Kod kreskowy (lub @skan):</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*" style="flex: 1; margin-right: 0;">
-                    <button id="admin-camera-scan-btn" type="button" style="margin: 0; padding: 0 12px;" title="Skanuj aparatem">📷</button>
-                </div>
-            </div>
             <div class="filter-group"><label>Sortuj według:</label>
                 <select id="admin-inv-sort">
                     <option value="name_asc">Nazwa (A-Z)</option>
@@ -682,7 +688,13 @@
                     <option value="qty_desc">Ilość (malejąco)</option>
                 </select>
             </div>
-            <div class="filter-group" style="flex-direction: row; align-items: center; gap: 10px;"><button id="admin-toggle-zeros-btn" style="margin:0">Ukryj stany 0</button></div>
+            <!-- WIERSZ 3 -->
+            <div class="filter-group" style="justify-content: flex-end;">
+                <button id="admin-toggle-zeros-btn" type="button" style="margin: 0; width: 100%; padding: 10px; box-sizing: border-box;">Ukryj stany 0</button>
+            </div>
+            <div class="filter-group" style="justify-content: flex-end;">
+                <button id="admin-camera-scan-btn" type="button" style="margin: 0; width: 100%; padding: 10px; background-color: #28a745; color: white; font-weight: bold; border-radius: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;" title="Skanuj aparatem">📷 Skanuj</button>
+            </div>
         </div>
         <div id="admin-inventory-count" style="margin-bottom: 10px; font-size: 0.9em; color: #888;"></div>
         <table class="inventory-table">
