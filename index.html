@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+EAN13+Text&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- BIBLIOTEKA DO SKANOWANIA KODÓW APARATEM -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         :root {
             --background-light: #f0f2f5;
@@ -100,7 +102,7 @@
             background: var(--surface-light); padding: 15px; border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); align-items: flex-end;
         }
-        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 150px; }
+        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 140px; }
         .filter-group label { font-size: 0.8em; margin-bottom: 5px; color: #666; }
         .inventory-table {
             width: 100%; border-collapse: collapse; background: var(--surface-light);
@@ -117,10 +119,10 @@
         .quantity-badge.out { background: #dc3545; color: #fff; border-color: #dc3545; }
         .load-more-container { text-align: center; margin-top: 15px; padding-bottom: 20px; }
         .load-more-btn { background-color: #6c757d; width: 100%; max-width: 300px; }
-        #user-inventory.price-hidden .inventory-table th:nth-child(4),
-        #user-inventory.price-hidden .inventory-table td:nth-child(4),
-        #admin-inventory.price-hidden .inventory-table th:nth-child(4),
-        #admin-inventory.price-hidden .inventory-table td:nth-child(4) { display: none; }
+        #user-inventory.price-hidden .inventory-table th:nth-child(5),
+        #user-inventory.price-hidden .inventory-table td:nth-child(5),
+        #admin-inventory.price-hidden .inventory-table th:nth-child(5),
+        #admin-inventory.price-hidden .inventory-table td:nth-child(5) { display: none; }
 
         /* --- CONTACTS MODULE STYLES --- */
         .company-card {
@@ -347,6 +349,15 @@
 </head>
 <body>
 
+<!-- MODAL SKANERA APARATEM -->
+<div id="scanner-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 380px; width: 95%;">
+        <h4>Skanuj kod kreskowy</h4>
+        <div id="reader" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; overflow: hidden;"></div>
+        <button id="scanner-close-btn" style="margin-top: 15px; width: 100%; background-color: #6c757d;">Anuluj / Zamknij</button>
+    </div>
+</div>
+
 <!-- AUTH MODAL -->
 <div id="auth-modal" class="modal-overlay" style="display: none; background-color: var(--background-dark);">
     <div class="modal-content" style="background: var(--surface-light); color: var(--text-light);">
@@ -510,7 +521,14 @@
         <div id="user-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
         <div class="inventory-controls">
             <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę..."></div>
-            <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
+            <div class="filter-group"><label>Symbol:</label><input type="text" id="user-inv-search-symbol" placeholder="Wpisz symbol..."></div>
+            <div class="filter-group">
+                <label>Kod kreskowy (lub @skan):</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*" style="flex: 1; margin-right: 0;">
+                    <button id="user-camera-scan-btn" type="button" style="margin: 0; padding: 0 12px;" title="Skanuj aparatem">📷</button>
+                </div>
+            </div>
             <div class="filter-group"><label>Sortuj według:</label>
                 <select id="user-inv-sort">
                     <option value="name_asc">Nazwa (A-Z)</option>
@@ -525,7 +543,7 @@
         </div>
         <div id="user-inventory-count" style="margin-bottom: 10px; font-size: 0.9em; color: #888;"></div>
         <table class="inventory-table">
-            <thead><tr><th>Produkt</th><th>Kod</th><th>Ilość</th><th>Cena (Brutto)</th></tr></thead>
+            <thead><tr><th>Produkt</th><th>Symbol</th><th>Kod</th><th>Ilość</th><th>Cena (Brutto)</th></tr></thead>
             <tbody id="user-inventory-list"></tbody>
         </table>
         <div class="load-more-container"><button id="user-load-more-btn" class="load-more-btn" style="display: none;">Pokaż więcej</button></div>
@@ -646,7 +664,14 @@
         </div>
         <div class="inventory-controls">
             <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę..."></div>
-            <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
+            <div class="filter-group"><label>Symbol:</label><input type="text" id="admin-inv-search-symbol" placeholder="Wpisz symbol..."></div>
+            <div class="filter-group">
+                <label>Kod kreskowy (lub @skan):</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*" style="flex: 1; margin-right: 0;">
+                    <button id="admin-camera-scan-btn" type="button" style="margin: 0; padding: 0 12px;" title="Skanuj aparatem">📷</button>
+                </div>
+            </div>
             <div class="filter-group"><label>Sortuj według:</label>
                 <select id="admin-inv-sort">
                     <option value="name_asc">Nazwa (A-Z)</option>
@@ -661,7 +686,7 @@
         </div>
         <div id="admin-inventory-count" style="margin-bottom: 10px; font-size: 0.9em; color: #888;"></div>
         <table class="inventory-table">
-            <thead><tr><th>Produkt</th><th>Kod</th><th>Ilość</th><th>Cena</th></tr></thead>
+            <thead><tr><th>Produkt</th><th>Symbol</th><th>Kod</th><th>Ilość</th><th>Cena</th></tr></thead>
             <tbody id="admin-inventory-list"></tbody>
         </table>
         <div class="load-more-container"><button id="admin-load-more-btn" class="load-more-btn" style="display: none;">Pokaż więcej</button></div>
@@ -832,7 +857,7 @@
     let currentPermissions = {};
     let tokenListenerUnsubscribe = null;
     let showUserPrices = false;
-    let isPasswordAdmin = false; // Zapamiętuje logowanie za pomocą hasła dla konsoli
+    let isPasswordAdmin = false;
 
     let editingTask = null;
     let editingContactIndex = -1;
@@ -841,6 +866,52 @@
     // --- OPTIMIZATION STATE ---
     const loadedViews = new Set();
     let isAuthReady = false;
+
+    // --- SKANER APARATU ---
+    let html5QrCode = null;
+    function openBarcodeScanner(isAdmin) {
+        const modal = document.getElementById('scanner-modal');
+        modal.style.display = 'flex';
+        const prefix = isAdmin ? 'admin' : 'user';
+
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
+        const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+        html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => {
+                const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+                if (codeInput) {
+                    codeInput.value = decodedText;
+                    displayLimit = 100;
+                    renderInventory(isAdmin);
+                }
+                closeBarcodeScanner();
+                if (navigator.vibrate) navigator.vibrate(200);
+            },
+            (errorMessage) => {
+                // ignoruj ciągłe błędy wyszukiwania kadru
+            }
+        ).catch((err) => {
+            alert("Błąd dostępu do aparatu: " + err);
+            closeBarcodeScanner();
+        });
+    }
+
+    function closeBarcodeScanner() {
+        const modal = document.getElementById('scanner-modal');
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                modal.style.display = 'none';
+            }).catch(() => {
+                modal.style.display = 'none';
+            });
+        } else {
+            modal.style.display = 'none';
+        }
+    }
 
     // --- Firebase Setup ---
     let app, db, auth, userId;
@@ -1018,7 +1089,7 @@
                 }
             });
 
-            // Wymuszone przenoszenie do admina, chyba że z wyboru wpisano "user" (zapis w cache)
+            // Wymuszone natychmiastowe przenoszenie do admina dla kont admin_1 (hybrydowo uwzględniając wybór widoku pracownika)
             if (currentPermissions.admin_1) {
                 const savedView = localStorage.getItem('defaultView');
                 if (savedView === 'user' && !isManualEntry) {
@@ -1453,6 +1524,7 @@
         if(!listEl) return;
 
         const nameSearchRaw = document.getElementById(`${prefix}-inv-search-name`).value.toLowerCase();
+        const symbolSearch = document.getElementById(`${prefix}-inv-search-symbol`).value.toLowerCase();
         const codeSearch = document.getElementById(`${prefix}-inv-search-code`).value.toLowerCase();
         const sortValue = document.getElementById(`${prefix}-inv-sort`).value;
         const nameParts = nameSearchRaw.split('%').filter(part => part.trim() !== "");
@@ -1460,10 +1532,13 @@
         let filtered = inventoryData.filter(item => {
             if(!showZeros && item.quantity <= 0) return false;
             const n = item.name ? item.name.toLowerCase() : "";
+            const s = item.symbol ? item.symbol.toLowerCase() : "";
             const c = item.barcode ? item.barcode.toLowerCase() : "";
+
             const matchName = nameParts.length === 0 || nameParts.every(part => n.includes(part));
+            const matchSymbol = !symbolSearch || s.includes(symbolSearch);
             const matchCode = !codeSearch || c.includes(codeSearch);
-            return matchName && matchCode;
+            return matchName && matchSymbol && matchCode;
         });
 
         filtered.sort((a, b) => {
@@ -1484,12 +1559,13 @@
             } else { loadMoreBtn.style.display = 'none'; }
         }
 
-        if (itemsToShow.length === 0) { listEl.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">Brak wyników</td></tr>'; return; }
+        if (itemsToShow.length === 0) { listEl.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Brak wyników</td></tr>'; return; }
 
         listEl.innerHTML = itemsToShow.map(item => {
             const qtyClass = item.quantity <= 0 ? 'out' : '';
             return `<tr>
                     <td data-label="Produkt"><strong>${item.name}</strong></td>
+                    <td data-label="Symbol">${item.symbol || '-'}</td>
                     <td data-label="Kod">${item.barcode || '-'}</td>
                     <td data-label="Ilość"><span class="quantity-badge ${qtyClass}">${item.quantity} szt</span></td>
                     <td data-label="Cena"><span class="price-tag">${parseFloat(item.price).toFixed(2)} zł</span></td>
@@ -1641,7 +1717,6 @@
         if (visibleCount === 0) listElement.innerHTML = '<p>Brak zadań.</p>';
 
         if (isAdmin && hiddenListElement) {
-            // Przycisk jest w HTML, wystarczy go wyświetlić, jeśli jeszcze nie jest kliknięty
             document.getElementById('load-hidden-tasks-btn').style.display = 'block';
             document.getElementById('load-hidden-tasks-btn').textContent = 'Załaduj ukryte zadania (Archiwum)';
             document.getElementById('load-hidden-tasks-btn').disabled = false;
@@ -1759,7 +1834,6 @@
         if (isAdmin && completedListElement) {
             completedListElement.innerHTML = '';
 
-            // Czyszczenie ewentualnych starych przycisków
             const oldBtn = document.getElementById('dynamic-history-orders-btn');
             if(oldBtn) oldBtn.remove();
 
@@ -2188,7 +2262,7 @@
     }
     async function saveAdminNote() {
         const title = document.getElementById('note-title-input').value.trim();
-        if (!title) { showModal('Błąd', 'Brak tytułu'); return; }
+        if (!title) { showModal('Błąd', 'Brak tytułu!'); return; }
         const content = editorMode.admin === 'raw' ? document.getElementById('note-content-raw').value : convertRenderedToSource(document.getElementById('note-content-input'));
         const noteData = { title, content, titleColor: document.getElementById('note-color-input').value, updatedAt: new Date() };
         if (currentAdminNoteId) {
@@ -2488,7 +2562,7 @@
             };
         }
 
-        // Guzik do pobierania ukrytych zadań (zamiast generować go na nowo za każdym renderem)
+        // Guzik do pobierania ukrytych zadań (bez duplikowania)
         document.getElementById('load-hidden-tasks-btn').onclick = async (e) => {
             const btn = e.target;
             const hiddenListElement = document.getElementById('admin-task-list-hidden');
@@ -2503,7 +2577,7 @@
 
             hiddenListElement.innerHTML = '';
             hiddenListElement.style.display = 'block';
-            btn.style.display = 'none'; // Ukryj przycisk po załadowaniu
+            btn.style.display = 'none';
 
             const filterPerson = document.getElementById('admin-task-filter-person').value;
 
@@ -2660,9 +2734,15 @@
         themeToggleButtons.forEach(btn => btn.onclick = toggleTheme);
         document.querySelectorAll('.hamburger-btn').forEach(btn => { btn.onclick = () => btn.closest('.nav-bar').querySelector('.nav-links').classList.toggle('open'); });
 
+        // PRZYCISKI SKANERA APARATU
+        document.getElementById('user-camera-scan-btn')?.addEventListener('click', () => openBarcodeScanner(false));
+        document.getElementById('admin-camera-scan-btn')?.addEventListener('click', () => openBarcodeScanner(true));
+        document.getElementById('scanner-close-btn')?.addEventListener('click', closeBarcodeScanner);
+
         ['user', 'admin'].forEach(prefix => {
             const render = () => { displayLimit = 100; renderInventory(prefix === 'admin'); };
             document.getElementById(`${prefix}-inv-search-name`)?.addEventListener('input', render);
+            document.getElementById(`${prefix}-inv-search-symbol`)?.addEventListener('input', render);
             document.getElementById(`${prefix}-inv-search-code`)?.addEventListener('input', render);
             document.getElementById(`${prefix}-inv-sort`)?.addEventListener('change', render);
         });
@@ -2671,7 +2751,6 @@
             const navLink = e.target.closest('a[data-page]');
             if (navLink) { e.preventDefault(); showPage(navLink.dataset.page); }
 
-            // Logika przycisków Nawigacji (uzależniona od tokena)
             if (e.target.closest('#switch-to-admin-direct-btn')) {
                 e.preventDefault();
                 if (currentPermissions.admin_1) {
