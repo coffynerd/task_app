@@ -10,6 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+EAN13+Text&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <!-- BIBLIOTEKA DO SKANOWANIA KODÓW APARATEM -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
     <style>
         :root {
             --background-light: #f0f2f5;
@@ -96,6 +101,23 @@
         .due-date-text { margin-left: 15px; font-size: 1em; font-weight: normal; }
         .right-aligned-info { text-align: right; }
 
+        /* --- DELIVERY (DOSTAWY) STYLES --- */
+        .delivery-item {
+            border-bottom: 1px solid var(--border-light);
+            padding: 12px 10px; display: flex; justify-content: space-between; align-items: center; gap: 15px;
+            transition: background-color 0.2s;
+        }
+        .dark-mode .delivery-item { border-bottom-color: var(--border-dark); }
+        .delivery-item.checked { background-color: rgba(40, 167, 69, 0.1); }
+        .dark-mode .delivery-item.checked { background-color: rgba(40, 167, 69, 0.2); }
+        .delivery-info { flex-grow: 1; display: flex; flex-direction: column; gap: 4px; }
+        .delivery-info .ean-code { font-size: 0.85em; color: #888; font-family: monospace; }
+        .dark-mode .delivery-info .ean-code { color: #aaa; }
+        .delivery-controls { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        .delivery-qty-input { width: 50px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: bold;}
+        .dark-mode .delivery-qty-input { background: #2a2a2a; color: var(--text-dark); border-color: #444; }
+        .delivery-controls input[type="checkbox"] { transform: scale(1.3); cursor: pointer; margin-left: 10px; }
+
         /* --- INVENTORY STYLES (UKŁAD SIATKI 2x3 WG SZKICU) --- */
         .inventory-controls {
             display: grid;
@@ -159,13 +181,12 @@
         .dark-mode .contact-actions { border-top-color: #444; }
         .contact-actions button { font-size: 0.8em; padding: 4px 8px; }
 
-
         h2, h3 { color: var(--text-light); }
         form {
             margin-top: 20px; margin-bottom: 20px; background-color: var(--surface-light);
             padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        form input[type="text"], form input[type="tel"], form input[type="email"], form input[type="date"], form textarea, .inventory-controls input, .inventory-controls select, form select, .filter-bar select {
+        form input[type="text"], form input[type="tel"], form input[type="email"], form input[type="date"], form textarea, .inventory-controls input, .inventory-controls select, form select, .filter-bar select, .delivery-controls input[type="number"] {
             padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: none; box-sizing: border-box; width: 100%;
         }
 
@@ -211,7 +232,7 @@
         .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
         .item-row button.reject-btn { background-color: var(--reject-color) !important; color: white; border: 1px solid var(--reject-color); }
         .google-sheet-iframe { width: 100%; height: 75vh; border: 1px solid var(--border-light); border-radius: 5px; }
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
         .page-header a { display: inline-block; padding: 8px 16px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9em; transition: background-color 0.3s; }
         .page-header a:hover { background-color: #218838; }
 
@@ -250,14 +271,14 @@
         .dark-mode .request-status.rejected { color: #f87171; }
         .dark-mode .request-status.pending { color: #facc15; }
 
-        /* --- NOTEBOOK --- */
+        /* --- NOTEBOOK & DELIVERIES --- */
         .notebook-container { display: flex; gap: 20px; height: 80vh; }
         .note-list-column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-light); padding-right: 20px; }
         .dark-mode .note-list-column { border-right-color: var(--border-dark); }
-        .note-editor-column { flex: 3; display: flex; flex-direction: column; }
+        .note-editor-column { flex: 3; display: flex; flex-direction: column; overflow-y: auto;}
         .note-editor-content-wrapper { position: relative; flex-grow: 1; display: flex; }
-        #new-note-btn, #user-new-note-btn { width: 100%; margin: 0 0 10px 0; }
-        #note-title-list, #user-note-title-list { overflow-y: auto; }
+        #new-note-btn, #user-new-note-btn, .new-doc-btn { width: 100%; margin: 0 0 10px 0; }
+        #note-title-list, #user-note-title-list, .doc-title-list { overflow-y: auto; }
         .note-list-item { padding: 10px; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .note-title-wrapper { display: flex; align-items: baseline; flex-grow: 1; overflow: hidden; }
         .note-title { font-weight: bold; font-size: 1.1em; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
@@ -285,8 +306,8 @@
         .note-editor-buttons { margin-top: 10px; text-align: right; }
         #admin-notes button { background-color: #6c757d; }
         #admin-notes button:hover { background-color: #5a6268; }
-        #delete-note-btn, .delete-order-btn, .delete-vacation-btn, .delete-task-btn, .delete-token-btn { background-color: #dc3545; }
-        #delete-note-btn:hover, .delete-order-btn:hover, .delete-vacation-btn:hover, .delete-task-btn:hover, .delete-token-btn:hover { background-color: #c82333; }
+        #delete-note-btn, .delete-order-btn, .delete-vacation-btn, .delete-task-btn, .delete-token-btn, .delete-delivery-btn { background-color: #dc3545; }
+        #delete-note-btn:hover, .delete-order-btn:hover, .delete-vacation-btn:hover, .delete-task-btn:hover, .delete-token-btn:hover, .delete-delivery-btn:hover { background-color: #c82333; }
 
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000;
@@ -386,11 +407,27 @@
 <div id="confirm-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <h4>Niezapisane zmiany</h4>
-        <p>Masz niezapisane zmiany w notatce. Czy chcesz je zapisać?</p>
+        <p>Masz niezapisane zmiany. Czy chcesz je zapisać?</p>
         <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
             <button id="confirm-yes-btn" style="background-color: #28a745;">Tak</button>
             <button id="confirm-no-btn" style="background-color: #dc3545;">Nie</button>
             <button id="confirm-cancel-btn" style="background-color: #6c757d;">Wróć</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL NOWEJ DOSTAWY -->
+<div id="new-delivery-modal" class="modal-overlay" style="display: none; z-index: 2500;">
+    <div class="modal-content">
+        <h4>Dodaj nowy dokument dostawy</h4>
+        <input type="text" id="delivery-title-input" class="modal-input" placeholder="Tytuł / Numer WZ" required>
+        <div style="text-align:left; margin-top: 10px;">
+            <label style="font-size: 0.9em; color: #666;">Plik specyfikacji (PDF):</label>
+            <input type="file" id="delivery-file-input" class="modal-input" accept="application/pdf">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+            <button id="delivery-modal-cancel" style="background-color: #6c757d;">Anuluj</button>
+            <button id="delivery-modal-save" style="background-color: #28a745;">Importuj</button>
         </div>
     </div>
 </div>
@@ -460,6 +497,7 @@
     <div class="nav-bar blue-nav">
         <div class="nav-links" id="user-nav-links">
             <a data-page="user-tasks">📋 Lista zadań</a>
+            <a data-page="user-deliveries">🚚 Dostawy</a>
             <a data-page="user-order">🛒 Do zamówienia</a>
             <a data-page="user-schedule">📅 Grafik</a>
             <a data-page="user-schedule-requests">📝 Wnioski do grafiku</a>
@@ -474,6 +512,7 @@
             <button class="hamburger-btn" id="user-hamburger-btn">&#9776;</button>
         </div>
     </div>
+
     <div id="user-tasks" class="content active">
         <h2>Lista Zadań</h2>
         <form id="user-task-form">
@@ -490,6 +529,32 @@
         </div>
         <div id="user-task-list">Ładowanie...</div>
     </div>
+
+    <div id="user-deliveries" class="content">
+        <h2>Weryfikacja Dostaw</h2>
+        <div class="notebook-container">
+            <div class="note-list-column">
+                <button class="new-doc-btn" onclick="openNewDeliveryModal(false)">+ Nowa dostawa</button>
+                <div id="user-delivery-list" class="doc-title-list">Ładowanie...</div>
+            </div>
+            <div class="note-editor-column" id="user-delivery-details" style="display:none;">
+                <div class="editor-header" style="justify-content: space-between;">
+                    <h3 id="user-delivery-title" style="margin:0;">Wybierz dokument</h3>
+                </div>
+                <div class="inventory-controls" style="margin-bottom: 10px;">
+                    <div class="filter-group">
+                        <label>Wyszukaj by filtrować listę:</label>
+                        <input type="text" id="user-delivery-scan-input" placeholder="Wpisz fragment EAN lub Nazwy...">
+                    </div>
+                    <div class="filter-group" style="justify-content: flex-end;">
+                        <button type="button" style="margin: 0; width: 100%; padding: 10px; background-color: #28a745; color: white; font-weight: bold; border-radius: 4px;" title="Skanuj aparatem" onclick="openBarcodeScanner(false, 'delivery')">📷 Skanuj aparat</button>
+                    </div>
+                </div>
+                <div id="user-delivery-items" style="flex-grow: 1; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="user-order" class="content">
         <h2>Do zamówienia</h2>
         <form id="user-order-form">
@@ -525,12 +590,9 @@
     <div id="user-inventory" class="content">
         <h2>Magazyn</h2>
         <div id="user-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
-        <!-- UKŁAD SIATKI 2x3 -->
         <div class="inventory-controls">
-            <!-- WIERSZ 1 -->
             <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę..."></div>
             <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
-            <!-- WIERSZ 2 -->
             <div class="filter-group"><label>Symbol:</label><input type="text" id="user-inv-search-symbol" placeholder="Wpisz symbol..."></div>
             <div class="filter-group"><label>Sortuj według:</label>
                 <select id="user-inv-sort">
@@ -542,7 +604,6 @@
                     <option value="qty_desc">Ilość (malejąco)</option>
                 </select>
             </div>
-            <!-- WIERSZ 3 -->
             <div class="filter-group" style="justify-content: flex-end;">
                 <button id="user-toggle-zeros-btn" type="button" style="margin: 0; width: 100%; padding: 10px; box-sizing: border-box;">Ukryj stany 0</button>
             </div>
@@ -588,6 +649,7 @@
         <div class="nav-links" id="admin-nav-links">
             <a data-page="admin-tasks">📋 Zadania</a>
             <a data-page="admin-recurring-tasks">🔄 Cykliczne</a>
+            <a data-page="admin-deliveries">🚚 Dostawy</a>
             <a data-page="admin-order">🛒 Zamówienia</a>
             <a data-page="admin-inventory">📦 Magazyn</a>
             <a data-page="admin-schedule">📅 Grafik</a>
@@ -651,6 +713,33 @@
         <button id="load-hidden-tasks-btn" style="width: 100%; padding: 10px; margin-bottom: 20px;">Załaduj ukryte zadania (Archiwum)</button>
         <div id="admin-task-list-hidden" style="display: none;"></div>
     </div>
+
+    <div id="admin-deliveries" class="content">
+        <h2>Weryfikacja Dostaw (Admin)</h2>
+        <div class="notebook-container">
+            <div class="note-list-column">
+                <button class="new-doc-btn" onclick="openNewDeliveryModal(true)">+ Nowa dostawa</button>
+                <div id="admin-delivery-list" class="doc-title-list">Ładowanie...</div>
+            </div>
+            <div class="note-editor-column" id="admin-delivery-details" style="display:none;">
+                <div class="editor-header" style="justify-content: space-between;">
+                    <h3 id="admin-delivery-title" style="margin:0;">Wybierz dokument</h3>
+                    <button id="admin-delivery-delete-btn" class="delete-delivery-btn">Usuń dokument</button>
+                </div>
+                <div class="inventory-controls" style="margin-bottom: 10px;">
+                    <div class="filter-group">
+                        <label>Wyszukaj by filtrować listę:</label>
+                        <input type="text" id="admin-delivery-scan-input" placeholder="Wpisz fragment EAN lub Nazwy...">
+                    </div>
+                    <div class="filter-group" style="justify-content: flex-end;">
+                        <button type="button" style="margin: 0; width: 100%; padding: 10px; background-color: #28a745; color: white; font-weight: bold; border-radius: 4px;" title="Skanuj aparatem" onclick="openBarcodeScanner(true, 'delivery')">📷 Skanuj aparat</button>
+                    </div>
+                </div>
+                <div id="admin-delivery-items" style="flex-grow: 1; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="admin-order" class="content">
         <h2>Do zamówienia (Admin)</h2>
         <form id="admin-order-form">
@@ -671,12 +760,9 @@
             </div>
             <a href="https://drive.google.com/file/d/1rleT0kRGo11zloRZge6lY9qKpGcpueE0/view?usp=drive_link" target="_blank">📱 App</a>
         </div>
-        <!-- UKŁAD SIATKI 2x3 -->
         <div class="inventory-controls">
-            <!-- WIERSZ 1 -->
             <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę..."></div>
             <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="admin-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
-            <!-- WIERSZ 2 -->
             <div class="filter-group"><label>Symbol:</label><input type="text" id="admin-inv-search-symbol" placeholder="Wpisz symbol..."></div>
             <div class="filter-group"><label>Sortuj według:</label>
                 <select id="admin-inv-sort">
@@ -688,7 +774,6 @@
                     <option value="qty_desc">Ilość (malejąco)</option>
                 </select>
             </div>
-            <!-- WIERSZ 3 -->
             <div class="filter-group" style="justify-content: flex-end;">
                 <button id="admin-toggle-zeros-btn" type="button" style="margin: 0; width: 100%; padding: 10px; box-sizing: border-box;">Ukryj stany 0</button>
             </div>
@@ -801,9 +886,10 @@
 
     <div id="admin-company-details" class="content">
         <div class="page-header">
-            <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
                 <button id="back-to-companies-btn" style="background-color: #6c757d; margin:0;">&larr; Wróć</button>
                 <h2 id="detail-company-name" style="margin:0;">Nazwa Firmy</h2>
+                <button id="edit-company-name-btn" style="background-color: #ffc101; color: black; padding: 4px 8px; font-size: 0.8em; margin: 0; border: none; border-radius: 4px; cursor: pointer;">✏️ Edytuj Nazwę</button>
             </div>
             <button id="add-contact-btn">+ Dodaj Kontakt</button>
         </div>
@@ -827,6 +913,7 @@
         <div id="admin-employee-list-archived"></div>
     </div>
 </div>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -864,6 +951,17 @@
     let showZeros = true;
     let displayLimit = 100;
 
+    // DOSTAWY
+    let deliveriesData = [];
+    let currentDeliveryData = null;
+    let currentDeliveryIsAdmin = false;
+    window.openNewDeliveryModal = function(isAdmin) {
+        document.getElementById('delivery-title-input').value = '';
+        document.getElementById('delivery-file-input').value = '';
+        currentDeliveryIsAdmin = isAdmin;
+        document.getElementById('new-delivery-modal').style.display = 'flex';
+    };
+
     // SYSTEM TOKENÓW I KONSOLI
     let currentAuthToken = null;
     let currentPermissions = {};
@@ -881,7 +979,10 @@
 
     // --- SKANER APARATU ---
     let html5QrCode = null;
-    function openBarcodeScanner(isAdmin) {
+    let scannerContext = 'inventory';
+
+    window.openBarcodeScanner = function(isAdmin, context = 'inventory') {
+        scannerContext = context;
         const modal = document.getElementById('scanner-modal');
         modal.style.display = 'flex';
         const prefix = isAdmin ? 'admin' : 'user';
@@ -894,18 +995,24 @@
             { facingMode: "environment" },
             config,
             (decodedText) => {
-                const codeInput = document.getElementById(`${prefix}-inv-search-code`);
-                if (codeInput) {
-                    codeInput.value = decodedText;
-                    displayLimit = 100;
-                    renderInventory(isAdmin);
+                if (scannerContext === 'inventory') {
+                    const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+                    if (codeInput) {
+                        codeInput.value = decodedText;
+                        displayLimit = 100;
+                        renderInventory(isAdmin);
+                    }
+                } else if (scannerContext === 'delivery') {
+                    const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
+                    if (scanInput) {
+                        scanInput.value = decodedText;
+                        scanInput.dispatchEvent(new Event('input')); // Wywołanie filtra
+                    }
                 }
                 closeBarcodeScanner();
                 if (navigator.vibrate) navigator.vibrate(200);
             },
-            (errorMessage) => {
-                // ignoruj ciągłe błędy wyszukiwania kadru
-            }
+            (errorMessage) => { }
         ).catch((err) => {
             alert("Błąd dostępu do aparatu: " + err);
             closeBarcodeScanner();
@@ -986,19 +1093,6 @@
 
             await checkAndCreateRecurringTasks();
             await loadEmployees();
-
-            // Zabezpieczenie zerowego uruchomienia:
-            const tokensSnap = await getDocs(query(collection(db, `artifacts/${appId}/public/data/auth_tokens`), limit(1)));
-            if (tokensSnap.empty) {
-                const masterToken = generateRandomToken();
-                await addDoc(collection(db, `artifacts/${appId}/public/data/auth_tokens`), {
-                    token: masterToken, title: "Główny Administrator", permissions: { admin_1: true, value_1: true, konsola: true }, createdAt: new Date()
-                });
-                console.warn("==================================================");
-                console.warn("PIERWSZY TOKEN DOSTĘPU (MASTER): " + masterToken);
-                console.warn("==================================================");
-                alert("Wykryto pierwsze uruchomienie. Wygenerowano główny token dostępu (zapisz go sobie!):\n\n" + masterToken + "\n\nMożesz go również sprawdzić w konsoli przeglądarki (F12).");
-            }
 
             await initTokenAuth();
         });
@@ -1193,6 +1287,7 @@
         'user-schedule-requests': () => renderVacationRequests(false),
         'user-inventory': () => loadInventory(),
         'user-notes': () => renderNotes(false),
+        'user-deliveries': () => loadDeliveries(false),
         'admin-tasks': () => renderTasks(true),
         'admin-recurring-tasks': () => renderRecurringTasks(),
         'admin-order': () => renderOrders(true),
@@ -1203,7 +1298,8 @@
         'admin-employees': () => loadEmployees(true),
         'admin-contacts': () => loadCompanies(),
         'admin-company-details': () => {},
-        'admin-tokens': () => renderAdminTokens()
+        'admin-tokens': () => renderAdminTokens(),
+        'admin-deliveries': () => loadDeliveries(true)
     };
 
     // --- UI UTILITIES ---
@@ -1365,6 +1461,292 @@
     }
 
     const getSourceTag = (source) => showSourceTagsAdmin ? `<span class="source-tag ${source}">${source}</span>` : '';
+
+
+    // --- DOSTAWY (DELIVERIES) LOGIC ---
+    async function loadDeliveries(isAdmin) {
+        if (!isAuthReady) return;
+        const prefix = isAdmin ? 'admin' : 'user';
+        const listEl = document.getElementById(`${prefix}-delivery-list`);
+        if(!listEl) return;
+        listEl.innerHTML = 'Ładowanie...';
+
+        try {
+            const q = query(collection(db, `artifacts/${appId}/public/data/deliveries`), orderBy("createdAt", "desc"));
+            const snapshot = await getDocs(q);
+            deliveriesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderDeliveriesList(isAdmin);
+        } catch (e) {
+            console.error(e);
+            listEl.innerHTML = 'Błąd pobierania dostaw.';
+        }
+    }
+
+    function renderDeliveriesList(isAdmin) {
+        const prefix = isAdmin ? 'admin' : 'user';
+        const listEl = document.getElementById(`${prefix}-delivery-list`);
+        listEl.innerHTML = '';
+
+        if (deliveriesData.length === 0) {
+            listEl.innerHTML = '<p>Brak dostaw.</p>';
+            return;
+        }
+
+        deliveriesData.forEach(delivery => {
+            const item = document.createElement('div');
+            item.className = 'note-list-item';
+            if (currentDeliveryData && currentDeliveryData.id === delivery.id) item.classList.add('selected');
+
+            // Kalkulacja postępu
+            const total = delivery.items ? delivery.items.length : 0;
+            const checked = delivery.items ? delivery.items.filter(i => i.checked).length : 0;
+            const isDone = total > 0 && checked === total;
+
+            let dateStr = '';
+            if (delivery.createdAt) {
+                const dateObj = delivery.createdAt.seconds ? new Date(delivery.createdAt.seconds * 1000) : new Date(delivery.createdAt);
+                dateStr = dateObj.toLocaleDateString('pl-PL') + ' ' + dateObj.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'});
+            }
+
+            const titleHtml = `<span class="note-title" style="${isDone ? 'color:green; text-decoration:line-through;' : ''}">${delivery.title}</span>
+                               <span class="note-list-date">${dateStr ? dateStr + ' | ' : ''}Postęp: ${checked}/${total}</span>`;
+            item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
+
+            item.onclick = () => {
+                document.querySelectorAll('.doc-title-list .note-list-item').forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                renderDeliveryDetails(delivery, isAdmin);
+            };
+            listEl.appendChild(item);
+        });
+    }
+
+    function renderDeliveryDetails(delivery, isAdmin) {
+        currentDeliveryData = delivery;
+        const prefix = isAdmin ? 'admin' : 'user';
+        document.getElementById(`${prefix}-delivery-details`).style.display = 'flex';
+        document.getElementById(`${prefix}-delivery-title`).textContent = delivery.title;
+
+        const delBtn = document.getElementById('admin-delivery-delete-btn');
+        if (isAdmin && delBtn) {
+            delBtn.onclick = async () => {
+                if(confirm('Usunąć ten dokument dostawy?')) {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/deliveries`, delivery.id));
+                    document.getElementById(`${prefix}-delivery-details`).style.display = 'none';
+                    currentDeliveryData = null;
+                    loadDeliveries(isAdmin);
+                }
+            };
+        }
+
+        // Resetowanie wyszukiwarki przy przełączaniu dokumentu
+        const scanInputOld = document.getElementById(`${prefix}-delivery-scan-input`);
+        if (scanInputOld) {
+            scanInputOld.value = '';
+            const newScanInput = scanInputOld.cloneNode(true);
+            scanInputOld.parentNode.replaceChild(newScanInput, scanInputOld);
+
+            newScanInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const items = document.querySelectorAll(`#${prefix}-delivery-items .delivery-item`);
+                items.forEach(item => {
+                    const ean = item.dataset.ean.toLowerCase();
+                    const name = item.dataset.name.toLowerCase();
+                    if(ean.includes(query) || name.includes(query)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        const itemsEl = document.getElementById(`${prefix}-delivery-items`);
+        itemsEl.innerHTML = '';
+
+        if (!delivery.items || delivery.items.length === 0) {
+            itemsEl.innerHTML = '<p style="padding:10px;">Dokument jest pusty lub nie udało się odczytać produktów.</p>';
+            return;
+        }
+
+        delivery.items.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = `delivery-item ${item.checked ? 'checked' : ''}`;
+            div.dataset.ean = item.ean || '';
+            div.dataset.name = item.name || '';
+
+            div.innerHTML = `
+                <div class="delivery-info">
+                    <strong style="font-size: 1.4em; color: var(--priority-color); letter-spacing: 1px;">${item.ean}</strong>
+                    <span style="font-size: 1em; font-weight: bold; margin-top: 2px;">${item.name}</span>
+                    <span class="ean-code" style="margin-top: 2px;">Symbol: ${item.symbol}</span>
+                </div>
+                <div class="delivery-controls">
+                    <input type="number" class="delivery-qty-input" value="${item.actualQty || 0}" min="0">
+                    <span style="color:#666; font-size: 0.9em;">/ ${item.expectedQty}</span>
+                    <input type="checkbox" ${item.checked ? 'checked' : ''}>
+                </div>
+            `;
+
+            const qtyInput = div.querySelector('.delivery-qty-input');
+            const checkbox = div.querySelector('input[type="checkbox"]');
+
+            qtyInput.addEventListener('change', async (e) => {
+                const val = parseFloat(e.target.value) || 0;
+                delivery.items[index].actualQty = val;
+                await saveDeliveryItems(delivery.id, delivery.items, isAdmin);
+            });
+
+            checkbox.addEventListener('change', async (e) => {
+                delivery.items[index].checked = e.target.checked;
+                div.classList.toggle('checked', e.target.checked);
+                await saveDeliveryItems(delivery.id, delivery.items, isAdmin);
+            });
+
+            itemsEl.appendChild(div);
+        });
+    }
+
+    async function saveDeliveryItems(docId, items, isAdmin) {
+        try {
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/deliveries`, docId), { items: items });
+            // Odśwież postęp na liście w tle
+            const idx = deliveriesData.findIndex(d => d.id === docId);
+            if (idx > -1) deliveriesData[idx].items = items;
+            renderDeliveriesList(isAdmin);
+        } catch (e) { console.error('Error saving delivery:', e); }
+    }
+
+    // Obsługa dodawania nowej dostawy z PDF
+    document.getElementById('delivery-modal-cancel').onclick = () => document.getElementById('new-delivery-modal').style.display = 'none';
+    document.getElementById('delivery-modal-save').onclick = async () => {
+        const title = document.getElementById('delivery-title-input').value.trim();
+        const fileInput = document.getElementById('delivery-file-input');
+
+        if (!title) { alert('Wpisz tytuł dokumentu!'); return; }
+
+        const btn = document.getElementById('delivery-modal-save');
+        btn.textContent = 'Przetwarzanie...';
+        btn.disabled = true;
+
+        try {
+            let products = [];
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                products = await extractProductsFromPDF(file);
+            }
+
+            await addDoc(collection(db, `artifacts/${appId}/public/data/deliveries`), {
+                title: title,
+                items: products,
+                createdAt: new Date(),
+                status: 'pending'
+            });
+
+            document.getElementById('new-delivery-modal').style.display = 'none';
+            loadDeliveries(currentDeliveryIsAdmin);
+        } catch (e) {
+            showModal('Błąd importu', e.message);
+        } finally {
+            btn.textContent = 'Importuj';
+            btn.disabled = false;
+        }
+    };
+
+    // Heurystyka do wydobywania danych tabelarycznych (np. WZ) z pliku PDF
+    async function extractProductsFromPDF(file) {
+        if (!window.pdfjsLib) throw new Error("Biblioteka PDF nie została załadowana.");
+
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let tokens = [];
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            content.items.forEach(item => {
+                if (item.str.trim()) {
+                    tokens.push(...item.str.trim().split(/\s+/));
+                }
+            });
+        }
+
+        let products = [];
+        let lastRowEndIndex = -1;
+        const headerWords = ['Pozycje', 'dokumentu', 'WZ', 'Lp', 'Nazwa', 'Symbol', 'EAN', 'J.ew', 'VAT', 'Ilość', 'MPP', 'Kod', 'CN'];
+
+        for (let i = 0; i < tokens.length; i++) {
+            const t = tokens[i];
+
+            // Kod EAN ma zazwyczaj od 8 do 14 znaków numerycznych
+            const isEan = /^\d{8,14}$/.test(t);
+
+            if (isEan) {
+                const t1 = tokens[i+1] || '';
+                const t2 = tokens[i+2] || '';
+                const t3 = tokens[i+3] || '';
+
+                // Sprawdzamy czy kolejny token to jednostka miary.
+                // To odróżnia EAN od Kodu CN (po Kodzie CN nie ma jednostki).
+                const isUnit = /^(szt|szt\.|kg|kpl|op|opak|l|litr|m|m2|par|para)$/i.test(t1);
+
+                if (isUnit) {
+                    const ean = t;
+                    const symbol = tokens[i-1] || '';
+
+                    let qtyStr = "0";
+                    let rowEndOffset = i;
+
+                    // Ilość jest po jednostce miary i VAT
+                    if (/^\d{1,2}%$/.test(t2) || /^ZW$/i.test(t2)) {
+                        qtyStr = t3;
+                        rowEndOffset = i + 3;
+                    } else if (/^\d+([\.,]\d+)?$/.test(t2)) {
+                        qtyStr = t2;
+                        rowEndOffset = i + 2;
+                    }
+
+                    // Skaczemy dalej przez MPP (NIE/TAK) i ewentualny Kod CN (8 cyfr) żeby nie weszły do nazwy kolejnego towaru
+                    if (tokens[rowEndOffset + 1] === 'NIE' || tokens[rowEndOffset + 1] === 'TAK') {
+                        rowEndOffset++;
+                    }
+                    if (/^\d{8}$/.test(tokens[rowEndOffset + 1])) {
+                        rowEndOffset++;
+                    }
+
+                    const qty = parseFloat(qtyStr.replace(',', '.')) || 0;
+
+                    let nameStartIndex = lastRowEndIndex > -1 ? lastRowEndIndex + 1 : 0;
+                    let nameParts = tokens.slice(nameStartIndex, i - 1);
+
+                    // Bezkompromisowe odcinanie śmieci nagłówkowych (również jeśli wskoczą ze startem nowej strony)
+                    while (nameParts.length > 0) {
+                        const w = nameParts[0];
+                        if (headerWords.includes(w) || w.startsWith('NZ/') || /^\d+$/.test(w)) {
+                            nameParts.shift();
+                        } else {
+                            break;
+                        }
+                    }
+
+                    const name = nameParts.join(' ').trim();
+
+                    products.push({
+                        id: crypto.randomUUID(),
+                        ean: ean,
+                        symbol: symbol,
+                        name: name,
+                        expectedQty: qty,
+                        actualQty: 0,
+                        checked: false
+                    });
+
+                    lastRowEndIndex = rowEndOffset;
+                }
+            }
+        }
+        return products;
+    }
 
 
     // --- CONTACTS MODULE LOGIC ---
@@ -2506,6 +2888,23 @@
         document.getElementById('user-toggle-zeros-btn').onclick = () => { showZeros=!showZeros; renderInventory(false); };
         document.getElementById('user-task-filter-person').onchange = () => { renderTasks(false); };
         document.getElementById('user-request-filter-person').onchange = () => { renderVacationRequests(false); };
+
+        const userDeliveryScanInput = document.getElementById('user-delivery-scan-input');
+        if (userDeliveryScanInput) {
+            userDeliveryScanInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const items = document.querySelectorAll('#user-delivery-items .delivery-item');
+                items.forEach(item => {
+                    const ean = item.dataset.ean.toLowerCase();
+                    const name = item.dataset.name.toLowerCase();
+                    if(ean.includes(query) || name.includes(query)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
     }
 
     function initAdminView() {
@@ -2704,6 +3103,21 @@
             currentCompanyData = null;
         };
 
+        document.getElementById('edit-company-name-btn').onclick = async () => {
+            if (!currentCompanyData) return;
+            const newName = prompt('Podaj nową nazwę firmy:', currentCompanyData.name);
+            if (newName && newName.trim() !== '') {
+                try {
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/companies`, currentCompanyData.id), { name: newName.trim() });
+                    currentCompanyData.name = newName.trim();
+                    document.getElementById('detail-company-name').textContent = currentCompanyData.name;
+                    loadCompanies(); // odświeża listę w tle
+                } catch (e) {
+                    showModal('Błąd', 'Nie udało się zmienić nazwy firmy.');
+                }
+            }
+        };
+
         document.getElementById('add-contact-btn').onclick = () => openContactModal();
         document.getElementById('contact-modal-cancel').onclick = () => document.getElementById('contact-modal').style.display = 'none';
 
@@ -2731,6 +3145,23 @@
                 renderContactList();
             } catch (e) { showModal('Błąd', 'Nie udało się zapisać kontaktu.'); }
         };
+
+        const adminDeliveryScanInput = document.getElementById('admin-delivery-scan-input');
+        if (adminDeliveryScanInput) {
+            adminDeliveryScanInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const items = document.querySelectorAll('#admin-delivery-items .delivery-item');
+                items.forEach(item => {
+                    const ean = item.dataset.ean.toLowerCase();
+                    const name = item.dataset.name.toLowerCase();
+                    if(ean.includes(query) || name.includes(query)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -2747,8 +3178,8 @@
         document.querySelectorAll('.hamburger-btn').forEach(btn => { btn.onclick = () => btn.closest('.nav-bar').querySelector('.nav-links').classList.toggle('open'); });
 
         // PRZYCISKI SKANERA APARATU
-        document.getElementById('user-camera-scan-btn')?.addEventListener('click', () => openBarcodeScanner(false));
-        document.getElementById('admin-camera-scan-btn')?.addEventListener('click', () => openBarcodeScanner(true));
+        document.getElementById('user-camera-scan-btn')?.addEventListener('click', () => openBarcodeScanner(false, 'inventory'));
+        document.getElementById('admin-camera-scan-btn')?.addEventListener('click', () => openBarcodeScanner(true, 'inventory'));
         document.getElementById('scanner-close-btn')?.addEventListener('click', closeBarcodeScanner);
 
         ['user', 'admin'].forEach(prefix => {
@@ -2829,11 +3260,21 @@
                     const code = scannerBuffer.substring(1);
                     const isAdmin = document.getElementById('admin-view').style.display === 'block';
                     const prefix = isAdmin ? 'admin' : 'user';
-                    const codeInput = document.getElementById(`${prefix}-inv-search-code`);
-                    if(codeInput) {
-                        codeInput.value = code;
-                        displayLimit = 100;
-                        renderInventory(isAdmin);
+
+                    if (scannerContext === 'inventory') {
+                        const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+                        if(codeInput) {
+                            codeInput.value = code;
+                            displayLimit = 100;
+                            renderInventory(isAdmin);
+                            scannerBuffer = "";
+                        }
+                    } else if (scannerContext === 'delivery') {
+                        const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
+                        if (scanInput) {
+                            scanInput.value = code;
+                            scanInput.dispatchEvent(new Event('input')); // Wywołanie filtra!
+                        }
                         scannerBuffer = "";
                     }
                 }
