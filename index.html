@@ -104,8 +104,11 @@
         /* --- DELIVERY (DOSTAWY) STYLES --- */
         .delivery-item {
             border-bottom: 1px solid var(--border-light);
-            padding: 12px 10px; display: flex; justify-content: space-between; align-items: center; gap: 15px;
+            padding: 12px 10px; display: flex; flex-direction: column; align-items: stretch; gap: 5px;
             transition: background-color 0.2s;
+        }
+        .delivery-item-main {
+            display: flex; justify-content: space-between; align-items: center; gap: 15px; width: 100%;
         }
         .dark-mode .delivery-item { border-bottom-color: var(--border-dark); }
         .delivery-item.checked { background-color: rgba(40, 167, 69, 0.1); }
@@ -114,9 +117,15 @@
         .delivery-info .ean-code { font-size: 0.85em; color: #888; font-family: monospace; }
         .dark-mode .delivery-info .ean-code { color: #aaa; }
         .delivery-controls { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
-        .delivery-qty-input { width: 50px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: bold;}
+        .delivery-qty-input { width: 70px; min-width: 70px; padding: 8px 4px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; font-size: 1.1em;}
         .dark-mode .delivery-qty-input { background: #2a2a2a; color: var(--text-dark); border-color: #444; }
         .delivery-controls input[type="checkbox"] { transform: scale(1.3); cursor: pointer; margin-left: 10px; }
+
+        .delivery-note-input {
+            background-color: var(--surface-light); color: var(--text-light); border: 1px solid #ccc; border-radius: 4px;
+            padding: 6px; margin-top: 5px; font-size: 0.9em; width: 100%; box-sizing: border-box;
+        }
+        .dark-mode .delivery-note-input { background-color: #2a2a2a; color: var(--text-dark); border-color: #444; }
 
         /* --- INVENTORY STYLES (UKŁAD SIATKI 2x3 WG SZKICU) --- */
         .inventory-controls {
@@ -889,7 +898,8 @@
             <div style="display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
                 <button id="back-to-companies-btn" style="background-color: #6c757d; margin:0;">&larr; Wróć</button>
                 <h2 id="detail-company-name" style="margin:0;">Nazwa Firmy</h2>
-                <button id="edit-company-name-btn" style="background-color: #ffc101; color: black; padding: 4px 8px; font-size: 0.8em; margin: 0; border: none; border-radius: 4px; cursor: pointer;">✏️ Edytuj Nazwę</button>
+                <button id="edit-company-name-btn" style="background-color: #ffc101; color: black; padding: 4px 8px; font-size: 0.8em; margin: 0; border: none; border-radius: 4px; cursor: pointer;">✏️ Edytuj</button>
+                <button id="delete-company-btn" style="background-color: #dc3545; color: white; padding: 4px 8px; font-size: 0.8em; margin: 0; border: none; border-radius: 4px; cursor: pointer;">🗑️ Usuń</button>
             </div>
             <button id="add-contact-btn">+ Dodaj Kontakt</button>
         </div>
@@ -1502,15 +1512,25 @@
             const checked = delivery.items ? delivery.items.filter(i => i.checked).length : 0;
             const isDone = total > 0 && checked === total;
 
-            let dateStr = '';
+            let dateInfo = [];
             if (delivery.createdAt) {
-                const dateObj = delivery.createdAt.seconds ? new Date(delivery.createdAt.seconds * 1000) : new Date(delivery.createdAt);
-                dateStr = dateObj.toLocaleDateString('pl-PL') + ' ' + dateObj.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'});
+                const d = delivery.createdAt.seconds ? new Date(delivery.createdAt.seconds * 1000) : new Date(delivery.createdAt);
+                dateInfo.push('Dodano: ' + d.toLocaleDateString('pl-PL') + ' ' + d.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'}));
+            }
+            if (isDone && (delivery.completedAt || delivery.updatedAt)) {
+                const d = delivery.completedAt || delivery.updatedAt;
+                const dObj = d.seconds ? new Date(d.seconds * 1000) : new Date(d);
+                dateInfo.push('Sprawdzono: ' + dObj.toLocaleDateString('pl-PL') + ' ' + dObj.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'}));
+            } else if (delivery.updatedAt && !isDone) {
+                const d = delivery.updatedAt.seconds ? new Date(delivery.updatedAt.seconds * 1000) : new Date(delivery.updatedAt);
+                dateInfo.push('Ost. akt: ' + d.toLocaleDateString('pl-PL') + ' ' + d.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'}));
             }
 
-            const titleHtml = `<span class="note-title" style="${isDone ? 'color:green; text-decoration:line-through;' : ''}">${delivery.title}</span>
-                               <span class="note-list-date">${dateStr ? dateStr + ' | ' : ''}Postęp: ${checked}/${total}</span>`;
-            item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
+            const titleHtml = `<div style="display:flex; flex-direction:column; gap:4px; width: 100%;">
+                               <span class="note-title" style="${isDone ? 'color:green; text-decoration:line-through;' : ''}">${delivery.title}</span>
+                               <span class="note-list-date" style="margin-left:0; white-space:normal; line-height:1.4; ${isDone ? 'color:green;' : ''}">${dateInfo.join('<br>')} <br><strong>Postęp: ${checked}/${total}</strong></span>
+                               </div>`;
+            item.innerHTML = `<div class="note-title-wrapper" style="align-items:flex-start;">${titleHtml}</div>`;
 
             item.onclick = () => {
                 document.querySelectorAll('.doc-title-list .note-list-item').forEach(i => i.classList.remove('selected'));
@@ -1575,31 +1595,56 @@
             div.dataset.ean = item.ean || '';
             div.dataset.name = item.name || '';
 
+            const actualVal = (item.actualQty === 0 || item.actualQty == null) ? '' : item.actualQty;
+
             div.innerHTML = `
-                <div class="delivery-info">
-                    <strong style="font-size: 1.4em; color: var(--priority-color); letter-spacing: 1px;">${item.ean}</strong>
-                    <span style="font-size: 1em; font-weight: bold; margin-top: 2px;">${item.name}</span>
-                    <span class="ean-code" style="margin-top: 2px;">Symbol: ${item.symbol}</span>
+                <div class="delivery-item-main">
+                    <div class="delivery-info">
+                        <strong style="font-size: 1.4em; color: var(--priority-color); letter-spacing: 1px;">${item.ean}</strong>
+                        <span style="font-size: 1em; font-weight: bold; margin-top: 2px;">${item.name}</span>
+                        <span class="ean-code" style="margin-top: 2px;">Symbol: ${item.symbol}</span>
+                    </div>
+                    <div class="delivery-controls">
+                        <input type="number" class="delivery-qty-input" value="${actualVal}" placeholder="0" min="0" inputmode="numeric">
+                        <span style="color:#666; font-size: 0.9em; min-width: 30px; display:inline-block; text-align:right;">/ ${item.expectedQty}</span>
+                        <input type="checkbox" ${item.checked ? 'checked' : ''}>
+                    </div>
                 </div>
-                <div class="delivery-controls">
-                    <input type="number" class="delivery-qty-input" value="${item.actualQty || 0}" min="0">
-                    <span style="color:#666; font-size: 0.9em;">/ ${item.expectedQty}</span>
-                    <input type="checkbox" ${item.checked ? 'checked' : ''}>
-                </div>
+                <input type="text" class="delivery-note-input" maxlength="50" placeholder="Krótka notatka (max 50 znaków)..." value="${item.note || ''}">
             `;
 
             const qtyInput = div.querySelector('.delivery-qty-input');
             const checkbox = div.querySelector('input[type="checkbox"]');
+            const noteInput = div.querySelector('.delivery-note-input');
 
             qtyInput.addEventListener('change', async (e) => {
                 const val = parseFloat(e.target.value) || 0;
                 delivery.items[index].actualQty = val;
+
+                // Automatyczne zaznaczanie, bez automatycznego odznaczania
+                if (val >= item.expectedQty) {
+                    delivery.items[index].checked = true;
+                    checkbox.checked = true;
+                    div.classList.add('checked');
+                }
                 await saveDeliveryItems(delivery.id, delivery.items, isAdmin);
             });
 
             checkbox.addEventListener('change', async (e) => {
                 delivery.items[index].checked = e.target.checked;
                 div.classList.toggle('checked', e.target.checked);
+
+                // Udogodnienie: Jeśli ręcznie zaznaczamy pusty input, wypełnij go 100% ilości oczekiwanej
+                if (e.target.checked && (!qtyInput.value || parseFloat(qtyInput.value) === 0)) {
+                    qtyInput.value = item.expectedQty;
+                    delivery.items[index].actualQty = item.expectedQty;
+                }
+
+                await saveDeliveryItems(delivery.id, delivery.items, isAdmin);
+            });
+
+            noteInput.addEventListener('change', async (e) => {
+                delivery.items[index].note = e.target.value.trim();
                 await saveDeliveryItems(delivery.id, delivery.items, isAdmin);
             });
 
@@ -1609,10 +1654,24 @@
 
     async function saveDeliveryItems(docId, items, isAdmin) {
         try {
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/deliveries`, docId), { items: items });
+            const now = new Date();
+            const updatePayload = { items: items, updatedAt: now };
+            const total = items.length;
+            const checkedCount = items.filter(i => i.checked).length;
+
+            if (total > 0 && checkedCount === total) {
+                updatePayload.completedAt = now;
+            }
+
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/deliveries`, docId), updatePayload);
+
             // Odśwież postęp na liście w tle
             const idx = deliveriesData.findIndex(d => d.id === docId);
-            if (idx > -1) deliveriesData[idx].items = items;
+            if (idx > -1) {
+                deliveriesData[idx].items = items;
+                deliveriesData[idx].updatedAt = now;
+                if (updatePayload.completedAt) deliveriesData[idx].completedAt = now;
+            }
             renderDeliveriesList(isAdmin);
         } catch (e) { console.error('Error saving delivery:', e); }
     }
@@ -1738,7 +1797,8 @@
                         name: name,
                         expectedQty: qty,
                         actualQty: 0,
-                        checked: false
+                        checked: false,
+                        note: ''
                     });
 
                     lastRowEndIndex = rowEndOffset;
@@ -1781,24 +1841,6 @@
             div.className = 'company-card';
             div.innerHTML = `<span>🏢 <strong>${comp.name}</strong></span> <span>&rsaquo;</span>`;
             div.onclick = () => openCompanyDetails(comp);
-
-            const delBtn = document.createElement('button');
-            delBtn.textContent = 'Usuń';
-            delBtn.style.marginLeft = '10px';
-            delBtn.style.backgroundColor = '#dc3545';
-            delBtn.style.fontSize = '0.7em';
-            delBtn.style.float = 'right';
-            delBtn.onclick = async (e) => {
-                e.stopPropagation();
-                if(confirm(`Usunąć firmę ${comp.name} i wszystkie jej kontakty?`)) {
-                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/companies`, comp.id));
-                    loadCompanies();
-                }
-            };
-            const rightSpan = div.lastElementChild;
-            rightSpan.innerHTML = '';
-            rightSpan.appendChild(delBtn);
-
             listEl.appendChild(div);
         });
     }
@@ -3118,6 +3160,21 @@
             }
         };
 
+        document.getElementById('delete-company-btn').onclick = async () => {
+            if (!currentCompanyData) return;
+            if (confirm(`Czy na pewno chcesz usunąć firmę ${currentCompanyData.name} i wszystkie jej kontakty?`)) {
+                try {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/companies`, currentCompanyData.id));
+                    document.getElementById('admin-company-details').classList.remove('active');
+                    document.getElementById('admin-contacts').classList.add('active');
+                    currentCompanyData = null;
+                    loadCompanies();
+                } catch (e) {
+                    showModal('Błąd', 'Nie udało się usunąć firmy.');
+                }
+            }
+        };
+
         document.getElementById('add-contact-btn').onclick = () => openContactModal();
         document.getElementById('contact-modal-cancel').onclick = () => document.getElementById('contact-modal').style.display = 'none';
 
@@ -3248,37 +3305,68 @@
         }
         setupTaskListeners();
 
-        let scannerBuffer = ""; let lastKeyTime = 0;
-        document.addEventListener('keydown', (e) => {
-            const now = Date.now();
-            if (now - lastKeyTime > 300) scannerBuffer = "";
-            lastKeyTime = now;
-            if (e.key.length === 1) scannerBuffer += e.key;
-            if (scannerBuffer.startsWith('@')) {
-                if (document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') { e.preventDefault(); }
-                if (/@\d+/.test(scannerBuffer)) {
-                    const code = scannerBuffer.substring(1);
-                    const isAdmin = document.getElementById('admin-view').style.display === 'block';
-                    const prefix = isAdmin ? 'admin' : 'user';
+        let scannerBuffer = "";
+        let lastKeyTime = 0;
+        let scannerTimeout = null;
 
-                    if (scannerContext === 'inventory') {
-                        const codeInput = document.getElementById(`${prefix}-inv-search-code`);
-                        if(codeInput) {
-                            codeInput.value = code;
-                            displayLimit = 100;
-                            renderInventory(isAdmin);
-                            scannerBuffer = "";
-                        }
-                    } else if (scannerContext === 'delivery') {
-                        const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
-                        if (scanInput) {
-                            scanInput.value = code;
-                            scanInput.dispatchEvent(new Event('input')); // Wywołanie filtra!
-                        }
-                        scannerBuffer = "";
+        const processScannerBuffer = () => {
+            if (scannerBuffer.startsWith('@') && scannerBuffer.length > 1) {
+                const code = scannerBuffer.substring(1).trim();
+                const isAdmin = document.getElementById('admin-view').style.display === 'block';
+                const prefix = isAdmin ? 'admin' : 'user';
+
+                if (scannerContext === 'inventory') {
+                    const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+                    if(codeInput) {
+                        codeInput.value = code;
+                        displayLimit = 100;
+                        renderInventory(isAdmin);
+                    }
+                } else if (scannerContext === 'delivery') {
+                    const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
+                    if (scanInput) {
+                        scanInput.value = code;
+                        scanInput.dispatchEvent(new Event('input'));
                     }
                 }
             }
+            scannerBuffer = "";
+        };
+
+        document.addEventListener('keydown', (e) => {
+            // Ignorowanie modyfikatorów
+            if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+
+            const now = Date.now();
+            if (now - lastKeyTime > 100) {
+                // Typowanie zbyt wolne (człowiek) - resetujemy bufor chyba, że to sam znak @
+                if (e.key === '@') {
+                    scannerBuffer = "";
+                }
+            }
+            lastKeyTime = now;
+
+            if (e.key === 'Enter') {
+                if (scannerBuffer.startsWith('@')) {
+                    e.preventDefault();
+                    processScannerBuffer();
+                }
+                return;
+            }
+
+            if (e.key.length === 1) {
+                scannerBuffer += e.key;
+            }
+
+            // Fallback: W przypadku fizycznego skanera bez zaprogramowanego przycisku 'Enter' na końcu (rzadkie ale możliwe)
+            clearTimeout(scannerTimeout);
+            scannerTimeout = setTimeout(() => {
+                if (scannerBuffer.startsWith('@') && scannerBuffer.length > 3) {
+                    processScannerBuffer();
+                } else {
+                    scannerBuffer = "";
+                }
+            }, 150);
         });
     });
 </script>
