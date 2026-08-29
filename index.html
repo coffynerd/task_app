@@ -288,7 +288,7 @@
         .note-editor-column { flex: 3; display: flex; flex-direction: column; overflow-y: auto;}
         .note-editor-content-wrapper { position: relative; flex-grow: 1; display: flex; }
         #new-note-btn, #user-new-note-btn, .new-doc-btn { width: 100%; margin: 0 0 10px 0; }
-        #user-note-title-list, .doc-title-list { overflow-y: auto; flex-grow: 1; flex-shrink: 1; min-height: 0; }
+        #note-title-list, #user-note-title-list, .doc-title-list { overflow-y: auto; flex-grow: 1; flex-shrink: 1; min-height: 0; }
         .note-list-item { padding: 10px; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .note-title-wrapper { display: flex; align-items: baseline; flex-grow: 1; overflow: hidden; }
         .note-title { font-weight: bold; font-size: 1.1em; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
@@ -552,8 +552,8 @@
         <h2>Weryfikacja Dostaw</h2>
         <div class="notebook-container">
             <div class="note-list-column">
-                <button class="new-doc-btn" style="flex-shrink: 0;" onclick="openNewDeliveryModal(false)">+ Nowa dostawa</button>
-                <div id="user-delivery-list" class="doc-title-list" style="flex-grow: 1; flex-shrink: 1; min-height: 0;">Ładowanie...</div>
+                <button class="new-doc-btn" onclick="openNewDeliveryModal(false)">+ Nowa dostawa</button>
+                <div id="user-delivery-list" class="doc-title-list">Ładowanie...</div>
             </div>
             <div class="note-editor-column" id="user-delivery-details" style="display:none;">
                 <div class="editor-header" style="justify-content: space-between;">
@@ -640,8 +640,8 @@
         <h2>Notatnik</h2>
         <div class="notebook-container">
             <div class="note-list-column">
-                <button id="user-new-note-btn" style="flex-shrink: 0;">+ Nowa notatka</button>
-                <div id="user-note-title-list" style="overflow-y: auto; flex-grow: 1; flex-shrink: 1; min-height: 0;">Brak notatek</div>
+                <button id="user-new-note-btn">+ Nowa notatka</button>
+                <div id="user-note-title-list">Brak notatek</div>
             </div>
             <div class="note-editor-column">
                 <div class="editor-header">
@@ -739,8 +739,8 @@
         <h2>Weryfikacja Dostaw (Admin)</h2>
         <div class="notebook-container">
             <div class="note-list-column">
-                <button class="new-doc-btn" style="flex-shrink: 0;" onclick="openNewDeliveryModal(true)">+ Nowa dostawa</button>
-                <div id="admin-delivery-list" class="doc-title-list" style="flex-grow: 1; flex-shrink: 1; min-height: 0;">Ładowanie...</div>
+                <button class="new-doc-btn" onclick="openNewDeliveryModal(true)">+ Nowa dostawa</button>
+                <div id="admin-delivery-list" class="doc-title-list">Ładowanie...</div>
             </div>
             <div class="note-editor-column" id="admin-delivery-details" style="display:none;">
                 <div class="editor-header" style="justify-content: space-between;">
@@ -1014,7 +1014,7 @@
         modal.style.display = 'flex';
         const prefix = isAdmin ? 'admin' : 'user';
 
-        const useBeta = document.getElementById('global-beta-scanner-toggle').checked;
+        const useBeta = localStorage.getItem('betaScanner') === 'true';
         const html5Div = document.getElementById('reader-html5');
         const zxingVideo = document.getElementById('reader-zxing');
 
@@ -1030,7 +1030,7 @@
                 const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
                 if (scanInput) {
                     scanInput.value = decodedText;
-                    scanInput.dispatchEvent(new Event('input')); // Wywołanie filtra
+                    scanInput.dispatchEvent(new Event('input'));
                 }
             }
             closeBarcodeScanner();
@@ -1043,20 +1043,34 @@
             zxingVideo.style.display = 'block';
 
             if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
-            zxingReader.decodeFromVideoDevice(undefined, 'reader-zxing', (result, err) => {
-                if (result) {
-                    onScanSuccess(result.getText());
-                }
-            }).catch((err) => {
-                console.warn(err);
-            });
+
+            try {
+                zxingReader.decodeFromConstraints({ video: { facingMode: "environment" } }, 'reader-zxing', (result, err) => {
+                    if (result) {
+                        onScanSuccess(result.getText());
+                    }
+                }).catch((err) => {
+                    console.warn("Zxing constraints error:", err);
+                    // fallback to default
+                    zxingReader.decodeFromVideoDevice(null, 'reader-zxing', (result, err) => {
+                        if (result) onScanSuccess(result.getText());
+                    }).catch(console.error);
+                });
+            } catch(e) {
+                zxingReader.decodeFromVideoDevice(null, 'reader-zxing', (result, err) => {
+                    if (result) onScanSuccess(result.getText());
+                }).catch(console.error);
+            }
         } else {
             isBetaScannerActive = false;
             zxingVideo.style.display = 'none';
             html5Div.style.display = 'block';
 
-            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader-html5");
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader-html5");
+            }
             const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {})
                 .catch((err) => {
                     alert("Błąd dostępu do aparatu: " + err);
@@ -1070,12 +1084,16 @@
         if (isBetaScannerActive && zxingReader) {
             zxingReader.reset();
             modal.style.display = 'none';
-        } else if (!isBetaScannerActive && html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
+        } else if (!isBetaScannerActive && html5QrCode) {
+            try {
+                html5QrCode.stop().then(() => {
+                    modal.style.display = 'none';
+                }).catch(() => {
+                    modal.style.display = 'none';
+                });
+            } catch(e) {
                 modal.style.display = 'none';
-            }).catch(() => {
-                modal.style.display = 'none';
-            });
+            }
         } else {
             modal.style.display = 'none';
         }
@@ -3595,5 +3613,3 @@
         });
     });
 </script>
-</body>
-</html>
