@@ -8,14 +8,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+EAN13+Text&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <!-- JEDEN, UNIWERSALNY SILNIK SKANERA KODÓW KRESKOWYCH (ZXING) -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script type="text/javascript" src="https://unpkg.com/@zxing/library@0.19.1"></script>
-    <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
-    <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW EXCEL -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -67,6 +65,7 @@
         .blue-nav a:hover { background-color: #ffc101; color: black; }
         .gray-nav a:hover { background-color: #5a6268; }
         .nav-actions { display: flex; align-items: center; }
+        .beta-scanner-label { color: white; font-size: 0.85em; margin-right: 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
         .theme-toggle-btn, .refresh-btn { font-size: 1.5em; background: none; border: none; cursor: pointer; padding: 0 10px; color: white; }
         .hamburger-btn { display: none; font-size: 1.8em; background: none; border: none; cursor: pointer; color: white; }
         .content { padding: 20px 30px; display: none; }
@@ -376,6 +375,7 @@
             .dark-mode .vacation-request .right-aligned-info { border-top-color: #333; }
             .vacation-request button { padding: 10px 15px; margin: 5px; flex: 1 0 auto; min-width: 80px; }
             .vacation-request .right-aligned-info > div { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; justify-content: flex-end; }
+            .beta-scanner-label { font-size: 0.75em; margin-right: 5px; white-space: nowrap; }
         }
 
         /* --- EASTER EGGS --- */
@@ -386,16 +386,15 @@
 </head>
 <body>
 
-<!-- MODAL SKANERA APARATEM -->
 <div id="scanner-modal" class="modal-overlay" style="display: none; z-index: 3000;">
     <div class="modal-content" style="max-width: 380px; width: 95%;">
         <h4>Skanuj kod kreskowy</h4>
-        <video id="reader-zxing" autoplay muted playsinline style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; object-fit: cover;"></video>
+        <div id="reader-html5" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; overflow: hidden;"></div>
+        <video id="reader-zxing" autoplay muted playsinline style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; display: none; object-fit: cover;"></video>
         <button id="scanner-close-btn" style="margin-top: 15px; width: 100%; background-color: #6c757d; padding: 12px; font-size: 1em;">Anuluj / Zamknij</button>
     </div>
 </div>
 
-<!-- AUTH MODAL -->
 <div id="auth-modal" class="modal-overlay" style="display: none; background-color: var(--background-dark);">
     <div class="modal-content" style="background: var(--surface-light); color: var(--text-light);">
         <h4>Autoryzacja</h4>
@@ -426,7 +425,6 @@
     </div>
 </div>
 
-<!-- MODAL NOWEJ DOSTAWY -->
 <div id="new-delivery-modal" class="modal-overlay" style="display: none; z-index: 2500;">
     <div class="modal-content">
         <h4>Dodaj nowy dokument dostawy</h4>
@@ -485,7 +483,6 @@
     </div>
 </div>
 
-<!-- MODAL EDYCJI TOKENÓW -->
 <div id="edit-token-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <h4>Edytuj Token</h4>
@@ -517,6 +514,9 @@
             <a id="switch-to-admin-password-btn" style="display: none; font-weight: bold;">🔑 Zaloguj do Panelu</a>
         </div>
         <div class="nav-actions">
+            <label class="beta-scanner-label" title="Włącz alternatywny silnik skanera (lepszy dla iPhone'ów)">
+                <input type="checkbox" class="beta-scanner-toggle"> Skaner Beta
+            </label>
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
             <button class="theme-toggle-btn">🌓</button>
             <button class="hamburger-btn" id="user-hamburger-btn">&#9776;</button>
@@ -672,6 +672,9 @@
             <a id="admin-commands-btn">💻 Opcje Dev</a>
         </div>
         <div class="nav-actions">
+            <label class="beta-scanner-label" title="Włącz alternatywny silnik skanera (lepszy dla iPhone'ów)">
+                <input type="checkbox" class="beta-scanner-toggle"> Skaner Beta
+            </label>
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
             <button class="theme-toggle-btn">🌓</button>
             <button class="hamburger-btn" id="admin-hamburger-btn">&#9776;</button>
@@ -992,7 +995,9 @@
     let isAuthReady = false;
 
     // --- SKANER APARATU ---
+    let html5QrCode = null;
     let zxingReader = null;
+    let isBetaScannerActive = false;
     let scannerContext = 'inventory';
 
     window.openBarcodeScanner = function(isAdmin, context = 'inventory') {
@@ -1000,6 +1005,10 @@
         const modal = document.getElementById('scanner-modal');
         modal.style.display = 'flex';
         const prefix = isAdmin ? 'admin' : 'user';
+
+        const useBeta = localStorage.getItem('betaScanner') === 'true';
+        const html5Div = document.getElementById('reader-html5');
+        const zxingVideo = document.getElementById('reader-zxing');
 
         const onScanSuccess = (decodedText) => {
             if (scannerContext === 'inventory') {
@@ -1020,33 +1029,63 @@
             if (navigator.vibrate) navigator.vibrate(200);
         };
 
-        if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+        if (useBeta) {
+            isBetaScannerActive = true;
+            html5Div.style.display = 'none';
+            zxingVideo.style.display = 'block';
 
-        try {
-            document.getElementById('reader-zxing').style.display = 'block';
-            zxingReader.decodeFromConstraints({ video: { facingMode: "environment" } }, 'reader-zxing', (result, err) => {
-                if (result) {
-                    onScanSuccess(result.getText());
-                }
-            }).catch((err) => {
-                console.warn("Zxing constraints error:", err);
+            if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+
+            try {
+                document.getElementById('reader-zxing').style.display = 'block';
+                zxingReader.decodeFromConstraints({ video: { facingMode: "environment" } }, 'reader-zxing', (result, err) => {
+                    if (result) {
+                        onScanSuccess(result.getText());
+                    }
+                }).catch((err) => {
+                    console.warn("Zxing constraints error:", err);
+                    // fallback to default
+                    zxingReader.decodeFromVideoDevice(null, 'reader-zxing', (result, err) => {
+                        if (result) onScanSuccess(result.getText());
+                    }).catch(console.error);
+                });
+            } catch(e) {
                 zxingReader.decodeFromVideoDevice(null, 'reader-zxing', (result, err) => {
                     if (result) onScanSuccess(result.getText());
                 }).catch(console.error);
-            });
-        } catch(e) {
-            zxingReader.decodeFromVideoDevice(null, 'reader-zxing', (result, err) => {
-                if (result) onScanSuccess(result.getText());
-            }).catch(console.error);
+            }
+        } else {
+            isBetaScannerActive = false;
+            zxingVideo.style.display = 'none';
+            html5Div.style.display = 'block';
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader-html5");
+            }
+            const config = { fps: 15 }; // BEZ qrbox - łapie z całego okna wideo!
+
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {})
+                .catch((err) => {
+                    alert("Błąd dostępu do aparatu: " + err);
+                    closeBarcodeScanner();
+                });
         }
     }
 
     function closeBarcodeScanner() {
         const modal = document.getElementById('scanner-modal');
-        if (zxingReader) {
-            zxingReader.reset();
-        }
         modal.style.display = 'none';
+
+        if (isBetaScannerActive && zxingReader) {
+            zxingReader.reset();
+        } else if (!isBetaScannerActive && html5QrCode) {
+            // bezpieczne zatrzymywanie skanera
+            if (html5QrCode.getState && html5QrCode.getState() === 2 /* SCANNING */) {
+                html5QrCode.stop().catch(e => console.warn(e));
+            } else {
+                try { html5QrCode.stop().catch(e=>console.warn(e)); } catch(e){}
+            }
+        }
     }
 
     // --- Firebase Setup ---
@@ -3407,6 +3446,17 @@
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
 
+        // Inicjalizacja skanera beta na podstawie localStorage
+        const savedBetaState = localStorage.getItem('betaScanner') === 'true';
+        document.querySelectorAll('.beta-scanner-toggle').forEach(cb => {
+            cb.checked = savedBetaState;
+            cb.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                localStorage.setItem('betaScanner', isChecked);
+                document.querySelectorAll('.beta-scanner-toggle').forEach(box => box.checked = isChecked);
+            });
+        });
+
         updatePriceVisibility();
 
         initUserView();
@@ -3497,18 +3547,21 @@
                 const isAdmin = document.getElementById('admin-view').style.display === 'block';
                 const prefix = isAdmin ? 'admin' : 'user';
 
-                if (scannerContext === 'inventory') {
-                    const codeInput = document.getElementById(`${prefix}-inv-search-code`);
-                    if(codeInput) {
-                        codeInput.value = code;
-                        displayLimit = 100;
-                        renderInventory(isAdmin);
-                    }
-                } else if (scannerContext === 'delivery') {
-                    const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
-                    if (scanInput) {
-                        scanInput.value = code;
-                        scanInput.dispatchEvent(new Event('input'));
+                const activeContent = document.querySelector('.content.active');
+                if (activeContent) {
+                    if (activeContent.id.includes('inventory')) {
+                        const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+                        if(codeInput) {
+                            codeInput.value = code;
+                            displayLimit = 100;
+                            renderInventory(isAdmin);
+                        }
+                    } else if (activeContent.id.includes('deliveries')) {
+                        const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
+                        if (scanInput) {
+                            scanInput.value = code;
+                            scanInput.dispatchEvent(new Event('input'));
+                        }
                     }
                 }
             }
