@@ -8,13 +8,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+EAN13+Text&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <!-- BIBLIOTEKA DO SKANOWANIA KODÓW APARATEM -->
+    <!-- BIBLIOTEKA DO SKANOWANIA KODÓW APARATEM (STANDARD) -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- BIBLIOTEKA DO SKANOWANIA KODÓW APARATEM (BETA / IOS) -->
+    <script type="text/javascript" src="https://unpkg.com/@zxing/library@0.19.1"></script>
     <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
+    <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW EXCEL -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --background-light: #f0f2f5;
@@ -65,12 +69,9 @@
         .blue-nav a:hover { background-color: #ffc101; color: black; }
         .gray-nav a:hover { background-color: #5a6268; }
         .nav-actions { display: flex; align-items: center; }
-        .theme-toggle-btn, .refresh-btn {
-            font-size: 1.5em; background: none; border: none; cursor: pointer; padding: 0 10px; color: white;
-        }
-        .hamburger-btn {
-            display: none; font-size: 1.8em; background: none; border: none; cursor: pointer; color: white;
-        }
+        .beta-scanner-label { color: white; font-size: 0.85em; margin-right: 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .theme-toggle-btn, .refresh-btn { font-size: 1.5em; background: none; border: none; cursor: pointer; padding: 0 10px; color: white; }
+        .hamburger-btn { display: none; font-size: 1.8em; background: none; border: none; cursor: pointer; color: white; }
         .content { padding: 20px 30px; display: none; }
         .content.active { display: block; }
 
@@ -282,12 +283,12 @@
 
         /* --- NOTEBOOK & DELIVERIES --- */
         .notebook-container { display: flex; gap: 20px; height: 80vh; }
-        .note-list-column { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-light); padding-right: 20px; }
+        .note-list-column { flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; border-right: 1px solid var(--border-light); padding-right: 20px; }
         .dark-mode .note-list-column { border-right-color: var(--border-dark); }
         .note-editor-column { flex: 3; display: flex; flex-direction: column; overflow-y: auto;}
         .note-editor-content-wrapper { position: relative; flex-grow: 1; display: flex; }
         #new-note-btn, #user-new-note-btn, .new-doc-btn { width: 100%; margin: 0 0 10px 0; }
-        #note-title-list, #user-note-title-list, .doc-title-list { overflow-y: auto; }
+        #user-note-title-list, .doc-title-list { overflow-y: auto; flex-grow: 1; flex-shrink: 1; min-height: 0; }
         .note-list-item { padding: 10px; border-bottom: 1px solid var(--border-light); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .note-title-wrapper { display: flex; align-items: baseline; flex-grow: 1; overflow: hidden; }
         .note-title { font-weight: bold; font-size: 1.1em; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
@@ -315,8 +316,11 @@
         .note-editor-buttons { margin-top: 10px; text-align: right; }
         #admin-notes button { background-color: #6c757d; }
         #admin-notes button:hover { background-color: #5a6268; }
-        #delete-note-btn, .delete-order-btn, .delete-vacation-btn, .delete-task-btn, .delete-token-btn, .delete-delivery-btn { background-color: #dc3545; }
-        #delete-note-btn:hover, .delete-order-btn:hover, .delete-vacation-btn:hover, .delete-task-btn:hover, .delete-token-btn:hover, .delete-delivery-btn:hover { background-color: #c82333; }
+
+        #archive-note-btn { background-color: #dc3545; color: white; }
+        #archive-note-btn:hover { background-color: #c82333; }
+        .delete-order-btn, .delete-vacation-btn, .delete-task-btn, .delete-token-btn, .delete-delivery-btn { background-color: #dc3545; }
+        .delete-order-btn:hover, .delete-vacation-btn:hover, .delete-task-btn:hover, .delete-token-btn:hover, .delete-delivery-btn:hover { background-color: #c82333; }
 
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000;
@@ -348,7 +352,7 @@
             .nav-bar .nav-links { order: 3; width: 100%; }
             .nav-bar::before { content: "Nawigacja"; order: 1; flex-grow: 1; text-align: left; }
             .notebook-container { flex-direction: column; height: 75vh; }
-            .note-list-column { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border-light); padding-bottom: 20px; margin-bottom: 20px; flex-shrink: 0; max-height: 30%; }
+            .note-list-column { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border-light); padding-bottom: 20px; margin-bottom: 20px; flex-shrink: 0; max-height: auto; height: 35vh; }
             .dark-mode .note-list-column { border-bottom-color: var(--border-dark); }
             .content { padding: 15px; }
             .order-item .order-buttons { width: 100%; text-align: left; padding-top: 5px; }
@@ -375,6 +379,7 @@
             .dark-mode .vacation-request .right-aligned-info { border-top-color: #333; }
             .vacation-request button { padding: 10px 15px; margin: 5px; flex: 1 0 auto; min-width: 80px; }
             .vacation-request .right-aligned-info > div { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; justify-content: flex-end; }
+            .beta-scanner-label { font-size: 0.75em; margin-right: 5px; white-space: nowrap; }
         }
 
         /* --- EASTER EGGS --- */
@@ -389,7 +394,8 @@
 <div id="scanner-modal" class="modal-overlay" style="display: none; z-index: 3000;">
     <div class="modal-content" style="max-width: 380px; width: 95%;">
         <h4>Skanuj kod kreskowy</h4>
-        <div id="reader" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; overflow: hidden;"></div>
+        <div id="reader-html5" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; overflow: hidden;"></div>
+        <video id="reader-zxing" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; display: none; object-fit: cover;"></video>
         <button id="scanner-close-btn" style="margin-top: 15px; width: 100%; background-color: #6c757d; padding: 12px; font-size: 1em;">Anuluj / Zamknij</button>
     </div>
 </div>
@@ -431,8 +437,8 @@
         <h4>Dodaj nowy dokument dostawy</h4>
         <input type="text" id="delivery-title-input" class="modal-input" placeholder="Tytuł / Numer WZ" required>
         <div style="text-align:left; margin-top: 10px;">
-            <label style="font-size: 0.9em; color: #666;">Plik specyfikacji (PDF):</label>
-            <input type="file" id="delivery-file-input" class="modal-input" accept="application/pdf">
+            <label style="font-size: 0.9em; color: #666;">Plik specyfikacji (PDF / Excel):</label>
+            <input type="file" id="delivery-file-input" class="modal-input" accept="application/pdf, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
             <button id="delivery-modal-cancel" style="background-color: #6c757d;">Anuluj</button>
@@ -516,6 +522,9 @@
             <a id="switch-to-admin-password-btn" style="display: none; font-weight: bold;">🔑 Zaloguj do Panelu</a>
         </div>
         <div class="nav-actions">
+            <label class="beta-scanner-label" title="Włącz alternatywny silnik skanera (lepszy dla iPhone'ów)">
+                <input type="checkbox" class="beta-scanner-toggle"> Skaner Beta
+            </label>
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
             <button class="theme-toggle-btn">🌓</button>
             <button class="hamburger-btn" id="user-hamburger-btn">&#9776;</button>
@@ -543,8 +552,8 @@
         <h2>Weryfikacja Dostaw</h2>
         <div class="notebook-container">
             <div class="note-list-column">
-                <button class="new-doc-btn" onclick="openNewDeliveryModal(false)">+ Nowa dostawa</button>
-                <div id="user-delivery-list" class="doc-title-list">Ładowanie...</div>
+                <button class="new-doc-btn" style="flex-shrink: 0;" onclick="openNewDeliveryModal(false)">+ Nowa dostawa</button>
+                <div id="user-delivery-list" class="doc-title-list" style="flex-grow: 1; flex-shrink: 1; min-height: 0;">Ładowanie...</div>
             </div>
             <div class="note-editor-column" id="user-delivery-details" style="display:none;">
                 <div class="editor-header" style="justify-content: space-between;">
@@ -631,8 +640,8 @@
         <h2>Notatnik</h2>
         <div class="notebook-container">
             <div class="note-list-column">
-                <button id="user-new-note-btn">+ Nowa notatka</button>
-                <div id="user-note-title-list">Brak notatek</div>
+                <button id="user-new-note-btn" style="flex-shrink: 0;">+ Nowa notatka</button>
+                <div id="user-note-title-list" style="overflow-y: auto; flex-grow: 1; flex-shrink: 1; min-height: 0;">Brak notatek</div>
             </div>
             <div class="note-editor-column">
                 <div class="editor-header">
@@ -671,6 +680,9 @@
             <a id="admin-commands-btn">💻 Opcje Dev</a>
         </div>
         <div class="nav-actions">
+            <label class="beta-scanner-label" title="Włącz alternatywny silnik skanera (lepszy dla iPhone'ów)">
+                <input type="checkbox" class="beta-scanner-toggle"> Skaner Beta
+            </label>
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
             <button class="theme-toggle-btn">🌓</button>
             <button class="hamburger-btn" id="admin-hamburger-btn">&#9776;</button>
@@ -727,8 +739,8 @@
         <h2>Weryfikacja Dostaw (Admin)</h2>
         <div class="notebook-container">
             <div class="note-list-column">
-                <button class="new-doc-btn" onclick="openNewDeliveryModal(true)">+ Nowa dostawa</button>
-                <div id="admin-delivery-list" class="doc-title-list">Ładowanie...</div>
+                <button class="new-doc-btn" style="flex-shrink: 0;" onclick="openNewDeliveryModal(true)">+ Nowa dostawa</button>
+                <div id="admin-delivery-list" class="doc-title-list" style="flex-grow: 1; flex-shrink: 1; min-height: 0;">Ładowanie...</div>
             </div>
             <div class="note-editor-column" id="admin-delivery-details" style="display:none;">
                 <div class="editor-header" style="justify-content: space-between;">
@@ -828,8 +840,10 @@
         <h2>Notatnik</h2>
         <div class="notebook-container">
             <div class="note-list-column">
-                <button id="new-note-btn">+ Nowa notatka</button>
-                <div id="note-title-list">Ładowanie...</div>
+                <button id="new-note-btn" style="flex-shrink: 0;">+ Nowa notatka</button>
+                <div id="note-title-list" style="overflow-y: auto; flex-grow: 1; flex-shrink: 1; min-height: 0;">Ładowanie...</div>
+                <button id="load-archived-notes-btn" style="width: 100%; margin-top: 10px; margin-bottom: 10px; flex-shrink: 0; background-color: #6c757d;">Załaduj archiwum</button>
+                <div id="note-title-list-archived" style="overflow-y: auto; display: none; border-top: 1px solid var(--border-light); padding-top: 10px; flex-grow: 1; flex-shrink: 1; min-height: 0;"></div>
             </div>
             <div class="note-editor-column">
                 <div class="editor-header">
@@ -843,7 +857,7 @@
                 <div id="note-timestamps"></div>
                 <div class="note-editor-buttons">
                     <button id="admin-toggle-raw-btn">Edytuj Kod</button>
-                    <button id="delete-note-btn">Usuń</button>
+                    <button id="archive-note-btn">Archiwizuj</button>
                     <button id="save-note-btn">Zapisz</button>
                 </div>
             </div>
@@ -960,6 +974,7 @@
     let themeToggleButtons;
     let showZeros = true;
     let displayLimit = 100;
+    let showingArchivedNotes = false;
 
     // DOSTAWY
     let deliveriesData = [];
@@ -989,6 +1004,8 @@
 
     // --- SKANER APARATU ---
     let html5QrCode = null;
+    let zxingReader = null;
+    let isBetaScannerActive = false;
     let scannerContext = 'inventory';
 
     window.openBarcodeScanner = function(isAdmin, context = 'inventory') {
@@ -997,41 +1014,63 @@
         modal.style.display = 'flex';
         const prefix = isAdmin ? 'admin' : 'user';
 
-        if (!html5QrCode) {
-            html5QrCode = new Html5Qrcode("reader");
-        }
-        const config = { fps: 10, qrbox: { width: 250, height: 150 } };
-        html5QrCode.start(
-            { facingMode: "environment" },
-            config,
-            (decodedText) => {
-                if (scannerContext === 'inventory') {
-                    const codeInput = document.getElementById(`${prefix}-inv-search-code`);
-                    if (codeInput) {
-                        codeInput.value = decodedText;
-                        displayLimit = 100;
-                        renderInventory(isAdmin);
-                    }
-                } else if (scannerContext === 'delivery') {
-                    const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
-                    if (scanInput) {
-                        scanInput.value = decodedText;
-                        scanInput.dispatchEvent(new Event('input')); // Wywołanie filtra
-                    }
+        const useBeta = document.getElementById('global-beta-scanner-toggle').checked;
+        const html5Div = document.getElementById('reader-html5');
+        const zxingVideo = document.getElementById('reader-zxing');
+
+        const onScanSuccess = (decodedText) => {
+            if (scannerContext === 'inventory') {
+                const codeInput = document.getElementById(`${prefix}-inv-search-code`);
+                if (codeInput) {
+                    codeInput.value = decodedText;
+                    displayLimit = 100;
+                    renderInventory(isAdmin);
                 }
-                closeBarcodeScanner();
-                if (navigator.vibrate) navigator.vibrate(200);
-            },
-            (errorMessage) => { }
-        ).catch((err) => {
-            alert("Błąd dostępu do aparatu: " + err);
+            } else if (scannerContext === 'delivery') {
+                const scanInput = document.getElementById(`${prefix}-delivery-scan-input`);
+                if (scanInput) {
+                    scanInput.value = decodedText;
+                    scanInput.dispatchEvent(new Event('input')); // Wywołanie filtra
+                }
+            }
             closeBarcodeScanner();
-        });
+            if (navigator.vibrate) navigator.vibrate(200);
+        };
+
+        if (useBeta) {
+            isBetaScannerActive = true;
+            html5Div.style.display = 'none';
+            zxingVideo.style.display = 'block';
+
+            if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
+            zxingReader.decodeFromVideoDevice(undefined, 'reader-zxing', (result, err) => {
+                if (result) {
+                    onScanSuccess(result.getText());
+                }
+            }).catch((err) => {
+                console.warn(err);
+            });
+        } else {
+            isBetaScannerActive = false;
+            zxingVideo.style.display = 'none';
+            html5Div.style.display = 'block';
+
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader-html5");
+            const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {})
+                .catch((err) => {
+                    alert("Błąd dostępu do aparatu: " + err);
+                    closeBarcodeScanner();
+                });
+        }
     }
 
     function closeBarcodeScanner() {
         const modal = document.getElementById('scanner-modal');
-        if (html5QrCode && html5QrCode.isScanning) {
+        if (isBetaScannerActive && zxingReader) {
+            zxingReader.reset();
+            modal.style.display = 'none';
+        } else if (!isBetaScannerActive && html5QrCode && html5QrCode.isScanning) {
             html5QrCode.stop().then(() => {
                 modal.style.display = 'none';
             }).catch(() => {
@@ -1692,7 +1731,19 @@
             let products = [];
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
-                products = await extractProductsFromPDF(file);
+                const fileName = file.name.toLowerCase();
+
+                if (fileName.endsWith('.pdf')) {
+                    products = await extractProductsFromPDF(file);
+                } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                    products = await extractProductsFromExcel(file);
+                } else {
+                    throw new Error("Nieobsługiwany format pliku. Wybierz PDF lub Excel (.xlsx, .xls)");
+                }
+            }
+
+            if (products.length === 0) {
+                throw new Error("Nie znaleziono żadnych pozycji w pliku.");
             }
 
             await addDoc(collection(db, `artifacts/${appId}/public/data/deliveries`), {
@@ -1808,6 +1859,102 @@
         return products;
     }
 
+    // Heurystyka do wydobywania danych z Excela (tylko krytyczne dane)
+    async function extractProductsFromExcel(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                    if (rows.length === 0) {
+                        resolve([]);
+                        return;
+                    }
+
+                    let headerRowIndex = -1;
+                    let headers = [];
+                    for (let i = 0; i < Math.min(30, rows.length); i++) {
+                        const row = rows[i];
+                        if (!Array.isArray(row)) continue;
+                        const rowString = row.map(c => String(c).toLowerCase()).join(' ');
+                        if (rowString.includes('nazwa') && (rowString.includes('ilość') || rowString.includes('ilosc'))) {
+                            headerRowIndex = i;
+                            headers = row.map(h => String(h || '').toLowerCase().trim());
+                            break;
+                        }
+                    }
+
+                    if (headerRowIndex === -1) {
+                        throw new Error("Nie znaleziono kolumn 'Nazwa' i 'Ilość' w arkuszu.");
+                    }
+
+                    let nameIdx = -1, eanIdx = -1, symbolIdx = -1, qtyIdx = -1;
+
+                    // Szukanie priorytetowe
+                    headers.forEach((h, idx) => {
+                        if (!h) return;
+                        if (h === 'nazwa towaru' || h === 'nazwa') nameIdx = idx;
+                        if (h === 'kod kreskowy' || h === 'ean') eanIdx = idx;
+                        if (h === 'symbol' || h === 'indeks') symbolIdx = idx;
+                        if (h === 'ilość do magazynu' || h === 'ilość na dokumencie') qtyIdx = idx;
+                    });
+
+                    // Zapasowe dopasowanie (fallback)
+                    headers.forEach((h, idx) => {
+                        if (!h) return;
+                        if (nameIdx === -1 && h.includes('nazwa')) nameIdx = idx;
+                        if (eanIdx === -1 && h.includes('kod')) eanIdx = idx;
+                        if (symbolIdx === -1 && h.includes('symbol')) symbolIdx = idx;
+                        if (qtyIdx === -1 && (h.includes('ilość') || h.includes('ilosc'))) qtyIdx = idx;
+                    });
+
+                    if (nameIdx === -1 || qtyIdx === -1) {
+                        throw new Error("Nie można dopasować krytycznych kolumn (Nazwa, Ilość).");
+                    }
+
+                    let products = [];
+                    for (let i = headerRowIndex + 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!Array.isArray(row) || row.length === 0) continue;
+
+                        const nameRaw = row[nameIdx];
+                        if (nameRaw == null || String(nameRaw).trim() === '') continue;
+
+                        const qtyRaw = row[qtyIdx];
+                        const qty = parseFloat(String(qtyRaw).replace(',', '.')) || 0;
+                        if (qty <= 0) continue;
+
+                        const eanRaw = eanIdx !== -1 ? row[eanIdx] : '';
+                        const symbolRaw = symbolIdx !== -1 ? row[symbolIdx] : '';
+
+                        // Pobieramy absolutne minimum danych wymaganych przez interfejs
+                        products.push({
+                            id: crypto.randomUUID(),
+                            ean: String(eanRaw || '').trim(),
+                            symbol: String(symbolRaw || '').trim(),
+                            name: String(nameRaw || '').trim(),
+                            expectedQty: qty,
+                            actualQty: 0,
+                            checked: false,
+                            note: ''
+                        });
+                    }
+                    resolve(products);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = function() {
+                reject(new Error("Błąd odczytu pliku"));
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
 
     // --- CONTACTS MODULE LOGIC ---
 
@@ -2428,54 +2575,81 @@
     async function renderNotes(isAdmin) {
         if (!isAuthReady) return;
         const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
-        listEl.innerHTML = 'Ładowanie...';
+        const archivedListEl = isAdmin ? document.getElementById('note-title-list-archived') : null;
+        if(listEl) listEl.innerHTML = 'Ładowanie...';
+
         const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
-        const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public }));
+        const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public, isArchived: n.is_archived }));
+
         const fbPath = `artifacts/${appId}/public/data/notes`;
         const fbSnapshot = await getDocs(collection(db, fbPath));
         const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
-        const allNotes = [...formattedSupabaseNotes, ...firebaseNotes]
-            .filter(note => isAdmin || note.public || note.is_public)
-            .sort((a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at)));
-        listEl.innerHTML = allNotes.length === 0 ? 'Brak notatek.' : '';
-        allNotes.forEach(note => {
-            const item = document.createElement('div');
-            item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public || note.is_public ? 'public' : ''}`;
-            item.dataset.id = note.id;
-            item.dataset.source = note.source;
-            if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
-            const sourceTagHtml = getSourceTag(note.source);
-            const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title} ${sourceTagHtml}</span>
-                               <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>`;
-            item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'note-actions';
-            const pinBtn = document.createElement('span');
-            pinBtn.className = 'note-pin-btn';
-            pinBtn.innerHTML = '&#128204;';
-            pinBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('pin', note, isAdmin); };
-            const publishBtn = document.createElement('span');
-            publishBtn.className = 'note-publish-btn';
-            publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
-            publishBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('publish', note, isAdmin); };
-            const shareBtn = document.createElement('span');
-            shareBtn.className = 'note-share-btn';
-            shareBtn.innerHTML = '&#128279;';
-            shareBtn.onclick = (e) => { e.stopPropagation(); navigator.clipboard.writeText(`https://publicnotebook.web.app/?uuid=${note.uuid||note.id}`); showModal('Sukces', 'Link skopiowany.'); };
-            actionsDiv.appendChild(pinBtn);
-            if (isAdmin) { actionsDiv.appendChild(publishBtn); }
-            if(note.uuid || note.source === 'firebase') actionsDiv.appendChild(shareBtn);
-            item.appendChild(actionsDiv);
-            item.onclick = () => {
-                checkUnsavedChanges(() => {
-                    if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
-                    else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
-                    document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
-                    item.classList.add('selected');
-                });
-            };
-            listEl.appendChild(item);
-        });
+
+        const allNotes = [...formattedSupabaseNotes, ...firebaseNotes];
+
+        const sortNotes = (a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
+
+        const activeNotes = allNotes.filter(note => (isAdmin || note.public || note.is_public) && !note.isArchived && !note.is_archived).sort(sortNotes);
+        const archivedNotes = allNotes.filter(note => isAdmin && (note.isArchived || note.is_archived)).sort(sortNotes);
+
+        const renderList = (notes, container) => {
+            if(!container) return;
+            container.innerHTML = notes.length === 0 ? '<p style="color:#888; padding: 10px;">Brak notatek.</p>' : '';
+            notes.forEach(note => {
+                const item = document.createElement('div');
+                item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public || note.is_public ? 'public' : ''}`;
+                item.dataset.id = note.id;
+                item.dataset.source = note.source;
+                if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
+
+                const sourceTagHtml = getSourceTag(note.source);
+                const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title} ${sourceTagHtml}</span>
+                                   <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>`;
+                item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'note-actions';
+
+                if(!note.isArchived && !note.is_archived) {
+                    const pinBtn = document.createElement('span');
+                    pinBtn.className = 'note-pin-btn';
+                    pinBtn.innerHTML = '&#128204;';
+                    pinBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('pin', note, isAdmin); };
+                    actionsDiv.appendChild(pinBtn);
+
+                    if (isAdmin) {
+                        const publishBtn = document.createElement('span');
+                        publishBtn.className = 'note-publish-btn';
+                        publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
+                        publishBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('publish', note, isAdmin); };
+                        actionsDiv.appendChild(publishBtn);
+                    }
+                }
+
+                const shareBtn = document.createElement('span');
+                shareBtn.className = 'note-share-btn';
+                shareBtn.innerHTML = '&#128279;';
+                shareBtn.onclick = (e) => { e.stopPropagation(); navigator.clipboard.writeText(`https://publicnotebook.web.app/?uuid=${note.uuid||note.id}`); showModal('Sukces', 'Link skopiowany.'); };
+                if(note.uuid || note.source === 'firebase') actionsDiv.appendChild(shareBtn);
+
+                item.appendChild(actionsDiv);
+
+                item.onclick = () => {
+                    checkUnsavedChanges(() => {
+                        if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
+                        else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
+                        document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
+                        item.classList.add('selected');
+                    });
+                };
+                container.appendChild(item);
+            });
+        };
+
+        renderList(activeNotes, listEl);
+        if (isAdmin && archivedListEl && archivedListEl.style.display !== 'none') {
+            renderList(archivedNotes, archivedListEl);
+        }
     }
 
     async function handleNoteAction(action, note, isAdmin) {
@@ -2677,11 +2851,17 @@
             document.getElementById('note-content-input').innerHTML = '';
             document.getElementById('note-content-raw').value = '';
             document.getElementById('note-timestamps').textContent = '';
-            document.querySelectorAll('#note-title-list .selected').forEach(item => item.classList.remove('selected'));
+            document.querySelectorAll('.note-list-item.selected').forEach(item => item.classList.remove('selected'));
             editorMode.admin = 'render';
             document.getElementById('note-content-input').style.display = 'block';
             document.getElementById('note-content-raw').style.display = 'none';
             lastSavedState = { title: '', content: '' };
+
+            const archiveBtn = document.getElementById('archive-note-btn');
+            if(archiveBtn) {
+                archiveBtn.textContent = 'Archiwizuj';
+                archiveBtn.style.backgroundColor = '#dc3545';
+            }
         });
     }
     function loadAdminNoteIntoEditor(note) {
@@ -2695,6 +2875,14 @@
         document.getElementById('note-content-input').style.display = 'block';
         document.getElementById('note-content-raw').style.display = 'none';
         lastSavedState = { title: note.title||'', content: note.content||'' };
+
+        const archiveBtn = document.getElementById('archive-note-btn');
+        if (archiveBtn) {
+            const isArch = note.isArchived || note.is_archived;
+            archiveBtn.dataset.isArchived = isArch ? 'true' : 'false';
+            archiveBtn.textContent = isArch ? 'Przywróć' : 'Archiwizuj';
+            archiveBtn.style.backgroundColor = isArch ? '#28a745' : '#dc3545';
+        }
     }
     async function saveAdminNote() {
         const title = document.getElementById('note-title-input').value.trim();
@@ -2710,11 +2898,23 @@
         }
         lastSavedState = { title, content }; renderNotes(true);
     }
-    async function deleteAdminNote() {
-        if (!currentAdminNoteId || !confirm('Usunąć?')) return;
-        if(currentAdminNoteId.startsWith('supabase')) await supabase.from('notes').delete().eq('id',currentAdminNoteId.replace('supabase-',''));
-        else await deleteDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId));
-        clearAdminEditor(); renderNotes(true);
+    async function archiveAdminNote() {
+        if (!currentAdminNoteId) return;
+        const archiveBtn = document.getElementById('archive-note-btn');
+        const isArchived = archiveBtn.dataset.isArchived === 'true';
+
+        const actionText = isArchived ? 'Przywrócić' : 'Zarchiwizować';
+        if (!confirm(`Czy na pewno chcesz ${actionText.toLowerCase()} tę notatkę?`)) return;
+
+        const newArchiveState = !isArchived;
+
+        if(currentAdminNoteId.startsWith('supabase')) {
+            await supabase.from('notes').update({is_archived: newArchiveState}).eq('id', currentAdminNoteId.replace('supabase-',''));
+        } else {
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), {isArchived: newArchiveState});
+        }
+        clearAdminEditor();
+        renderNotes(true);
     }
 
     async function renderRecurringTasks() {
@@ -3062,7 +3262,20 @@
         };
         document.getElementById('new-note-btn').onclick = clearAdminEditor;
         document.getElementById('save-note-btn').onclick = saveAdminNote;
-        document.getElementById('delete-note-btn').onclick = deleteAdminNote;
+        document.getElementById('archive-note-btn').onclick = archiveAdminNote;
+        document.getElementById('load-archived-notes-btn').onclick = async (e) => {
+            const archivedListEl = document.getElementById('note-title-list-archived');
+            if (archivedListEl.style.display === 'none' || archivedListEl.style.display === '') {
+                showingArchivedNotes = true;
+                archivedListEl.style.display = 'block';
+                e.target.textContent = 'Ukryj archiwum';
+                renderNotes(true);
+            } else {
+                showingArchivedNotes = false;
+                archivedListEl.style.display = 'none';
+                e.target.textContent = 'Załaduj archiwum';
+            }
+        };
         document.getElementById('admin-toggle-raw-btn').onclick = (e) => {
             const ci = document.getElementById('note-content-input'), cr = document.getElementById('note-content-raw');
             if (editorMode.admin === 'render') { cr.value = convertRenderedToSource(ci); ci.style.display = 'none'; cr.style.display = 'block'; editorMode.admin = 'raw'; e.target.textContent = 'Podgląd'; }
@@ -3226,6 +3439,17 @@
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
 
+        // Inicjalizacja skanera beta na podstawie localStorage
+        const savedBetaState = localStorage.getItem('betaScanner') === 'true';
+        document.querySelectorAll('.beta-scanner-toggle').forEach(cb => {
+            cb.checked = savedBetaState;
+            cb.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                localStorage.setItem('betaScanner', isChecked);
+                document.querySelectorAll('.beta-scanner-toggle').forEach(box => box.checked = isChecked);
+            });
+        });
+
         updatePriceVisibility();
 
         initUserView();
@@ -3311,7 +3535,8 @@
 
         const processScannerBuffer = () => {
             if (scannerBuffer.startsWith('@') && scannerBuffer.length > 1) {
-                const code = scannerBuffer.substring(1).trim();
+                // Bezpieczne odcinanie jednej małpy (jeżeli jest). Jeżeli zeskanowano z palca, po prostu bierze EAN.
+                const code = scannerBuffer.replace(/^@/, '').trim();
                 const isAdmin = document.getElementById('admin-view').style.display === 'block';
                 const prefix = isAdmin ? 'admin' : 'user';
 
