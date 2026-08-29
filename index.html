@@ -8,12 +8,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+EAN13+Text&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- BIBLIOTEKA DO SKANOWANIA KODÓW APARATEM (STANDARD) -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- BIBLIOTEKA DO SKANOWANIA KODÓW APARATEM (BETA / IOS) -->
     <script type="text/javascript" src="https://unpkg.com/@zxing/library@0.19.1"></script>
+    <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
+    <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW EXCEL -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -64,9 +68,8 @@
         }
         .blue-nav a:hover { background-color: #ffc101; color: black; }
         .gray-nav a:hover { background-color: #5a6268; }
-        .nav-actions { display: flex; align-items: center; }
-        .beta-scanner-label { color: white; font-size: 0.85em; margin-right: 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-        .theme-toggle-btn, .refresh-btn { font-size: 1.5em; background: none; border: none; cursor: pointer; padding: 0 10px; color: white; }
+        .nav-actions { display: flex; align-items: center; gap: 5px; }
+        .settings-btn, .refresh-btn { font-size: 1.5em; background: none; border: none; cursor: pointer; padding: 0 10px; color: white; }
         .hamburger-btn { display: none; font-size: 1.8em; background: none; border: none; cursor: pointer; color: white; }
         .content { padding: 20px 30px; display: none; }
         .content.active { display: block; }
@@ -92,7 +95,7 @@
         .item-row.due-date-warning:not(.done) .due-date-text { color: purple; font-weight: bold; }
         .dark-mode .item-row.due-date-warning:not(.done) .task-text-container,
         .dark-mode .item-row.due-date-warning:not(.done) .due-date-text { color: #c58af9; }
-        .item-content-wrapper { display: flex; align-items: center; flex-grow: 1; }
+        .item-content-wrapper { display: flex; align-items: center; flex-grow: 1; gap: 10px;}
         .assignees, .supplier-info { color: #555; font-size: 0.9em; margin-left: 15px; }
         .date-info { font-size: 0.8em; color: #888; margin-left: auto; padding-left: 20px; text-align: right; white-space: nowrap; }
         .due-date-text { margin-left: 15px; font-size: 1em; font-weight: normal; }
@@ -124,7 +127,7 @@
         }
         .dark-mode .delivery-note-input { background-color: #2a2a2a; color: var(--text-dark); border-color: #444; }
 
-        /* --- INVENTORY STYLES (UKŁAD SIATKI 2x3 WG SZKICU) --- */
+        /* --- INVENTORY STYLES --- */
         .inventory-controls {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -185,7 +188,7 @@
             text-align: right;
         }
         .dark-mode .contact-actions { border-top-color: #444; }
-        .contact-actions button { font-size: 0.8em; padding: 4px 8px; }
+        .contact-actions button { font-size: 0.8em; padding: 4px 8px; margin-left: 5px; }
 
         h2, h3 { color: var(--text-light); }
         form {
@@ -235,7 +238,7 @@
         .vacation-request-form button { margin-left: 0; }
         button { margin-left: 10px; cursor: pointer; padding: 8px 12px; border: none; border-radius: 4px; color: white; background-color: #004896; transition: background-color 0.3s; }
         button:disabled { background-color: #aaa; cursor: not-allowed; }
-        .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; }
+        .item-row button { background-color: #6c757d; font-size: 0.8em; padding: 5px 8px; margin-left: 5px; }
         .item-row button.reject-btn { background-color: var(--reject-color) !important; color: white; border: 1px solid var(--reject-color); }
         .google-sheet-iframe { width: 100%; height: 75vh; border: 1px solid var(--border-light); border-radius: 5px; }
         .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
@@ -375,7 +378,6 @@
             .dark-mode .vacation-request .right-aligned-info { border-top-color: #333; }
             .vacation-request button { padding: 10px 15px; margin: 5px; flex: 1 0 auto; min-width: 80px; }
             .vacation-request .right-aligned-info > div { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; justify-content: flex-end; }
-            .beta-scanner-label { font-size: 0.75em; margin-right: 5px; white-space: nowrap; }
         }
 
         /* --- EASTER EGGS --- */
@@ -386,6 +388,33 @@
 </head>
 <body>
 
+<!-- USTAWIENIA MODAL -->
+<div id="settings-modal" class="modal-overlay" style="display: none; z-index: 3000;">
+    <div class="modal-content">
+        <h4>Ustawienia aplikacji</h4>
+        <div style="display: flex; flex-direction: column; gap: 15px; align-items: flex-start; text-align: left; margin-top: 20px;">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 1.1em; width: 100%;">
+                <input type="checkbox" class="beta-scanner-toggle" style="transform: scale(1.3);"> Użyj skanera Beta (Zxing / iOS)
+            </label>
+            <button class="theme-toggle-btn" style="width: 100%; margin: 0; padding: 12px; font-size: 1.1em; background-color: #6c757d;">🌓 Przełącz ciemny motyw</button>
+            <button id="settings-console-btn" style="width: 100%; margin: 0; padding: 12px; font-size: 1.1em; background-color: #004896;">💻 Konsola (Dev)</button>
+        </div>
+        <button id="settings-close-btn" style="margin-top: 25px; width: 100%; padding: 12px; font-size: 1.1em; background-color: #dc3545;">Zamknij</button>
+    </div>
+</div>
+
+<!-- ARCHIWUM NOTATEK MODAL -->
+<div id="archive-modal" class="modal-overlay" style="display: none; z-index: 3000;">
+    <div class="modal-content" style="max-width: 500px; width: 95%;">
+        <h4>Archiwum Notatek</h4>
+        <div id="archive-modal-list" style="max-height: 50vh; overflow-y: auto; text-align: left; margin-bottom: 15px; padding: 5px;">
+            Ładowanie...
+        </div>
+        <button id="archive-modal-close-btn" style="width: 100%; background-color: #6c757d; padding: 12px;">Zamknij</button>
+    </div>
+</div>
+
+<!-- MODAL SKANERA APARATEM -->
 <div id="scanner-modal" class="modal-overlay" style="display: none; z-index: 3000;">
     <div class="modal-content" style="max-width: 380px; width: 95%;">
         <h4>Skanuj kod kreskowy</h4>
@@ -395,6 +424,7 @@
     </div>
 </div>
 
+<!-- AUTH MODAL -->
 <div id="auth-modal" class="modal-overlay" style="display: none; background-color: var(--background-dark);">
     <div class="modal-content" style="background: var(--surface-light); color: var(--text-light);">
         <h4>Autoryzacja</h4>
@@ -425,6 +455,7 @@
     </div>
 </div>
 
+<!-- MODAL NOWEJ DOSTAWY -->
 <div id="new-delivery-modal" class="modal-overlay" style="display: none; z-index: 2500;">
     <div class="modal-content">
         <h4>Dodaj nowy dokument dostawy</h4>
@@ -483,6 +514,7 @@
     </div>
 </div>
 
+<!-- MODAL EDYCJI TOKENÓW -->
 <div id="edit-token-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content">
         <h4>Edytuj Token</h4>
@@ -514,11 +546,8 @@
             <a id="switch-to-admin-password-btn" style="display: none; font-weight: bold;">🔑 Zaloguj do Panelu</a>
         </div>
         <div class="nav-actions">
-            <label class="beta-scanner-label" title="Włącz alternatywny silnik skanera (lepszy dla iPhone'ów)">
-                <input type="checkbox" class="beta-scanner-toggle"> Skaner Beta
-            </label>
+            <button class="settings-btn" title="Ustawienia">⚙️</button>
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
-            <button class="theme-toggle-btn">🌓</button>
             <button class="hamburger-btn" id="user-hamburger-btn">&#9776;</button>
         </div>
     </div>
@@ -669,14 +698,10 @@
             <a data-page="admin-employees">👥 Pracownicy</a>
             <a data-page="admin-tokens">🔑 Autoryzacja</a>
             <a id="switch-to-user-btn" style="font-weight: bold;">👤 Widok użytkownika</a>
-            <a id="admin-commands-btn">💻 Opcje Dev</a>
         </div>
         <div class="nav-actions">
-            <label class="beta-scanner-label" title="Włącz alternatywny silnik skanera (lepszy dla iPhone'ów)">
-                <input type="checkbox" class="beta-scanner-toggle"> Skaner Beta
-            </label>
+            <button class="settings-btn" title="Ustawienia">⚙️</button>
             <button class="refresh-btn" title="Odśwież dane">🔄</button>
-            <button class="theme-toggle-btn">🌓</button>
             <button class="hamburger-btn" id="admin-hamburger-btn">&#9776;</button>
         </div>
     </div>
@@ -831,11 +856,9 @@
     <div id="admin-notes" class="content">
         <h2>Notatnik</h2>
         <div class="notebook-container">
-            <div class="note-list-column" style="display: flex; flex-direction: column;">
+            <div class="note-list-column">
                 <button id="new-note-btn" style="flex-shrink: 0;">+ Nowa notatka</button>
                 <div id="note-title-list" style="overflow-y: auto; flex-grow: 1; flex-shrink: 1; min-height: 0;">Ładowanie...</div>
-                <button id="load-archived-notes-btn" style="width: 100%; margin-top: 10px; margin-bottom: 10px; flex-shrink: 0; background-color: #6c757d;">Załaduj archiwum</button>
-                <div id="note-title-list-archived" style="overflow-y: auto; display: none; border-top: 1px solid var(--border-light); padding-top: 10px; flex-grow: 1; flex-shrink: 1; min-height: 0;"></div>
             </div>
             <div class="note-editor-column">
                 <div class="editor-header">
@@ -966,7 +989,6 @@
     let themeToggleButtons;
     let showZeros = true;
     let displayLimit = 100;
-    let showingArchivedNotes = false;
 
     // DOSTAWY
     let deliveriesData = [];
@@ -1062,7 +1084,7 @@
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader-html5");
             }
-            const config = { fps: 15 }; // BEZ qrbox - łapie z całego okna wideo!
+            const config = { fps: 15 };
 
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {})
                 .catch((err) => {
@@ -1079,8 +1101,7 @@
         if (isBetaScannerActive && zxingReader) {
             zxingReader.reset();
         } else if (!isBetaScannerActive && html5QrCode) {
-            // bezpieczne zatrzymywanie skanera
-            if (html5QrCode.getState && html5QrCode.getState() === 2 /* SCANNING */) {
+            if (html5QrCode.getState && html5QrCode.getState() === 2) {
                 html5QrCode.stop().catch(e => console.warn(e));
             } else {
                 try { html5QrCode.stop().catch(e=>console.warn(e)); } catch(e){}
@@ -1470,8 +1491,94 @@
         }
     }
 
-    // --- EASTER EGGS / DEV COMMANDS ---
+    // --- EASTER EGGS / DEV COMMANDS / ARCHIVE ---
+    async function openArchiveModal() {
+        document.getElementById('archive-modal').style.display = 'flex';
+        const listEl = document.getElementById('archive-modal-list');
+        listEl.innerHTML = 'Ładowanie archiwum...';
+
+        try {
+            const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
+            const formattedSupabaseNotes = supabaseNotes.map(n => ({
+                ...n,
+                id: `supabase-${n.id}`,
+                source: 'supabase',
+                createdAt: n.created_at,
+                updatedAt: n.updated_at,
+                titleColor: n.title_color,
+                title: n.title,
+                content: n.content,
+                isArchived: n.is_archived
+            }));
+
+            const fbSnapshot = await getDocs(collection(db, `artifacts/${appId}/public/data/notes`));
+            const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
+
+            const allNotes = [...formattedSupabaseNotes, ...firebaseNotes];
+
+            const archivedNotes = allNotes.filter(note => note.isArchived === true || note.is_archived === true);
+            archivedNotes.sort((a, b) => (new Date(b.createdAt || 0) - new Date(a.createdAt || 0)));
+
+            listEl.innerHTML = archivedNotes.length === 0 ? '<p style="color:#888; padding: 10px;">Brak notatek w archiwum.</p>' : '';
+
+            archivedNotes.forEach(note => {
+                const item = document.createElement('div');
+                item.className = 'item-row';
+                item.innerHTML = `<div class="item-content-wrapper"><strong style="color:${note.titleColor || '#000'}">${note.title}</strong></div>`;
+
+                const previewBtn = document.createElement('button');
+                previewBtn.textContent = 'Podgląd';
+                previewBtn.style.backgroundColor = '#007bff';
+                previewBtn.onclick = () => {
+                    loadAdminNoteIntoEditor(note);
+                    document.getElementById('archive-modal').style.display = 'none';
+                };
+
+                const restoreBtn = document.createElement('button');
+                restoreBtn.textContent = 'Przywróć';
+                restoreBtn.style.backgroundColor = '#28a745';
+                restoreBtn.onclick = async () => {
+                    restoreBtn.disabled = true;
+                    if(note.source === 'supabase') {
+                        await supabase.from('notes').update({is_archived: false}).eq('id', note.id.replace('supabase-', ''));
+                    } else {
+                        await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, note.id), {isArchived: false});
+                    }
+                    openArchiveModal();
+                    renderNotes(true);
+                };
+
+                const delBtn = document.createElement('button');
+                delBtn.textContent = 'Usuń';
+                delBtn.className = 'reject-btn';
+                delBtn.onclick = async () => {
+                    if(confirm('Trwale usunąć tę notatkę? Operacji nie można cofnąć.')) {
+                        delBtn.disabled = true;
+                        if(note.source === 'supabase') {
+                            await supabase.from('notes').delete().eq('id', note.id.replace('supabase-', ''));
+                        } else {
+                            await deleteDoc(doc(db, `artifacts/${appId}/public/data/notes`, note.id));
+                        }
+                        openArchiveModal();
+                    }
+                };
+
+                const actions = document.createElement('div');
+                actions.appendChild(previewBtn);
+                actions.appendChild(restoreBtn);
+                actions.appendChild(delBtn);
+                item.appendChild(actions);
+
+                listEl.appendChild(item);
+            });
+        } catch (e) {
+            console.error("Błąd archiwum:", e);
+            listEl.innerHTML = '<p style="color:red;">Wystąpił błąd podczas ładowania archiwum.</p>';
+        }
+    }
+
     const passwordActions = {
+        'archiwum': openArchiveModal,
         'sql': () => {
             showSourceTagsAdmin = !showSourceTagsAdmin;
             showModal('Status', `Widoczność tagów źródła: ${showSourceTagsAdmin ? 'Włączona' : 'Wyłączona'}`);
@@ -1501,7 +1608,7 @@
         'Dinnerbone': () => { document.body.classList.toggle('upside-down-mode'); showModal('🙃', 'Do góry nogami!'); },
         'Grumm': () => { document.body.classList.toggle('upside-down-mode'); showModal('🙃', 'Do góry nogami!'); },
         'help': () => {
-            let cmds = ['passwd (zmiana hasła konsoli)', 'sql', 'dev', 'iddqd', 'minecraft', 'jeb_', 'Dinnerbone', 'Grumm', 'help'];
+            let cmds = ['archiwum (stare notatki)', 'passwd (zmiana hasła konsoli)', 'sql', 'dev', 'iddqd', 'minecraft', 'jeb_', 'Dinnerbone', 'Grumm', 'help'];
             showModal('Dostępne komendy Dev', '- ' + cmds.join('\n- '));
         }
     };
@@ -2582,81 +2689,70 @@
     async function renderNotes(isAdmin) {
         if (!isAuthReady) return;
         const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
-        const archivedListEl = isAdmin ? document.getElementById('note-title-list-archived') : null;
         if(listEl) listEl.innerHTML = 'Ładowanie...';
 
         const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
-        const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public, isArchived: n.is_archived }));
-
         const fbPath = `artifacts/${appId}/public/data/notes`;
         const fbSnapshot = await getDocs(collection(db, fbPath));
+
+        const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public, isArchived: n.is_archived, title: n.title, content: n.content, uuid: n.uuid }));
         const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
 
         const allNotes = [...formattedSupabaseNotes, ...firebaseNotes];
-
         const sortNotes = (a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
 
         const activeNotes = allNotes.filter(note => (isAdmin || note.public || note.is_public) && !note.isArchived && !note.is_archived).sort(sortNotes);
-        const archivedNotes = allNotes.filter(note => isAdmin && (note.isArchived || note.is_archived)).sort(sortNotes);
 
-        const renderList = (notes, container) => {
-            if(!container) return;
-            container.innerHTML = notes.length === 0 ? '<p style="color:#888; padding: 10px;">Brak notatek.</p>' : '';
-            notes.forEach(note => {
-                const item = document.createElement('div');
-                item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public || note.is_public ? 'public' : ''}`;
-                item.dataset.id = note.id;
-                item.dataset.source = note.source;
-                if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
+        if(!listEl) return;
+        listEl.innerHTML = activeNotes.length === 0 ? '<p style="color:#888; padding: 10px;">Brak notatek.</p>' : '';
 
-                const sourceTagHtml = getSourceTag(note.source);
-                const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title} ${sourceTagHtml}</span>
-                                   <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>`;
-                item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
+        activeNotes.forEach(note => {
+            const item = document.createElement('div');
+            item.className = `note-list-item ${note.pinned ? 'pinned' : ''} ${note.public || note.is_public ? 'public' : ''}`;
+            item.dataset.id = note.id;
+            item.dataset.source = note.source;
+            if ((isAdmin && note.id === currentAdminNoteId) || (!isAdmin && note.id === currentUserNoteId)) item.classList.add('selected');
 
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'note-actions';
+            const sourceTagHtml = getSourceTag(note.source);
+            const titleHtml = `<span class="note-title" style="color:${note.titleColor || note.title_color || 'inherit'}">${note.title} ${sourceTagHtml}</span>
+                               <span class="note-list-date">${note.createdAt ? new Date(note.createdAt).toLocaleDateString() : ''}</span>`;
+            item.innerHTML = `<div class="note-title-wrapper">${titleHtml}</div>`;
 
-                if(!note.isArchived && !note.is_archived) {
-                    const pinBtn = document.createElement('span');
-                    pinBtn.className = 'note-pin-btn';
-                    pinBtn.innerHTML = '&#128204;';
-                    pinBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('pin', note, isAdmin); };
-                    actionsDiv.appendChild(pinBtn);
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'note-actions';
 
-                    if (isAdmin) {
-                        const publishBtn = document.createElement('span');
-                        publishBtn.className = 'note-publish-btn';
-                        publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
-                        publishBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('publish', note, isAdmin); };
-                        actionsDiv.appendChild(publishBtn);
-                    }
-                }
+            const pinBtn = document.createElement('span');
+            pinBtn.className = 'note-pin-btn';
+            pinBtn.innerHTML = '&#128204;';
+            pinBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('pin', note, isAdmin); };
+            actionsDiv.appendChild(pinBtn);
 
-                const shareBtn = document.createElement('span');
-                shareBtn.className = 'note-share-btn';
-                shareBtn.innerHTML = '&#128279;';
-                shareBtn.onclick = (e) => { e.stopPropagation(); navigator.clipboard.writeText(`https://publicnotebook.web.app/?uuid=${note.uuid||note.id}`); showModal('Sukces', 'Link skopiowany.'); };
-                if(note.uuid || note.source === 'firebase') actionsDiv.appendChild(shareBtn);
+            if (isAdmin) {
+                const publishBtn = document.createElement('span');
+                publishBtn.className = 'note-publish-btn';
+                publishBtn.innerHTML = (note.public || note.is_public) ? '&#128275;' : '&#128274;';
+                publishBtn.onclick = (e) => { e.stopPropagation(); handleNoteAction('publish', note, isAdmin); };
+                actionsDiv.appendChild(publishBtn);
+            }
 
-                item.appendChild(actionsDiv);
+            const shareBtn = document.createElement('span');
+            shareBtn.className = 'note-share-btn';
+            shareBtn.innerHTML = '&#128279;';
+            shareBtn.onclick = (e) => { e.stopPropagation(); navigator.clipboard.writeText(`https://publicnotebook.web.app/?uuid=${note.uuid||note.id}`); showModal('Sukces', 'Link skopiowany.'); };
+            if(note.uuid || note.source === 'firebase') actionsDiv.appendChild(shareBtn);
 
-                item.onclick = () => {
-                    checkUnsavedChanges(() => {
-                        if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
-                        else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
-                        document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
-                        item.classList.add('selected');
-                    });
-                };
-                container.appendChild(item);
-            });
-        };
+            item.appendChild(actionsDiv);
 
-        renderList(activeNotes, listEl);
-        if (isAdmin && archivedListEl && archivedListEl.style.display !== 'none') {
-            renderList(archivedNotes, archivedListEl);
-        }
+            item.onclick = () => {
+                checkUnsavedChanges(() => {
+                    if (isAdmin) { currentAdminNoteId = note.id; loadAdminNoteIntoEditor(note); }
+                    else { currentUserNoteId = note.id; loadUserNoteIntoEditor(note); }
+                    document.querySelectorAll('.note-list-item.selected').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                });
+            };
+            listEl.appendChild(item);
+        });
     }
 
     async function handleNoteAction(action, note, isAdmin) {
@@ -2863,12 +2959,6 @@
             document.getElementById('note-content-input').style.display = 'block';
             document.getElementById('note-content-raw').style.display = 'none';
             lastSavedState = { title: '', content: '' };
-
-            const archiveBtn = document.getElementById('archive-note-btn');
-            if(archiveBtn) {
-                archiveBtn.textContent = 'Archiwizuj';
-                archiveBtn.style.backgroundColor = '#dc3545';
-            }
         });
     }
     function loadAdminNoteIntoEditor(note) {
@@ -2882,14 +2972,6 @@
         document.getElementById('note-content-input').style.display = 'block';
         document.getElementById('note-content-raw').style.display = 'none';
         lastSavedState = { title: note.title||'', content: note.content||'' };
-
-        const archiveBtn = document.getElementById('archive-note-btn');
-        if (archiveBtn) {
-            const isArch = note.isArchived || note.is_archived;
-            archiveBtn.dataset.isArchived = isArch ? 'true' : 'false';
-            archiveBtn.textContent = isArch ? 'Przywróć' : 'Archiwizuj';
-            archiveBtn.style.backgroundColor = isArch ? '#28a745' : '#dc3545';
-        }
     }
     async function saveAdminNote() {
         const title = document.getElementById('note-title-input').value.trim();
@@ -2907,18 +2989,12 @@
     }
     async function archiveAdminNote() {
         if (!currentAdminNoteId) return;
-        const archiveBtn = document.getElementById('archive-note-btn');
-        const isArchived = archiveBtn.dataset.isArchived === 'true';
-
-        const actionText = isArchived ? 'Przywrócić' : 'Zarchiwizować';
-        if (!confirm(`Czy na pewno chcesz ${actionText.toLowerCase()} tę notatkę?`)) return;
-
-        const newArchiveState = !isArchived;
+        if (!confirm(`Czy na pewno chcesz zarchiwizować tę notatkę? Zniknie ona z publicznego dostępu.`)) return;
 
         if(currentAdminNoteId.startsWith('supabase')) {
-            await supabase.from('notes').update({is_archived: newArchiveState}).eq('id', currentAdminNoteId.replace('supabase-',''));
+            await supabase.from('notes').update({is_archived: true, is_public: false, uuid: null}).eq('id', currentAdminNoteId.replace('supabase-',''));
         } else {
-            await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), {isArchived: newArchiveState});
+            await updateDoc(doc(db, `artifacts/${appId}/public/data/notes`, currentAdminNoteId), {isArchived: true, public: false, uuid: null});
         }
         clearAdminEditor();
         renderNotes(true);
@@ -3270,19 +3346,7 @@
         document.getElementById('new-note-btn').onclick = clearAdminEditor;
         document.getElementById('save-note-btn').onclick = saveAdminNote;
         document.getElementById('archive-note-btn').onclick = archiveAdminNote;
-        document.getElementById('load-archived-notes-btn').onclick = async (e) => {
-            const archivedListEl = document.getElementById('note-title-list-archived');
-            if (archivedListEl.style.display === 'none' || archivedListEl.style.display === '') {
-                showingArchivedNotes = true;
-                archivedListEl.style.display = 'block';
-                e.target.textContent = 'Ukryj archiwum';
-                renderNotes(true);
-            } else {
-                showingArchivedNotes = false;
-                archivedListEl.style.display = 'none';
-                e.target.textContent = 'Załaduj archiwum';
-            }
-        };
+
         document.getElementById('admin-toggle-raw-btn').onclick = (e) => {
             const ci = document.getElementById('note-content-input'), cr = document.getElementById('note-content-raw');
             if (editorMode.admin === 'render') { cr.value = convertRenderedToSource(ci); ci.style.display = 'none'; cr.style.display = 'block'; editorMode.admin = 'raw'; e.target.textContent = 'Podgląd'; }
@@ -3446,7 +3510,16 @@
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
 
-        // Inicjalizacja skanera beta na podstawie localStorage
+        // INICJALIZACJA USTAWIEŃ (MODAL)
+        document.querySelectorAll('.settings-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('settings-modal').style.display = 'flex';
+            });
+        });
+        document.getElementById('settings-close-btn').addEventListener('click', () => {
+            document.getElementById('settings-modal').style.display = 'none';
+        });
+
         const savedBetaState = localStorage.getItem('betaScanner') === 'true';
         document.querySelectorAll('.beta-scanner-toggle').forEach(cb => {
             cb.checked = savedBetaState;
@@ -3455,6 +3528,10 @@
                 localStorage.setItem('betaScanner', isChecked);
                 document.querySelectorAll('.beta-scanner-toggle').forEach(box => box.checked = isChecked);
             });
+        });
+
+        document.getElementById('archive-modal-close-btn').addEventListener('click', () => {
+            document.getElementById('archive-modal').style.display = 'none';
         });
 
         updatePriceVisibility();
@@ -3510,7 +3587,8 @@
                 localStorage.setItem('defaultView', 'user');
                 switchToUser();
             }
-            if (e.target.closest('#admin-commands-btn')) {
+            if (e.target.closest('#settings-console-btn')) {
+                document.getElementById('settings-modal').style.display = 'none';
                 handleCommandPrompt();
             }
 
