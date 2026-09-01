@@ -394,7 +394,10 @@
         <h4>Ustawienia aplikacji</h4>
         <div style="display: flex; flex-direction: column; gap: 15px; align-items: center; text-align: center; margin-top: 20px;">
             <label style="cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 1.1em; width: 100%;">
-                <input type="checkbox" class="beta-scanner-toggle" style="transform: scale(1.3);"> Użyj skanera Beta (Zxing / iOS)
+                <input type="checkbox" class="beta-scanner-toggle" style="transform: scale(1.3);"> Użyj skanera Beta (iOS)
+            </label>
+            <label style="cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 1.1em; width: 100%;">
+                <input type="checkbox" class="qrbox-toggle" style="transform: scale(1.3);"> Pokaż ramkę skanera
             </label>
             <button class="theme-toggle-btn" style="width: 100%; margin: 0; padding: 12px; font-size: 1.1em; background-color: #6c757d;">🌓 Przełącz ciemny motyw</button>
             <button id="settings-console-btn" style="width: 100%; margin: 0; padding: 12px; font-size: 1.1em; background-color: #004896;">💻 Konsola (Dev)</button>
@@ -1066,7 +1069,6 @@
                     }
                 }).catch((err) => {
                     console.warn("Zxing constraints error:", err);
-                    // fallback to default
                     zxingReader.decodeFromVideoDevice(null, 'reader-zxing', (result, err) => {
                         if (result) onScanSuccess(result.getText());
                     }).catch(console.error);
@@ -1084,7 +1086,12 @@
             if (!html5QrCode) {
                 html5QrCode = new Html5Qrcode("reader-html5");
             }
+
+            const useQrBox = localStorage.getItem('useQrBox') === 'true';
             const config = { fps: 15 };
+            if (useQrBox) {
+                config.qrbox = { width: 250, height: 150 };
+            }
 
             html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {})
                 .catch((err) => {
@@ -2695,17 +2702,20 @@
         const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
         if(listEl) listEl.innerHTML = 'Ładowanie...';
 
-        const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
+        const { data: supabaseNotes = [] } = await supabase.from('notes').select('*').eq('is_archived', false);
+
         const fbPath = `artifacts/${appId}/public/data/notes`;
-        const fbSnapshot = await getDocs(collection(db, fbPath));
+        const qFb = query(collection(db, fbPath), where("isArchived", "==", false));
+        const fbSnapshot = await getDocs(qFb);
 
         const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public, isArchived: n.is_archived, title: n.title, content: n.content, uuid: n.uuid }));
         const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
 
         const allNotes = [...formattedSupabaseNotes, ...firebaseNotes];
+
         const sortNotes = (a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
 
-        const activeNotes = allNotes.filter(note => (isAdmin || note.public || note.is_public) && !note.isArchived && !note.is_archived).sort(sortNotes);
+        const activeNotes = allNotes.filter(note => (isAdmin || note.public || note.is_public)).sort(sortNotes);
 
         if(!listEl) return;
         listEl.innerHTML = activeNotes.length === 0 ? '<p style="color:#888; padding: 10px;">Brak notatek.</p>' : '';
@@ -3514,7 +3524,37 @@
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
 
-        // INICJALIZACJA USTAWIEŃ (MODAL)
+        // INICJALIZACJA USTAWIEŃ I AUTO-DETEKCJA IOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        const autoBeta = isIOS || isSafari;
+
+        let savedBetaState = localStorage.getItem('betaScanner');
+        if (savedBetaState === null) {
+            savedBetaState = autoBeta ? 'true' : 'false';
+            localStorage.setItem('betaScanner', savedBetaState);
+        }
+        document.querySelectorAll('.beta-scanner-toggle').forEach(cb => {
+            cb.checked = savedBetaState === 'true';
+            cb.addEventListener('change', (e) => {
+                localStorage.setItem('betaScanner', e.target.checked);
+                document.querySelectorAll('.beta-scanner-toggle').forEach(box => box.checked = e.target.checked);
+            });
+        });
+
+        let savedQrBoxState = localStorage.getItem('useQrBox');
+        if (savedQrBoxState === null) {
+            savedQrBoxState = 'false';
+            localStorage.setItem('useQrBox', savedQrBoxState);
+        }
+        document.querySelectorAll('.qrbox-toggle').forEach(cb => {
+            cb.checked = savedQrBoxState === 'true';
+            cb.addEventListener('change', (e) => {
+                localStorage.setItem('useQrBox', e.target.checked);
+                document.querySelectorAll('.qrbox-toggle').forEach(box => box.checked = e.target.checked);
+            });
+        });
+
         document.querySelectorAll('.settings-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.getElementById('settings-modal').style.display = 'flex';
@@ -3522,16 +3562,6 @@
         });
         document.getElementById('settings-close-btn').addEventListener('click', () => {
             document.getElementById('settings-modal').style.display = 'none';
-        });
-
-        const savedBetaState = localStorage.getItem('betaScanner') === 'true';
-        document.querySelectorAll('.beta-scanner-toggle').forEach(cb => {
-            cb.checked = savedBetaState;
-            cb.addEventListener('change', (e) => {
-                const isChecked = e.target.checked;
-                localStorage.setItem('betaScanner', isChecked);
-                document.querySelectorAll('.beta-scanner-toggle').forEach(box => box.checked = isChecked);
-            });
         });
 
         document.getElementById('archive-modal-close-btn').addEventListener('click', () => {
