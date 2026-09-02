@@ -17,7 +17,7 @@
     <script>
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
-    <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW EXCEL -->
+    <!-- BIBLIOTEKA DO ODCZYTU PLIKÓW EXCEL/CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -417,6 +417,27 @@
     </div>
 </div>
 
+<!-- IMPORT MAGAZYNU MODAL -->
+<div id="import-modal" class="modal-overlay" style="display: none; z-index: 2500;">
+    <div class="modal-content">
+        <h4>Import Magazynu</h4>
+        <div style="text-align:left; margin-top: 10px;">
+            <label style="font-size: 0.9em; color: #666;">Wybierz plik z bazą (Excel / CSV):</label>
+            <input type="file" id="import-file-input" class="modal-input" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+        </div>
+        <div id="import-progress-container" style="display:none; margin-top: 15px;">
+            <div style="width: 100%; background: #ddd; border-radius: 4px; overflow: hidden; height: 20px;">
+                <div id="import-progress-bar" style="width: 0%; height: 100%; background: #007bff; transition: width 0.3s;"></div>
+            </div>
+            <p id="import-status-text" style="font-size: 0.9em; color: #666; text-align: center; margin-top: 5px;">Przetwarzanie...</p>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+            <button id="import-modal-cancel" style="background-color: #6c757d;">Anuluj</button>
+            <button id="import-modal-start" style="background-color: #28a745;">Rozpocznij Import</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL SKANERA APARATEM -->
 <div id="scanner-modal" class="modal-overlay" style="display: none; z-index: 3000;">
     <div class="modal-content" style="max-width: 380px; width: 95%;">
@@ -630,8 +651,15 @@
         <div id="user-schedule-request-list"></div>
     </div>
     <div id="user-inventory" class="content">
-        <h2>Magazyn</h2>
-        <div id="user-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
+        <div class="page-header">
+            <div>
+                <h2>Magazyn</h2>
+                <div id="user-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px; display: none;"></div>
+            </div>
+            <div>
+                <button id="user-inventory-import-btn" style="background-color: #28a745;">📥 Importuj z pliku</button>
+            </div>
+        </div>
         <div class="inventory-controls">
             <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="user-inv-search-name" placeholder="Wpisz nazwę..."></div>
             <div class="filter-group"><label>Kod kreskowy (lub @skan):</label><input type="text" id="user-inv-search-code" placeholder="Skanuj kod..." inputmode="numeric" pattern="[0-9]*"></div>
@@ -799,7 +827,9 @@
                 <h2>Zarządzanie Magazynem</h2>
                 <div id="admin-db-info" style="font-size: 0.8em; color: #888; margin-top: -10px; margin-bottom: 10px;"></div>
             </div>
-            <a href="https://drive.google.com/file/d/1rleT0kRGo11zloRZge6lY9qKpGcpueE0/view?usp=drive_link" target="_blank">📱 App</a>
+            <div>
+                <button id="admin-inventory-import-btn" style="background-color: #28a745;">📥 Importuj z pliku</button>
+            </div>
         </div>
         <div class="inventory-controls">
             <div class="filter-group"><label>Nazwa produktu:</label><input type="text" id="admin-inv-search-name" placeholder="Wpisz nazwę..."></div>
@@ -959,7 +989,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, where, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, getDoc, setDoc, where, limit, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/+esm';
 
@@ -1069,6 +1099,7 @@
                     }
                 }).catch((err) => {
                     console.warn("Zxing constraints error:", err);
+                    // fallback to default
                     zxingReader.decodeFromVideoDevice(null, 'reader-zxing', (result, err) => {
                         if (result) onScanSuccess(result.getText());
                     }).catch(console.error);
@@ -1498,6 +1529,170 @@
         }
     }
 
+    // --- IMPORT MAGAZYNU (ZASTĘPUJE PYTHON) ---
+    function parseInventoryExcel(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ""});
+
+                    if (rows.length === 0) throw new Error("Plik jest pusty.");
+
+                    let headerRowIndex = -1;
+                    let headers = [];
+                    for(let i=0; i<Math.min(30, rows.length); i++) {
+                        const rowStr = rows[i].join(' ').toLowerCase();
+                        if(rowStr.includes('nazwa') && (rowStr.includes('ilość') || rowStr.includes('ilosc') || rowStr.includes('cena'))) {
+                            headerRowIndex = i;
+                            headers = rows[i].map(h => String(h||'').toLowerCase().trim());
+                            break;
+                        }
+                    }
+
+                    if(headerRowIndex === -1) {
+                        headerRowIndex = 0;
+                        headers = rows[0].map(h => String(h||'').toLowerCase().trim());
+                    }
+
+                    const possibleSymbols = ['symbol', 'indeks', 'index', 'kod towaru', 'nr artykułu', 'ref'];
+                    const possibleNames = ['nazwa', 'towar', 'produkt', 'name', 'description', 'opis'];
+                    const possibleCodes = ['kod', 'ean', 'barcode', 'kod kreskowy'];
+                    const possibleQuantities = ['ilość', 'ilosc', 'stan', 'qty', 'quantity', 'dostępne'];
+                    const possiblePrices = ['cena', 'cena brutto', 'price', 'brutto'];
+
+                    const findCol = (possibilities) => {
+                        for(let p of possibilities) {
+                            const idx = headers.findIndex(h => h === p || h.includes(p));
+                            if(idx !== -1) return idx;
+                        }
+                        return -1;
+                    };
+
+                    let colSym = findCol(possibleSymbols);
+                    let colName = findCol(possibleNames);
+                    let colCode = findCol(possibleCodes);
+                    let colQty = findCol(possibleQuantities);
+                    let colPrice = findCol(possiblePrices);
+
+                    if(colSym === -1) colSym = 0;
+                    if(colName === -1 || colCode === -1 || colQty === -1 || colPrice === -1) {
+                        throw new Error(`Brak kluczowych kolumn. Znaleziono indexy: Nazwa(${colName}), Kod(${colCode}), Ilość(${colQty}), Cena(${colPrice})`);
+                    }
+
+                    let cleanData = [];
+                    for(let i = headerRowIndex + 1; i < rows.length; i++) {
+                        const r = rows[i];
+                        if(!r || r.length === 0) continue;
+
+                        let name = String(r[colName] || '').trim();
+                        if(name === '' || name === 'nan') continue;
+
+                        let symbol = String(r[colSym] || '').trim();
+                        let barcode = String(r[colCode] || '').replace(/\.0$/, '').trim();
+
+                        let qtyStr = String(r[colQty] || '0').replace(',', '.').replace(/\s/g, '');
+                        let qty = parseFloat(qtyStr);
+                        if(isNaN(qty)) qty = 0.0;
+
+                        let priceStr = String(r[colPrice] || '0').replace(',', '.').replace(/\s/g, '');
+                        let price = parseFloat(priceStr);
+                        if(isNaN(price)) price = 0.0;
+
+                        cleanData.push({
+                            symbol: symbol,
+                            name: name,
+                            barcode: barcode,
+                            quantity: qty,
+                            price: price
+                        });
+                    }
+                    resolve(cleanData);
+                } catch(err) { reject(err); }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    async function uploadInventoryToFirebase(items, progressCallback) {
+        const CHUNK_SIZE = 2000;
+        const totalItems = items.length;
+        const totalBatches = Math.ceil(totalItems / CHUNK_SIZE);
+
+        progressCallback(5, `Łączenie z bazą... (${totalItems} produktów)`);
+
+        const collectionRef = collection(db, `artifacts/${appId}/public/data/inventory_batches`);
+        const metaRef = doc(collectionRef, 'metadata');
+        const metaSnap = await getDoc(metaRef);
+
+        let oldBatches = 0;
+        if(metaSnap.exists()) {
+            oldBatches = metaSnap.data().totalBatches || 0;
+        }
+
+        progressCallback(10, "Czyszczenie starej bazy...");
+
+        let batch = writeBatch(db);
+        let deleteCounter = 0;
+
+        for(let i=0; i < oldBatches + 5; i++) {
+            const docRef = doc(collectionRef, `batch_${i}`);
+            batch.delete(docRef);
+            deleteCounter++;
+            if(deleteCounter >= 400) {
+                await batch.commit();
+                batch = writeBatch(db);
+                deleteCounter = 0;
+            }
+        }
+        if(deleteCounter > 0) {
+            await batch.commit();
+        }
+
+        progressCallback(30, "Rozpoczynam wysyłanie paczek...");
+
+        batch = writeBatch(db);
+        let opsCounter = 0;
+
+        for(let i=0; i<totalBatches; i++) {
+            const chunk = items.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+            const docRef = doc(collectionRef, `batch_${i}`);
+            batch.set(docRef, {
+                products: chunk,
+                count: chunk.length,
+                index: i,
+                uploadedAt: new Date()
+            });
+            opsCounter++;
+
+            if(opsCounter >= 10 || i === totalBatches - 1) {
+                await batch.commit();
+                batch = writeBatch(db);
+                opsCounter = 0;
+            }
+
+            const progress = 30 + Math.round(((i + 1) / totalBatches) * 60);
+            progressCallback(progress, `Wysłano paczkę ${i+1} z ${totalBatches}...`);
+        }
+
+        progressCallback(95, "Aktualizacja metadanych...");
+        await setDoc(metaRef, {
+            totalItems: totalItems,
+            totalBatches: totalBatches,
+            lastUpdate: new Date(),
+            chunkSize: CHUNK_SIZE
+        });
+
+        localStorage.removeItem(`inventory_meta_${appId}`);
+        localStorage.removeItem(`inventory_data_${appId}`);
+        inventoryData = items;
+
+        progressCallback(100, "Gotowe!");
+    }
+
     // --- EASTER EGGS / DEV COMMANDS / ARCHIVE ---
     async function openArchiveModal() {
         document.getElementById('archive-modal').style.display = 'flex';
@@ -1505,7 +1700,9 @@
         listEl.innerHTML = 'Ładowanie archiwum...';
 
         try {
-            const { data: supabaseNotes = [] } = await supabase.from('notes').select('*');
+            const { data: supabaseNotesData } = await supabase.from('notes').select('*');
+            const supabaseNotes = supabaseNotesData || [];
+
             const formattedSupabaseNotes = supabaseNotes.map(n => ({
                 ...n,
                 id: `supabase-${n.id}`,
@@ -2702,20 +2899,23 @@
         const listEl = document.getElementById(isAdmin ? 'note-title-list' : 'user-note-title-list');
         if(listEl) listEl.innerHTML = 'Ładowanie...';
 
-        const { data: supabaseNotes = [] } = await supabase.from('notes').select('*').eq('is_archived', false);
+        const { data: supabaseNotesData, error } = await supabase.from('notes').select('*');
+        const supabaseNotes = supabaseNotesData || [];
 
         const fbPath = `artifacts/${appId}/public/data/notes`;
-        const qFb = query(collection(db, fbPath), where("isArchived", "==", false));
-        const fbSnapshot = await getDocs(qFb);
+        const fbSnapshot = await getDocs(collection(db, fbPath));
 
         const formattedSupabaseNotes = supabaseNotes.map(n => ({ ...n, id: `supabase-${n.id}`, source: 'supabase', createdAt: n.created_at, titleColor: n.title_color, pinned: n.is_pinned, public: n.is_public, isArchived: n.is_archived, title: n.title, content: n.content, uuid: n.uuid }));
         const firebaseNotes = fbSnapshot.docs.map(d => ({ ...d.data(), id: d.id, source: 'firebase', createdAt: d.data().createdAt?.toDate() }));
 
         const allNotes = [...formattedSupabaseNotes, ...firebaseNotes];
-
         const sortNotes = (a, b) => (b.pinned ? 1 : -1) - (a.pinned ? 1 : -1) || (new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at));
 
-        const activeNotes = allNotes.filter(note => (isAdmin || note.public || note.is_public)).sort(sortNotes);
+        const activeNotes = allNotes.filter(note => {
+            const isArch = note.isArchived === true || note.is_archived === true;
+            const isPub = note.public === true || note.is_public === true;
+            return (isAdmin || isPub) && !isArch;
+        }).sort(sortNotes);
 
         if(!listEl) return;
         listEl.innerHTML = activeNotes.length === 0 ? '<p style="color:#888; padding: 10px;">Brak notatek.</p>' : '';
@@ -3194,6 +3394,7 @@
     }
 
     // --- INITIALIZATION ---
+    // --- INITIALIZATION ---
     function initUserView() {
         document.getElementById('user-order-form').onsubmit = async (e) => { e.preventDefault();
             await addDoc(collection(db, `artifacts/${appId}/public/data/orders`), { name:document.getElementById('user-order-name').value, supplier:document.getElementById('user-order-supplier').value, done:false, createdAt:new Date(), submittedByUserId:userId });
@@ -3244,9 +3445,32 @@
                 });
             });
         }
+
+        // BIND IMPORT DLA UŻYTKOWNIKA
+        const userInvBtn = document.getElementById('user-inventory-import-btn');
+        if(userInvBtn) {
+            userInvBtn.onclick = () => {
+                document.getElementById('import-file-input').value = '';
+                document.getElementById('import-progress-container').style.display = 'none';
+                document.getElementById('import-modal-start').disabled = false;
+                document.getElementById('import-modal-start').dataset.targetView = 'user';
+                document.getElementById('import-modal').style.display = 'flex';
+            };
+        }
     }
 
     function initAdminView() {
+        // BIND IMPORT DLA ADMINA
+        const adminInvBtn = document.getElementById('admin-inventory-import-btn');
+        if(adminInvBtn) {
+            adminInvBtn.onclick = () => {
+                document.getElementById('import-file-input').value = '';
+                document.getElementById('import-progress-container').style.display = 'none';
+                document.getElementById('import-modal-start').disabled = false;
+                document.getElementById('import-modal-start').dataset.targetView = 'admin';
+                document.getElementById('import-modal').style.display = 'flex';
+            };
+        }
 
         // Zapis z modala edycji tokenów
         document.getElementById('edit-token-cancel-btn').onclick = () => {
@@ -3520,6 +3744,41 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+
+        // --- GLOBAL IMPORT MODAL LOGIC ---
+        document.getElementById('import-modal-cancel').onclick = () => {
+            document.getElementById('import-modal').style.display = 'none';
+        };
+
+        document.getElementById('import-modal-start').onclick = async (e) => {
+            const fileInput = document.getElementById('import-file-input');
+            if(fileInput.files.length === 0) { alert('Wybierz plik Excel lub CSV!'); return; }
+            const file = fileInput.files[0];
+
+            const startBtn = e.target;
+            startBtn.disabled = true;
+            document.getElementById('import-progress-container').style.display = 'block';
+
+            const updateImportProgress = (percent, text) => {
+                document.getElementById('import-progress-bar').style.width = percent + '%';
+                document.getElementById('import-status-text').textContent = text;
+            };
+
+            try {
+                updateImportProgress(2, 'Odczytywanie pliku lokalnie...');
+                const items = await parseInventoryExcel(file);
+                await uploadInventoryToFirebase(items, updateImportProgress);
+                setTimeout(() => {
+                    document.getElementById('import-modal').style.display = 'none';
+                    const targetAdmin = startBtn.dataset.targetView === 'admin';
+                    renderInventory(targetAdmin);
+                }, 1000);
+            } catch(err) {
+                updateImportProgress(0, 'Błąd: ' + err.message);
+                startBtn.disabled = false;
+            }
+        };
+
         themeToggleButtons = document.querySelectorAll('.theme-toggle-btn');
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         updateThemeIcon();
